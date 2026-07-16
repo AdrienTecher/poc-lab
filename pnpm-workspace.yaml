@@ -1,0 +1,5 @@
+# Each buildable app under apps/ is a workspace package (it carries a package.json).
+# Static apps are plain folders with no package.json — pnpm simply ignores them here,
+# while the build orchestrator still copies them verbatim.
+packages:
+  - "apps/*"

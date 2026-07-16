@@ -1,0 +1,20 @@
+{
+  "name": "poc-lab",
+  "private": true,
+  "type": "module",
+  "description": "Public gallery of self-contained SPAs generated with Claude, published to GitHub Pages.",
+  "packageManager": "pnpm@9.9.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "validate": "node scripts/validate.mjs",
+    "prebuild": "node scripts/validate.mjs",
+    "build": "node scripts/build.mjs",
+    "preview": "SITE='' node scripts/build.mjs && npx -y serve dist -l 4173",
+    "new-app": "node scripts/new-app.mjs"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1"
+  }
+}

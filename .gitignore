@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Build output (the Pages artifact — produced by CI, never committed)
+dist/
+apps/*/dist/
+
+# Claude Code local state (keep .claude/atelier/ — the vendored conventions — committed)
+.claude/worktrees/
+.claude/settings.local.json
+# Personal identity module: useful locally, but not for a public repo (see CLAUDE.md).
+.claude/atelier/identity/persona.md
+
+# OS / editor noise
+.DS_Store
+*.log
