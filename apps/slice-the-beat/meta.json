@@ -1,8 +1,14 @@
 {
   "slug": "slice-the-beat",
   "title": "Slice the Beat",
-  "description": "Les fractions apprises en découpant une boucle : grille 16 pas interactive et ateliers avec les Aira Compacts. · Learn fractions by slicing a loop — an interactive 16-step grid plus activities for the Aira Compacts.",
-  "tags": ["musique", "maths", "enfants", "interactif"],
+  "description": "Les fractions apprises en découpant une boucle : grille 16 pas interactive et ateliers avec les Aira Compacts.",
+  "description_en": "Learn fractions by slicing a loop — an interactive 16-step grid plus activities for the Aira Compacts.",
+  "tags": [
+    "musique",
+    "maths",
+    "enfants",
+    "interactif"
+  ],
   "created": "2026-07-17",
   "source": "claude.ai",
   "kind": "static"

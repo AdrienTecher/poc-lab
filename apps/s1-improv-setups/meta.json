@@ -1,8 +1,14 @@
 {
   "slug": "s1-improv-setups",
   "title": "S-1 · four ways to wire a jam",
-  "description": "Quatre routages du Roland S-1 pour improviser en dawless, du boîtier seul au rig Aira complet. · Four Roland S-1 routings for dawless jamming, from one box to the full Aira chain.",
-  "tags": ["musique", "synth", "roland", "diagramme"],
+  "description": "Quatre routages du Roland S-1 pour improviser en dawless, du boîtier seul au rig Aira complet.",
+  "description_en": "Four Roland S-1 routings for dawless jamming, from one box to the full Aira chain.",
+  "tags": [
+    "musique",
+    "synth",
+    "roland",
+    "diagramme"
+  ],
   "created": "2026-07-17",
   "source": "claude.ai",
   "kind": "static"
