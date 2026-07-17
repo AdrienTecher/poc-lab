@@ -1,0 +1,9 @@
+{
+  "slug": "quiz-tnd",
+  "title": "Le grand quiz des TND",
+  "description": "70 questions expliquées sur les troubles du neurodéveloppement — TSA, TDAH, troubles « dys », langage, prise en charge. · A 70-question quiz on neurodevelopmental disorders, every answer explained.",
+  "tags": ["quiz", "tnd", "sante", "react"],
+  "created": "2026-07-17",
+  "source": "claude.ai",
+  "kind": "buildable"
+}
