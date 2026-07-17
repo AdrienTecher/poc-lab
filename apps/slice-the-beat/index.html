@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slice the Beat — Fractions with the Roland Aira Compacts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14131a; --bg2:#1d1b27; --bg3:#272335; --line:#3a3550;
+    --ink:#f6f3ff; --muted:#b8b2cc;
+    --pink:#ff4d97; --cyan:#2fe3cf; --amber:#ffc24b; --green:#74e87f; --orange:#ff8a3d;
+    --focus:#2fe3cf;
+    --display:'Fredoka', system-ui, sans-serif;
+    --body:'Atkinson Hyperlegible', system-ui, sans-serif;
+    --r:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(900px 600px at 80% -10%, rgba(255,77,151,.14), transparent 60%),
+      radial-gradient(800px 500px at 0% 10%, rgba(47,227,207,.10), transparent 55%),
+      var(--bg);
+    color:var(--ink); font-family:var(--body); font-size:clamp(16px,1.6vw,18px);
+    line-height:1.55; min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  /* faint grain overlay */
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none; opacity:.035; z-index:0;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .wrap{position:relative; z-index:1; max-width:1180px; margin:0 auto; padding:clamp(16px,3vw,34px)}
+  h1,h2,h3{font-family:var(--display); line-height:1.1; margin:0; font-weight:600}
+  a{color:var(--cyan)}
+  :focus-visible{outline:3px solid var(--focus); outline-offset:3px; border-radius:6px}
+
+  /* ---------- header ---------- */
+  header.top{display:flex; flex-wrap:wrap; align-items:flex-end; gap:18px; justify-content:space-between; margin-bottom:8px}
+  .brand .kicker{font-family:var(--display); letter-spacing:.18em; text-transform:uppercase; font-size:.72rem; color:var(--cyan); font-weight:600}
+  h1{font-size:clamp(2rem,5.5vw,3.4rem); font-weight:700; letter-spacing:-.5px}
+  h1 .hl{color:var(--pink)}
+  .sub{color:var(--muted); margin-top:6px; max-width:46ch}
+  .eq{display:flex; gap:4px; align-items:flex-end; height:42px}
+  .eq span{width:6px; background:linear-gradient(var(--pink),var(--amber)); border-radius:3px; animation:eq 1.1s ease-in-out infinite}
+  .eq span:nth-child(2){animation-delay:.15s; background:linear-gradient(var(--cyan),var(--green))}
+  .eq span:nth-child(3){animation-delay:.3s}
+  .eq span:nth-child(4){animation-delay:.45s; background:linear-gradient(var(--cyan),var(--green))}
+  .eq span:nth-child(5){animation-delay:.6s}
+  @keyframes eq{0%,100%{height:14px}50%{height:42px}}
+
+  .gear{display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 6px}
+  .chip{display:inline-flex; gap:8px; align-items:center; background:var(--bg2); border:1px solid var(--line); padding:7px 13px; border-radius:999px; font-size:.85rem}
+  .chip b{font-family:var(--display)}
+  .dot{width:9px;height:9px;border-radius:50%}
+
+  /* ---------- progress nav ---------- */
+  nav.progress{margin:22px 0; }
+  nav.progress ol{list-style:none; display:flex; flex-wrap:wrap; gap:8px; padding:0; margin:0}
+  .step-btn{font-family:var(--display); font-weight:500; cursor:pointer; background:var(--bg2); color:var(--muted);
+    border:1px solid var(--line); border-radius:12px; padding:9px 12px; min-height:44px; display:flex; gap:8px; align-items:center; transition:.18s}
+  .step-btn .num{display:grid; place-items:center; width:24px; height:24px; border-radius:7px; background:var(--bg3); font-size:.85rem}
+  .step-btn:hover{color:var(--ink); border-color:var(--pink)}
+  .step-btn[aria-current="true"]{background:var(--pink); color:#1a0f17; border-color:var(--pink)}
+  .step-btn[aria-current="true"] .num{background:rgba(0,0,0,.25); color:#1a0f17}
+  .step-btn .lbl{display:none}
+  @media(min-width:780px){ .step-btn .lbl{display:inline} }
+
+  /* ---------- layout ---------- */
+  .grid-2{display:grid; gap:24px; align-items:start}
+  @media(min-width:920px){ .grid-2{grid-template-columns:1fr 0.92fr} }
+
+  /* ---------- round card ---------- */
+  .round{background:linear-gradient(180deg,var(--bg2),rgba(29,27,39,.6)); border:1px solid var(--line);
+    border-radius:var(--r); padding:clamp(18px,3vw,30px)}
+  .js .round{display:none}
+  .js .round.active{display:block; animation:rise .35s ease both}
+  @keyframes rise{from{opacity:0; transform:translateY(10px)}to{opacity:1; transform:none}}
+  .round .meta{display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:14px}
+  .badge{font-family:var(--display); font-weight:700; font-size:1.1rem; background:var(--pink); color:#190f16;
+    width:46px; height:46px; border-radius:13px; display:grid; place-items:center; flex:0 0 auto}
+  .round h2{font-size:clamp(1.4rem,3.4vw,2rem)}
+  .time{margin-left:auto; color:var(--muted); font-size:.85rem; display:inline-flex; gap:7px; align-items:center}
+  .goal{color:var(--amber); font-weight:700; margin:2px 0 14px}
+  ul.steps{list-style:none; padding:0; margin:0; display:grid; gap:10px}
+  ul.steps li{display:flex; gap:12px; align-items:flex-start; background:var(--bg); border:1px solid var(--line);
+    border-radius:12px; padding:12px 14px}
+  .tick{flex:0 0 auto; width:30px; height:30px; border-radius:9px; border:2px solid var(--line); background:transparent;
+    cursor:pointer; display:grid; place-items:center; color:var(--green); font-size:1.1rem; line-height:1}
+  .tick[aria-pressed="true"]{background:rgba(116,232,127,.16); border-color:var(--green)}
+  .tick[aria-pressed="true"] + .txt{opacity:.6; text-decoration:line-through}
+  .txt{padding-top:3px}
+  .round-actions{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px}
+  .btn{font-family:var(--display); font-weight:600; cursor:pointer; border-radius:12px; padding:12px 18px;
+    min-height:48px; border:1px solid var(--line); background:var(--bg3); color:var(--ink); font-size:1rem; transition:.16s}
+  .btn:hover{transform:translateY(-1px)}
+  .btn.primary{background:var(--cyan); color:#06201d; border-color:var(--cyan)}
+  .btn.pink{background:var(--pink); color:#190f16; border-color:var(--pink)}
+  .btn.ghost{background:transparent}
+  .nav-row{display:flex; justify-content:space-between; gap:10px; margin-top:22px}
+
+  /* chop diagram (round 3) */
+  .chop{display:flex; gap:6px; margin:10px 0 2px}
+  .chop span{flex:1; height:46px; border-radius:9px; display:grid; place-items:center; font-family:var(--display);
+    font-weight:600; color:#190f16; font-size:.95rem}
+  .chop span:nth-child(1){background:var(--pink)} .chop span:nth-child(2){background:var(--cyan)}
+  .chop span:nth-child(3){background:var(--amber)} .chop span:nth-child(4){background:var(--green)}
+
+  /* ---------- beat lab ---------- */
+  .lab{position:sticky; top:16px; background:linear-gradient(180deg,#211d30,#171520); border:1px solid var(--line);
+    border-radius:var(--r); padding:clamp(16px,2.4vw,24px); box-shadow:0 24px 60px -30px rgba(255,77,151,.5)}
+  .lab h2{font-size:1.35rem; display:flex; align-items:center; gap:10px}
+  .lab .led{width:11px;height:11px;border-radius:50%;background:var(--pink); box-shadow:0 0 10px var(--pink)}
+  .lab .hint{color:var(--muted); font-size:.85rem; margin:4px 0 16px}
+
+  .transport{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:16px}
+  .tempo{display:flex; align-items:center; gap:10px; margin-left:auto; font-size:.85rem; color:var(--muted)}
+  input[type=range]{accent-color:var(--pink); width:120px; height:30px}
+
+  .grid{display:flex; flex-wrap:wrap; gap:12px; justify-content:center; padding:6px 0 4px}
+  .beat{display:flex; flex-direction:column; gap:6px}
+  .beat-num{font-family:var(--display); font-weight:600; color:var(--muted); font-size:.8rem; text-align:center}
+  .beat-pads{display:flex; gap:6px}
+  .pad{width:clamp(38px,9.5vw,46px); height:clamp(46px,11vw,56px); border-radius:11px; cursor:pointer;
+    background:#0f0e15; border:1px solid #322c45; position:relative; transition:transform .08s, box-shadow .14s, background .14s}
+  .pad::after{content:""; position:absolute; left:50%; top:9px; transform:translateX(-50%); width:7px;height:7px;border-radius:50%;
+    background:#3a3550; transition:.14s}
+  .pad[aria-pressed="true"]{background:linear-gradient(180deg,#ff79b0,#ff2f86); border-color:#ff9cc5;
+    box-shadow:0 0 16px rgba(255,77,151,.7), inset 0 -8px 14px rgba(120,0,50,.4)}
+  .pad[aria-pressed="true"]::after{background:#1a0a12; box-shadow:0 0 0 3px rgba(255,255,255,.35)}
+  .pad.playing{transform:translateY(2px) scale(1.04); box-shadow:0 0 22px var(--cyan)}
+  .pad:active{transform:scale(.94)}
+
+  .readout{margin-top:18px; background:#0f0e15; border:1px solid var(--line); border-radius:13px; padding:16px}
+  .readout .small{color:var(--muted); font-size:.82rem}
+  .sum{font-family:var(--display); font-weight:600; font-size:clamp(1.3rem,3.6vw,1.7rem); margin-top:4px; word-spacing:.05em}
+  .sum .eq1{color:var(--green)}
+  .sum .plus{color:var(--muted)}
+
+  .legend{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:16px}
+  .legend button{display:flex; align-items:center; gap:9px; text-align:left; cursor:pointer; min-height:44px;
+    background:var(--bg3); border:1px solid var(--line); color:var(--ink); border-radius:11px; padding:8px 11px; font-family:var(--body); font-size:.88rem}
+  .legend button:hover{border-color:var(--cyan)}
+  .legend .sw{width:14px;height:14px;border-radius:4px; flex:0 0 auto}
+  .legend b{font-family:var(--display)}
+
+  /* challenges */
+  .chal{margin-top:18px; border-top:1px dashed var(--line); padding-top:16px}
+  .chal h3{font-size:1.05rem; margin-bottom:4px}
+  .chal-pick{display:flex; flex-wrap:wrap; gap:7px; margin:10px 0}
+  .chal-pick button{cursor:pointer; min-height:40px; background:var(--bg3); border:1px solid var(--line); color:var(--muted);
+    border-radius:10px; padding:7px 11px; font-family:var(--body); font-size:.82rem}
+  .chal-pick button[aria-pressed="true"]{background:var(--amber); color:#241700; border-color:var(--amber); font-weight:700}
+  .chal-target{font-family:var(--display); font-size:1.05rem; min-height:1.4em}
+  .chal-result{margin-top:8px; font-weight:700; min-height:1.4em}
+  .ok{color:var(--green)} .no{color:var(--orange)}
+
+  footer{margin-top:34px; color:var(--muted); font-size:.85rem; border-top:1px solid var(--line); padding-top:18px}
+  footer h3{font-family:var(--display); color:var(--ink); font-size:1rem; margin-bottom:6px}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);border:0}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <div class="kicker">Aira Compact · Math Lab</div>
+      <h1>Slice the <span class="hl">Beat</span></h1>
+      <p class="sub">A loop is a <strong>whole</strong>. The 16 lit steps cut it into fractions you can hear, see, and tap. Let's build math out of music.</p>
+    </div>
+    <div class="eq" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+  </header>
+
+  <div class="gear" role="list" aria-label="Gear and what each does">
+    <span class="chip" role="listitem"><span class="dot" style="background:var(--pink)"></span><b>T-8</b> — the fraction ruler (16 steps)</span>
+    <span class="chip" role="listitem"><span class="dot" style="background:var(--cyan)"></span><b>P-6</b> — chops one sound into equal slices</span>
+    <span class="chip" role="listitem"><span class="dot" style="background:var(--amber)"></span><b>S-1</b> — the melody for the final jam</span>
+  </div>
+
+  <nav class="progress" aria-label="Activity rounds">
+    <ol id="dots"></ol>
+  </nav>
+
+  <div class="grid-2">
+
+    <!-- LEFT: rounds (all in DOM; JS shows one at a time) -->
+    <main id="rounds" aria-live="polite"></main>
+
+    <!-- RIGHT: the interactive Beat Lab -->
+    <aside class="lab" aria-label="Beat Lab — interactive 16-step grid">
+      <h2><span class="led" aria-hidden="true"></span> Beat Lab</h2>
+      <p class="hint">Tap the pads to place hits. Press play to hear it. The box below tells you the fractions you just made.</p>
+
+      <div class="transport">
+        <button class="btn pink" id="playBtn" aria-pressed="false">▶ Play</button>
+        <button class="btn ghost" id="clearBtn">Clear</button>
+        <label class="tempo">Tempo
+          <input type="range" id="tempo" min="70" max="120" value="90" aria-label="Tempo in beats per minute">
+          <span id="bpmLabel" aria-hidden="true">90</span>
+        </label>
+      </div>
+
+      <div class="grid" id="grid" role="group" aria-label="16-step beat grid, one bar of 4 beats"></div>
+
+      <div class="readout">
+        <div class="small">Your hits divide the whole bar into:</div>
+        <div class="sum" id="sum" aria-live="polite">Tap a pad to start slicing!</div>
+      </div>
+
+      <div class="legend" aria-label="Show a fraction on the grid">
+        <button data-preset="whole"><span class="sw" style="background:var(--amber)"></span><span><b>Whole</b> · 1 bar</span></button>
+        <button data-preset="half"><span class="sw" style="background:var(--cyan)"></span><span><b>Halves</b> · 1/2</span></button>
+        <button data-preset="quarter"><span class="sw" style="background:var(--pink)"></span><span><b>Quarters</b> · 1/4</span></button>
+        <button data-preset="eighth"><span class="sw" style="background:var(--green)"></span><span><b>Eighths</b> · 1/8</span></button>
+        <button data-preset="sixteenth"><span class="sw" style="background:var(--orange)"></span><span><b>Sixteenths</b> · 1/16</span></button>
+        <button data-preset="clear"><span class="sw" style="background:#3a3550"></span><span><b>Empty</b> · clear</span></button>
+      </div>
+
+      <div class="chal">
+        <h3>🎯 Fill-the-Bar challenge</h3>
+        <p class="small">Pick a target, then place hits until the fractions match. Many answers work!</p>
+        <div class="chal-pick" id="chalPick" role="group" aria-label="Choose a challenge"></div>
+        <div class="chal-target" id="chalTarget"></div>
+        <button class="btn primary" id="checkBtn" style="margin-top:10px">Check my bar</button>
+        <div class="chal-result" id="chalResult" aria-live="polite"></div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <h3>For the grown-up running it</h3>
+    <p>Built as short rounds on purpose — each one has a single clear win, movement, and an instant payoff so attention stays put. The fraction box updates live, so a wrong arrangement is corrected by the screen, not by you. Keep tempo low (around 80–90) so divisions are easy to count. Music notation already <em>is</em> fraction notation: whole, half, quarter, eighth, sixteenth — and "4/4" is a real fraction sitting on the T-8.</p>
+    <p><strong>Accessibility:</strong> every pad and control is keyboard-reachable (Tab + Enter/Space), colour is never the only signal, motion respects your "reduce motion" system setting, and the fraction readout is announced to screen readers. Body text uses Atkinson Hyperlegible, a typeface designed for readability.</p>
+  </footer>
+</div>
+
+<script>
+document.documentElement.className = "js";
+
+/* ---------------- rounds data ---------------- */
+const ROUNDS = [
+  { n:0, title:"Feel the Whole", time:"5 min · on your feet", goal:"The loop is ONE whole thing.",
+    steps:[
+      "Press ▶ Play and listen to one bar loop around.",
+      "Step on every strong beat — that's 4 steps per loop.",
+      "Each step you take is one-quarter of the whole bar.",
+      "Clap twice as fast (eighths), then twice as fast again (sixteenths)."],
+    actions:[{label:"▶ Play the whole bar", preset:"quarter", play:true}] },
+
+  { n:1, title:"Slice the Bar into 4", time:"8 min · T-8", goal:"4 × 1/4 = 1 whole.",
+    steps:[
+      "Hit the “Quarters” button — pads light up at 1, 5, 9, 13.",
+      "Press play. That steady pulse is quarter notes.",
+      "Count out loud: “one-quarter, two-quarters, three-quarters… WHOLE!”",
+      "You just split the whole bar into 4 equal pieces."],
+    actions:[{label:"Show quarters (1/4)", preset:"quarter"},{label:"▶ Play", play:true}] },
+
+  { n:2, title:"Halves & Eighths", time:"8 min · T-8", goal:"Hear that 2/4 = 1/2 and 4/8 = 1/2.",
+    steps:[
+      "Hit “Halves” — only 2 hits now. Each one is 1/2.",
+      "Now hit “Eighths” — 8 fast hits, each is 1/8.",
+      "Play both and listen: 2 eighths take the same time as 1 quarter.",
+      "So 2/8 = 1/4, and 4/8 = 1/2. Same spot — equal fractions!"],
+    actions:[{label:"Show halves (1/2)", preset:"half"},{label:"Show eighths (1/8)", preset:"eighth"},{label:"▶ Play", play:true}] },
+
+  { n:3, title:"Chop the Word", time:"8 min · P-6", goal:"One sound cut into 4 = four 1/4 slices.",
+    steps:[
+      "Record a short sound into the P-6 mic — your name, a “BOOM”, a beatbox.",
+      "Use the P-6 to chop that one sound into 4 equal slices.",
+      "Each slice is 1/4 of the whole sound (just like the bar!).",
+      "Trigger the slices out of order — they STILL add back up to 1 whole."],
+    chop:true, actions:[] },
+
+  { n:4, title:"Fill the Bar", time:"10–12 min · T-8", goal:"Add fractions until they make 1.",
+    steps:[
+      "Pick a challenge target in the Beat Lab (e.g. 1/2 + 1/4 + 1/4).",
+      "Tap pads to place your hits. Watch the fraction box change.",
+      "When your fractions match the target, press “Check my bar”.",
+      "Give each fraction its own drum sound on the T-8 to make a real groove."],
+    actions:[{label:"Jump to a challenge", focusChal:true}] },
+
+  { n:5, title:"Group Jam", time:"5–8 min · S-1 + everyone", goal:"Turn the fractions into a song.",
+    steps:[
+      "Keep your best “filled bar” looping on the T-8.",
+      "Play a simple melody over the top on the S-1.",
+      "Record the jam on the P-6 looper and play it back.",
+      "That recording is the trophy — you built music out of fractions."],
+    actions:[{label:"🎉 Victory jam", fanfare:true}] }
+];
+
+/* ---------------- audio engine ---------------- */
+let ctx=null, master=null;
+let pads = new Array(16).fill(false);
+let bpm=90, isPlaying=false, current=0, nextTime=0, timer=null;
+let queue=[];
+
+function ensureAudio(){
+  if(ctx) return;
+  ctx = new (window.AudioContext||window.webkitAudioContext)();
+  master = ctx.createGain(); master.gain.value=0.5; master.connect(ctx.destination);
+}
+function hit(time, accent){
+  const o=ctx.createOscillator(), g=ctx.createGain();
+  o.type="sine";
+  o.frequency.setValueAtTime(accent?240:170, time);
+  o.frequency.exponentialRampToValueAtTime(accent?95:60, time+0.08);
+  g.gain.setValueAtTime(0.0001, time);
+  g.gain.exponentialRampToValueAtTime(accent?0.6:0.45, time+0.005);
+  g.gain.exponentialRampToValueAtTime(0.0001, time+0.18);
+  o.connect(g).connect(master); o.start(time); o.stop(time+0.2);
+  // tiny click for attack clarity
+  const c=ctx.createOscillator(), cg=ctx.createGain();
+  c.type="square"; c.frequency.value=accent?900:600;
+  cg.gain.setValueAtTime(0.12, time); cg.gain.exponentialRampToValueAtTime(0.0001, time+0.03);
+  c.connect(cg).connect(master); c.start(time); c.stop(time+0.04);
+}
+function stepDur(){ return (60/bpm)/4; }
+function schedule(){
+  while(nextTime < ctx.currentTime + 0.12){
+    if(pads[current]) hit(nextTime, current%4===0);
+    queue.push({step:current, time:nextTime});
+    nextTime += stepDur();
+    current = (current+1)%16;
+  }
+  timer = setTimeout(schedule, 25);
+}
+function draw(){
+  if(!isPlaying) return;
+  let now = ctx ? ctx.currentTime : 0;
+  let show=-1;
+  while(queue.length && queue[0].time <= now){ show=queue[0].step; queue.shift(); }
+  if(show>=0){
+    document.querySelectorAll(".pad").forEach(p=>p.classList.remove("playing"));
+    const el=document.querySelector('.pad[data-step="'+show+'"]'); if(el) el.classList.add("playing");
+  }
+  requestAnimationFrame(draw);
+}
+function play(){
+  ensureAudio(); ctx.resume();
+  isPlaying=true; current=0; nextTime=ctx.currentTime+0.05; queue=[];
+  schedule(); requestAnimationFrame(draw);
+  const b=document.getElementById("playBtn"); b.textContent="⏸ Stop"; b.setAttribute("aria-pressed","true");
+}
+function stop(){
+  isPlaying=false; clearTimeout(timer);
+  document.querySelectorAll(".pad").forEach(p=>p.classList.remove("playing"));
+  const b=document.getElementById("playBtn"); b.textContent="▶ Play"; b.setAttribute("aria-pressed","false");
+}
+
+/* ---------------- fractions ---------------- */
+function gcd(a,b){return b?gcd(b,a%b):a;}
+function frac(n,d){const g=gcd(n,d)||1;n/=g;d/=g;return d===1?String(n):n+"/"+d;}
+function gaps(){
+  const h=[]; pads.forEach((v,i)=>{if(v)h.push(i);});
+  if(h.length===0) return [];
+  const out=[];
+  for(let i=0;i<h.length;i++){ let g=(h[(i+1)%h.length]-h[i]+16)%16; if(g===0)g=16; out.push(g); }
+  return out;
+}
+function updateReadout(){
+  const g=gaps(); const el=document.getElementById("sum");
+  if(g.length===0){ el.textContent="Tap a pad to start slicing!"; return; }
+  const parts=g.map(x=>frac(x,16));
+  el.innerHTML = parts.join(' <span class="plus">+</span> ') + ' <span class="eq1">= 1 ✓</span>';
+}
+
+/* ---------------- grid ---------------- */
+const grid=document.getElementById("grid");
+for(let b=0;b<4;b++){
+  const beat=document.createElement("div"); beat.className="beat";
+  const num=document.createElement("div"); num.className="beat-num"; num.textContent="beat "+(b+1); beat.appendChild(num);
+  const row=document.createElement("div"); row.className="beat-pads";
+  for(let s=0;s<4;s++){
+    const idx=b*4+s;
+    const pad=document.createElement("button"); pad.className="pad"; pad.dataset.step=idx;
+    pad.setAttribute("aria-pressed","false");
+    pad.setAttribute("aria-label","Step "+(idx+1)+", beat "+(b+1)+", off");
+    pad.addEventListener("click",()=>toggle(idx));
+    row.appendChild(pad);
+  }
+  beat.appendChild(row); grid.appendChild(beat);
+}
+function toggle(i){
+  pads[i]=!pads[i];
+  const el=document.querySelector('.pad[data-step="'+i+'"]');
+  el.setAttribute("aria-pressed", pads[i]?"true":"false");
+  el.setAttribute("aria-label","Step "+(i+1)+", beat "+(Math.floor(i/4)+1)+", "+(pads[i]?"on":"off"));
+  if(pads[i] && ctx){ const t=ctx.currentTime; ctx.resume(); hit(t,i%4===0); }
+  updateReadout();
+}
+function setPads(arr){
+  pads = new Array(16).fill(false);
+  arr.forEach(i=>pads[i]=true);
+  document.querySelectorAll(".pad").forEach(p=>{
+    const i=+p.dataset.step;
+    p.setAttribute("aria-pressed", pads[i]?"true":"false");
+    p.setAttribute("aria-label","Step "+(i+1)+", beat "+(Math.floor(i/4)+1)+", "+(pads[i]?"on":"off"));
+  });
+  updateReadout();
+}
+const PRESETS={
+  whole:[0], half:[0,8], quarter:[0,4,8,12],
+  eighth:[0,2,4,6,8,10,12,14], sixteenth:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], clear:[]
+};
+document.querySelectorAll(".legend button").forEach(btn=>{
+  btn.addEventListener("click",()=>setPads(PRESETS[btn.dataset.preset]));
+});
+document.getElementById("clearBtn").addEventListener("click",()=>setPads([]));
+document.getElementById("playBtn").addEventListener("click",()=> isPlaying?stop():play());
+const tempo=document.getElementById("tempo");
+tempo.addEventListener("input",()=>{ bpm=+tempo.value; document.getElementById("bpmLabel").textContent=bpm; });
+
+/* ---------------- challenges ---------------- */
+const CHALLENGES=[
+  {name:"Four equal slices", target:["1/4","1/4","1/4","1/4"]},
+  {name:"Two halves", target:["1/2","1/2"]},
+  {name:"A half + two quarters", target:["1/2","1/4","1/4"]},
+  {name:"All eighths", target:Array(8).fill("1/8")}
+];
+let activeChal=0;
+const pick=document.getElementById("chalPick");
+CHALLENGES.forEach((c,i)=>{
+  const b=document.createElement("button"); b.textContent=c.name; b.setAttribute("aria-pressed", i===0?"true":"false");
+  b.addEventListener("click",()=>{ activeChal=i; renderChal(); });
+  pick.appendChild(b);
+});
+function renderChal(){
+  [...pick.children].forEach((b,i)=>b.setAttribute("aria-pressed", i===activeChal?"true":"false"));
+  document.getElementById("chalTarget").textContent = "Make: "+CHALLENGES[activeChal].target.join(" + ")+" = 1";
+  document.getElementById("chalResult").textContent="";
+}
+function sameMultiset(a,b){
+  if(a.length!==b.length) return false;
+  const s=x=>[...x].sort().join("|"); return s(a)===s(b);
+}
+document.getElementById("checkBtn").addEventListener("click",()=>{
+  const mine=gaps().map(x=>frac(x,16));
+  const res=document.getElementById("chalResult");
+  if(mine.length===0){ res.className="chal-result no"; res.textContent="Place some hits first!"; return; }
+  if(sameMultiset(mine, CHALLENGES[activeChal].target)){
+    res.className="chal-result ok"; res.textContent="✓ Nailed it! "+mine.join(" + ")+" = 1";
+  }else{
+    res.className="chal-result no"; res.textContent="Not yet — you made "+mine.join(" + ")+". Keep slicing!";
+  }
+});
+renderChal();
+
+/* ---------------- render rounds + nav ---------------- */
+const dotsEl=document.getElementById("dots");
+const roundsEl=document.getElementById("rounds");
+let activeRound=0;
+
+ROUNDS.forEach((r,i)=>{
+  const li=document.createElement("li");
+  const b=document.createElement("button"); b.className="step-btn"; b.setAttribute("aria-current", i===0?"true":"false");
+  b.innerHTML='<span class="num">'+r.n+'</span><span class="lbl">'+r.title+'</span>';
+  b.setAttribute("aria-label","Round "+r.n+": "+r.title);
+  b.addEventListener("click",()=>goTo(i));
+  li.appendChild(b); dotsEl.appendChild(li);
+
+  const sec=document.createElement("section"); sec.className="round"+(i===0?" active":"");
+  sec.setAttribute("aria-label","Round "+r.n+": "+r.title);
+  let html='<div class="meta"><span class="badge">'+r.n+'</span><h2>'+r.title+'</h2>'
+    +'<span class="time">⏱ '+r.time+'</span></div>'
+    +'<p class="goal">🎯 '+r.goal+'</p>';
+  if(r.chop) html+='<div class="chop" aria-hidden="true"><span>1/4</span><span>1/4</span><span>1/4</span><span>1/4</span></div>';
+  html+='<ul class="steps">';
+  r.steps.forEach((s,si)=>{
+    html+='<li><button class="tick" aria-pressed="false" aria-label="Mark step done">✓</button><span class="txt">'+s+'</span></li>';
+  });
+  html+='</ul>';
+  if(r.actions && r.actions.length){
+    html+='<div class="round-actions">';
+    r.actions.forEach((a,ai)=>{
+      const cls = a.play||a.fanfare ? "btn pink" : (a.focusChal?"btn primary":"btn");
+      html+='<button class="'+cls+'" data-r="'+i+'" data-a="'+ai+'">'+a.label+'</button>';
+    });
+    html+='</div>';
+  }
+  html+='<div class="nav-row"><button class="btn ghost" data-go="prev"'+(i===0?' disabled':'')+'>← Back</button>'
+    +'<button class="btn ghost" data-go="next"'+(i===ROUNDS.length-1?' disabled':'')+'>Next →</button></div>';
+  sec.innerHTML=html;
+  roundsEl.appendChild(sec);
+});
+
+// ticks
+roundsEl.addEventListener("click",e=>{
+  const t=e.target.closest(".tick");
+  if(t){ const on=t.getAttribute("aria-pressed")==="true"; t.setAttribute("aria-pressed", on?"false":"true"); }
+});
+// nav prev/next
+roundsEl.addEventListener("click",e=>{
+  const g=e.target.closest("[data-go]"); if(!g) return;
+  goTo(activeRound + (g.dataset.go==="next"?1:-1));
+});
+// action buttons
+roundsEl.addEventListener("click",e=>{
+  const btn=e.target.closest("[data-a]"); if(!btn) return;
+  const a=ROUNDS[+btn.dataset.r].actions[+btn.dataset.a];
+  if(a.preset) setPads(PRESETS[a.preset]);
+  if(a.play){ if(!isPlaying) play(); }
+  if(a.fanfare) fanfare();
+  if(a.focusChal){ document.getElementById("checkBtn").scrollIntoView({behavior:"smooth",block:"center"}); document.querySelector("#chalPick button").focus(); }
+});
+
+function goTo(i){
+  if(i<0||i>=ROUNDS.length) return;
+  activeRound=i;
+  document.querySelectorAll(".round").forEach((s,si)=>s.classList.toggle("active",si===i));
+  [...dotsEl.querySelectorAll(".step-btn")].forEach((b,si)=>b.setAttribute("aria-current",si===i?"true":"false"));
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+/* victory arpeggio (S-1 vibe) */
+function fanfare(){
+  ensureAudio(); ctx.resume();
+  const notes=[523.25,659.25,783.99,1046.5,783.99,1046.5];
+  let t=ctx.currentTime+0.02;
+  notes.forEach((f,i)=>{
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.type="sawtooth"; o.frequency.value=f;
+    const lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=2600;
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.3,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+0.32);
+    o.connect(lp).connect(g).connect(master); o.start(t); o.stop(t+0.34);
+    t+=0.13;
+  });
+}
+
+updateReadout();
+</script>
+</body>
+</html>
