@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>S-1 · four ways to wire a jam</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f131a;
+    --surface:#161c26;
+    --surface-2:#1b2330;
+    --line:#28323f;
+    --ink:#e9edf3;
+    --muted:#8b95a4;
+    --faint:#5e6877;
+
+    --kbd:#e0a458;      /* controller / amber  */
+    --s1:#54c79a;       /* synth / green       */
+    --t8:#e0705a;       /* drums / coral       */
+    --p6:#46b1d4;       /* sampler / cyan      */
+    --out:#9aa3b2;      /* mixer / neutral     */
+
+    --audio:#d4dae3;    /* solid cable         */
+    --clock:#e3b341;    /* dashed cable        */
+
+    --disp:'Space Grotesk',sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--mono);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      linear-gradient(var(--line) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:46px 46px;
+    background-position:center top;
+    background-attachment:fixed;
+    background-blend-mode:normal;
+  }
+  body::before{content:"";position:fixed;inset:0;background:var(--bg);opacity:.86;z-index:-1}
+
+  .wrap{max-width:940px;margin:0 auto;padding:54px 22px 80px}
+
+  /* ---- header ---- */
+  .eyebrow{
+    font-size:12px;letter-spacing:.32em;text-transform:uppercase;
+    color:var(--kbd);font-weight:600;margin:0 0 18px
+  }
+  h1{
+    font-family:var(--disp);font-weight:700;
+    font-size:clamp(30px,6.4vw,52px);line-height:1.02;
+    letter-spacing:-.02em;margin:0 0 16px
+  }
+  h1 em{font-style:normal;color:var(--s1)}
+  .thesis{color:var(--muted);max-width:54ch;margin:0;font-size:14.5px}
+
+  /* ---- legend ---- */
+  .legend{
+    display:flex;flex-wrap:wrap;gap:10px 26px;align-items:center;
+    margin:30px 0 8px;padding:16px 18px;
+    border:1px solid var(--line);border-radius:12px;background:var(--surface);
+    font-size:12px;color:var(--muted)
+  }
+  .legend .group{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+  .legend .sep{width:1px;height:18px;background:var(--line)}
+  .lk{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+  .dot{width:11px;height:11px;border-radius:3px;border:1.5px solid}
+  .ln{width:24px;height:0;border-top:2px solid var(--audio)}
+  .ln.dash{border-top:2px dashed var(--clock)}
+
+  /* ---- setups ---- */
+  .setups{display:grid;gap:18px;margin-top:30px}
+  .setup{
+    border:1px solid var(--line);border-radius:16px;background:var(--surface);
+    padding:22px 22px 20px;
+    animation:rise .55s cubic-bezier(.2,.7,.2,1) both
+  }
+  .setup:nth-child(1){animation-delay:.02s}
+  .setup:nth-child(2){animation-delay:.10s}
+  .setup:nth-child(3){animation-delay:.18s}
+  .setup:nth-child(4){animation-delay:.26s}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+  .head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:4px}
+  .idx{font-family:var(--disp);font-weight:700;font-size:26px;color:var(--faint);letter-spacing:-.02em}
+  .tag{
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+    border:1px solid var(--line);border-radius:999px;padding:3px 10px
+  }
+  .stitle{font-family:var(--disp);font-weight:600;font-size:19px;letter-spacing:-.01em;margin-left:2px}
+  .ssum{color:var(--muted);font-size:13px;margin:6px 0 14px}
+
+  .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:20px;align-items:center}
+  @media(max-width:680px){.grid{grid-template-columns:1fr;gap:14px}}
+
+  .diagram{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .diagram svg{display:block;width:100%;height:auto}
+
+  /* spec list */
+  .spec{margin:0;display:grid;gap:11px}
+  .row{display:grid;grid-template-columns:84px 1fr;gap:12px;align-items:start}
+  .row dt{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);padding-top:2px}
+  .row dd{margin:0;font-size:13px;color:var(--ink)}
+  .row dd .hi{color:var(--s1)}
+  .row.warn dd{color:#e7b08f}
+
+  /* ---- svg chip + cable styling ---- */
+  .chip-bg{stroke-width:1.6;fill:var(--surface)}
+  .cn{font-family:var(--disp);font-weight:600;font-size:15px;fill:var(--ink);text-anchor:middle}
+  .cr{font-family:var(--mono);font-size:9.5px;fill:var(--muted);text-anchor:middle;letter-spacing:.04em}
+
+  .dev-kbd .chip-bg{stroke:var(--kbd);fill:rgba(224,164,88,.09)}
+  .dev-s1  .chip-bg{stroke:var(--s1); fill:rgba(84,199,154,.10)}
+  .dev-t8  .chip-bg{stroke:var(--t8); fill:rgba(224,112,90,.09)}
+  .dev-p6  .chip-bg{stroke:var(--p6); fill:rgba(70,177,212,.09)}
+  .dev-out .chip-bg{stroke:var(--out);fill:rgba(154,163,178,.07)}
+
+  .cable-audio{stroke:var(--audio);stroke-width:2;fill:none;opacity:.9}
+  .cable-midi{
+    stroke:var(--clock);stroke-width:2;fill:none;stroke-dasharray:6 5;
+    animation:flow 1.15s linear infinite
+  }
+  @keyframes flow{to{stroke-dashoffset:-22}}
+
+  .anno{font-family:var(--mono);font-size:9.5px;fill:var(--clock);letter-spacing:.06em}
+  .anno.q{fill:var(--faint)}
+
+  .foot{margin-top:30px;color:var(--faint);font-size:12px;text-align:center}
+
+  @media(prefers-reduced-motion:reduce){
+    .setup{animation:none}
+    .cable-midi{animation:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Roland S-1 · dawless</p>
+  <h1>Four ways to<br>wire a <em>jam</em>.</h1>
+  <p class="thesis">Same keyboard, same S-1. Four routings that trade simplicity for range — from one box on a table to your full Aira Compact chain.</p>
+
+  <div class="legend">
+    <div class="group">
+      <span class="lk"><span class="ln"></span>audio</span>
+      <span class="lk"><span class="ln dash"></span>MIDI / clock</span>
+    </div>
+    <span class="sep"></span>
+    <div class="group">
+      <span class="lk"><span class="dot" style="border-color:var(--kbd)"></span>keyboard</span>
+      <span class="lk"><span class="dot" style="border-color:var(--s1)"></span>S-1</span>
+      <span class="lk"><span class="dot" style="border-color:var(--t8)"></span>T-8</span>
+      <span class="lk"><span class="dot" style="border-color:var(--p6)"></span>P-6</span>
+      <span class="lk"><span class="dot" style="border-color:var(--out)"></span>mixer</span>
+    </div>
+  </div>
+
+  <div class="setups">
+
+    <!-- 01 -->
+    <section class="setup">
+      <div class="head">
+        <span class="idx">01</span>
+        <span class="tag">1 box · poly</span>
+        <span class="stitle">Chords under, melody over</span>
+      </div>
+      <p class="ssum">The whole jam inside one synth. Nothing to patch.</p>
+      <div class="grid">
+        <div class="diagram">
+          <svg viewBox="0 0 500 146" role="img" aria-label="Keyboard sends MIDI to the S-1, which outputs audio">
+            <text class="anno" x="250" y="40" text-anchor="middle">seq: D+A → C+G  (poly)</text>
+            <path class="cable-midi"  d="M136 90 L190 90"/>
+            <path class="cable-audio" d="M310 90 L364 90"/>
+            <g class="chip dev-kbd" transform="translate(16,63)"><rect class="chip-bg" width="120" height="54" rx="9"/><text class="cn" x="60" y="26">Keyboard</text><text class="cr" x="60" y="42">controller</text></g>
+            <g class="chip dev-s1"  transform="translate(190,63)"><rect class="chip-bg" width="120" height="54" rx="9"/><text class="cn" x="60" y="26">S-1</text><text class="cr" x="60" y="42">synth · poly</text></g>
+            <g class="chip dev-out" transform="translate(364,63)"><rect class="chip-bg" width="120" height="54" rx="9"/><text class="cn" x="60" y="26">Out</text><text class="cr" x="60" y="42">audio out</text></g>
+          </svg>
+        </div>
+        <dl class="spec">
+          <div class="row"><dt>Backing</dt><dd>S-1 sequencer holds a low 2-note shell vamp.</dd></div>
+          <div class="row"><dt>You play</dt><dd><span class="hi">Live melody up high</span> on the free voices — white keys, home on D.</dd></div>
+          <div class="row"><dt>Best for</dt><dd>Fast ambient / house sketches.</dd></div>
+          <div class="row warn"><dt>Watch</dt><dd>4 voices shared with the seq; one envelope serves both roles.</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- 02 -->
+    <section class="setup">
+      <div class="head">
+        <span class="idx">02</span>
+        <span class="tag">1 box · arp</span>
+        <span class="stitle">Hold, let it run, twist</span>
+      </div>
+      <p class="ssum">The arpeggiator is the backing. You perform with both hands on the panel.</p>
+      <div class="grid">
+        <div class="diagram">
+          <svg viewBox="0 0 500 146" role="img" aria-label="Keyboard sends MIDI to the S-1 running its arpeggiator, which outputs audio">
+            <text class="anno" x="250" y="40" text-anchor="middle">arp · 8 phrase types</text>
+            <path class="cable-midi"  d="M136 90 L190 90"/>
+            <path class="cable-audio" d="M310 90 L364 90"/>
+            <g class="chip dev-kbd" transform="translate(16,63)"><rect class="chip-bg" width="120" height="54" rx="9"/><text class="cn" x="60" y="26">Keyboard</text><text class="cr" x="60" y="42">holds chord</text></g>
+            <g class="chip dev-s1"  transform="translate(190,63)"><rect class="chip-bg" width="120" height="54" rx="9"/><text class="cn" x="60" y="26">S-1</text><text class="cr" x="60" y="42">synth · arp</text></g>
+            <g class="chip dev-out" transform="translate(364,63)"><rect class="chip-bg" width="120" height="54" rx="9"/><text class="cn" x="60" y="26">Out</text><text class="cr" x="60" y="42">audio out</text></g>
+          </svg>
+        </div>
+        <dl class="spec">
+          <div class="row"><dt>Backing</dt><dd>Hold a chord; the arp generates the moving line.</dd></div>
+          <div class="row"><dt>You play</dt><dd><span class="hi">Change the held shape</span>, transpose, and ride filter / LFO / FX.</dd></div>
+          <div class="row"><dt>Best for</dt><dd>Hypnotic, knob-driven acid / psy.</dd></div>
+          <div class="row warn"><dt>Watch</dt><dd>The arp eats the held notes — your "melody" is shape + tweaks, not a separate line.</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- 03 -->
+    <section class="setup">
+      <div class="head">
+        <span class="idx">03</span>
+        <span class="tag">2 boxes · +beat</span>
+        <span class="stitle">Groove first</span>
+      </div>
+      <p class="ssum">Drums hold the floor so the S-1 is free to lead. Sync over Aira Link.</p>
+      <div class="grid">
+        <div class="diagram">
+          <svg viewBox="0 0 560 212" role="img" aria-label="Keyboard to S-1 by MIDI; S-1 and T-8 share clock; both send audio to a mixer">
+            <path class="cable-midi"  d="M136 53 L200 53"/>
+            <path class="cable-midi"  d="M260 80 L260 140"/>
+            <text class="anno" x="272" y="116">clock</text>
+            <path class="cable-audio" d="M320 53 C356 53 366 96 392 100"/>
+            <path class="cable-audio" d="M320 167 C356 167 366 124 392 120"/>
+            <g class="chip dev-kbd" transform="translate(16,26)"><rect class="chip-bg" width="120" height="54" rx="9"/><text class="cn" x="60" y="26">Keyboard</text><text class="cr" x="60" y="42">controller</text></g>
+            <g class="chip dev-s1"  transform="translate(200,26)"><rect class="chip-bg" width="120" height="54" rx="9"/><text class="cn" x="60" y="26">S-1</text><text class="cr" x="60" y="42">synth · lead</text></g>
+            <g class="chip dev-t8"  transform="translate(200,140)"><rect class="chip-bg" width="120" height="54" rx="9"/><text class="cn" x="60" y="26">T-8</text><text class="cr" x="60" y="42">drums</text></g>
+            <g class="chip dev-out" transform="translate(392,83)"><rect class="chip-bg" width="140" height="54" rx="9"/><text class="cn" x="70" y="26">Mixer</text><text class="cr" x="70" y="42">→ out</text></g>
+          </svg>
+        </div>
+        <dl class="spec">
+          <div class="row"><dt>Backing</dt><dd>T-8 drives the beat; S-1 seq can hold a bass.</dd></div>
+          <div class="row"><dt>You play</dt><dd><span class="hi">Lead or bass on the S-1</span> over the groove — poly trick from 01 still works.</dd></div>
+          <div class="row"><dt>Best for</dt><dd>Jams that need to drive and hold attention.</dd></div>
+          <div class="row warn"><dt>Watch</dt><dd>Two audio sources now — set levels; pick one box as clock.</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- 04 -->
+    <section class="setup">
+      <div class="head">
+        <span class="idx">04</span>
+        <span class="tag">3 boxes · full rig</span>
+        <span class="stitle">Split the roles</span>
+      </div>
+      <p class="ssum">Harmony moves to the P-6, so the S-1 finally gets its own voice. This is the fix for "one timbre for everything."</p>
+      <div class="grid">
+        <div class="diagram">
+          <svg viewBox="0 0 580 262" role="img" aria-label="Keyboard to S-1 by MIDI; S-1, P-6 and T-8 share an Aira Link clock chain; all three send audio to a mixer">
+            <path class="cable-midi"  d="M136 51 L200 51"/>
+            <path class="cable-midi"  d="M260 78 L260 116"/>
+            <path class="cable-midi"  d="M260 170 L260 208"/>
+            <text class="anno" x="272" y="100">Aira Link · 1 clock</text>
+            <path class="cable-audio" d="M320 51 C360 51 372 122 404 128"/>
+            <path class="cable-audio" d="M320 143 L404 143"/>
+            <path class="cable-audio" d="M320 235 C360 235 372 164 404 158"/>
+            <g class="chip dev-kbd" transform="translate(16,24)"><rect class="chip-bg" width="120" height="54" rx="9"/><text class="cn" x="60" y="26">Keyboard</text><text class="cr" x="60" y="42">controller</text></g>
+            <g class="chip dev-s1"  transform="translate(200,24)"><rect class="chip-bg" width="120" height="54" rx="9"/><text class="cn" x="60" y="26">S-1</text><text class="cr" x="60" y="42">synth · lead</text></g>
+            <g class="chip dev-p6"  transform="translate(200,116)"><rect class="chip-bg" width="120" height="54" rx="9"/><text class="cn" x="60" y="26">P-6</text><text class="cr" x="60" y="42">pad / chords</text></g>
+            <g class="chip dev-t8"  transform="translate(200,208)"><rect class="chip-bg" width="120" height="54" rx="9"/><text class="cn" x="60" y="26">T-8</text><text class="cr" x="60" y="42">drums</text></g>
+            <g class="chip dev-out" transform="translate(404,116)"><rect class="chip-bg" width="140" height="54" rx="9"/><text class="cn" x="70" y="26">Mixer</text><text class="cr" x="70" y="42">→ out</text></g>
+          </svg>
+        </div>
+        <dl class="spec">
+          <div class="row"><dt>Backing</dt><dd>P-6 holds the pad / chord loop; T-8 drives rhythm.</dd></div>
+          <div class="row"><dt>You play</dt><dd><span class="hi">Pure lead on the S-1</span> — its own envelope and filter, no longer shared.</dd></div>
+          <div class="row"><dt>Best for</dt><dd>The richest sound; long-form sets.</dd></div>
+          <div class="row warn"><dt>Watch</dt><dd>More to sync and mix; assign one box as clock master.</dd></div>
+        </dl>
+      </div>
+    </section>
+
+  </div>
+
+  <p class="foot">Complexity climbs left to right · the S-1 is in every routing</p>
+
+</div>
+</body>
+</html>
