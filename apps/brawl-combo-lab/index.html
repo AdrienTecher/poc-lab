@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Combo Lab — Brawl Stars</title>
+<meta name="description" content="Search and understand Brawl Stars combos. Why they work, how to run them, when not to.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   COMBO LAB — arcade cabinet at night.
+   Colour encodes ROLE. It is information, not decoration.
+   ============================================================ */
+:root{
+  /* ground */
+  --ink:      oklch(0.15 0.038 280);
+  --ink-2:    oklch(0.21 0.040 280);
+  --ink-3:    oklch(0.27 0.045 280);
+  --shadow:   oklch(0.09 0.030 280);
+  --line:     oklch(0.38 0.050 280);
+  --text:     oklch(0.97 0.008 280);
+  --dim:      oklch(0.74 0.022 280);
+  --faint:    oklch(0.58 0.030 280);
+  /* accents */
+  --gold:     oklch(0.84 0.160 88);
+  --star:     oklch(0.72 0.190 302);
+  --good:     oklch(0.80 0.170 148);
+  --bad:      oklch(0.70 0.200 25);
+  /* role hues — same order everywhere in the app */
+  --r-tank:       oklch(0.72 0.170 48);
+  --r-assassin:   oklch(0.68 0.200 312);
+  --r-marksman:   oklch(0.78 0.140 202);
+  --r-artillery:  oklch(0.82 0.180 132);
+  --r-controller: oklch(0.72 0.190 348);
+  --r-support:    oklch(0.86 0.150 96);
+  --r-damage:     oklch(0.68 0.200 25);
+
+  --display: "Lilita One", "Arial Black", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --r: 10px;
+}
+@supports not (color: oklch(0.5 0.1 180)){
+  :root{
+    --ink:#1d1830;--ink-2:#2b2545;--ink-3:#3a3358;--shadow:#100d1c;--line:#5a5180;
+    --text:#f6f4ff;--dim:#b4aed0;--faint:#847ca8;
+    --gold:#ffc233;--star:#c264ff;--good:#4fe08a;--bad:#ff6b52;
+    --r-tank:#ff9142;--r-assassin:#c264ff;--r-marksman:#4fd4e8;
+    --r-artillery:#8ee83c;--r-controller:#ff5fa8;--r-support:#ffd24a;--r-damage:#ff6b52;
+  }
+}
+*,*::before,*::after{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  margin:0;background:var(--ink);color:var(--text);
+  font-family:var(--body);font-size:16px;line-height:1.55;
+  /* faint arcade scanline haze — ambient, never in the way */
+  background-image:
+    radial-gradient(1100px 620px at 50% -10%, oklch(0.30 0.075 300 / .55), transparent 70%),
+    repeating-linear-gradient(0deg, oklch(1 0 0 / .015) 0 1px, transparent 1px 3px);
+  background-attachment:fixed;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+h1,h2,h3,h4{font-family:var(--display);font-weight:400;line-height:1.05;letter-spacing:.01em;margin:0;}
+button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer;}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:4px;}
+.wrap{max-width:920px;margin:0 auto;padding:0 14px;}
+.hide{display:none !important;}
+
+/* ---------- header ---------- */
+header{
+  position:sticky;top:0;z-index:50;
+  background:oklch(0.15 0.038 280 / .93);backdrop-filter:blur(10px);
+  border-bottom:2px solid var(--line);
+}
+.bar{display:flex;align-items:center;gap:10px;padding:9px 0 8px;}
+.logo{font-family:var(--display);font-size:19px;letter-spacing:.02em;white-space:nowrap;}
+.logo b{color:var(--gold);font-weight:400;}
+.logo .lm{color:var(--star);}
+.spacer{flex:1;}
+.lang{display:flex;border:2px solid var(--line);border-radius:99px;overflow:hidden;background:var(--ink-2);}
+.lang button{background:none;border:0;padding:4px 11px;font-weight:700;font-size:12px;color:var(--dim);letter-spacing:.06em;}
+.lang button[aria-pressed="true"]{background:var(--gold);color:var(--shadow);}
+
+/* ---------- search ---------- */
+.searchrow{position:relative;padding-bottom:9px;}
+#q{
+  width:100%;padding:13px 42px 13px 40px;
+  background:var(--ink-2);color:var(--text);
+  border:2.5px solid var(--line);border-radius:var(--r);
+  box-shadow:0 3px 0 var(--shadow);
+  font-family:var(--body);font-size:16px;
+}
+#q::placeholder{color:var(--faint);}
+#q:focus{border-color:var(--gold);outline:none;box-shadow:0 3px 0 var(--shadow);}
+.si{position:absolute;left:26px;top:12px;font-size:17px;opacity:.75;pointer-events:none;}
+.clr{position:absolute;right:24px;top:9px;background:none;border:0;color:var(--faint);font-size:20px;padding:2px 6px;line-height:1;}
+.clr:hover{color:var(--text);}
+
+/* ---------- tabs ---------- */
+nav.tabs{display:flex;gap:6px;overflow-x:auto;padding:0 14px 9px;max-width:920px;margin:0 auto;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+nav.tabs::-webkit-scrollbar{display:none;}
+.tab{
+  flex:0 0 auto;background:var(--ink-2);border:2px solid var(--line);border-radius:99px;
+  padding:6px 13px;font-weight:700;font-size:13px;color:var(--dim);white-space:nowrap;
+  transition:transform .08s;
+}
+.tab:active{transform:translateY(1px);}
+.tab[aria-selected="true"]{background:var(--star);border-color:var(--star);color:#fff;}
+
+/* ---------- generic card ---------- */
+.card{
+  background:var(--ink-2);border:2px solid var(--line);border-radius:var(--r);
+  box-shadow:0 3px 0 var(--shadow);padding:14px;margin:0 0 12px;
+  border-left-width:6px;border-left-color:var(--line);
+}
+.card h3{font-size:19px;margin-bottom:3px;}
+.lede{color:var(--dim);font-size:14.5px;margin:0 0 14px;}
+.sect-h{font-family:var(--display);font-size:15px;color:var(--gold);letter-spacing:.09em;
+  text-transform:uppercase;margin:22px 0 9px;}
+.sect-h:first-child{margin-top:6px;}
+
+/* ---------- chips ---------- */
+.chip{
+  display:inline-flex;align-items:center;gap:4px;
+  font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;padding:2px 7px;border-radius:5px;
+  background:var(--ink-3);color:var(--dim);border:1px solid var(--line);
+}
+.chip.role{color:var(--shadow);border:0;}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;}
+.diff{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;}
+.d1{color:var(--good);} .d2{color:var(--gold);} .d3{color:var(--bad);}
+
+/* ---------- combo card ---------- */
+.combo{cursor:pointer;}
+.combo .top{display:flex;align-items:flex-start;gap:9px;}
+.combo .names{flex:1;min-width:0;}
+.combo .parts{font-family:var(--display);font-size:15px;color:var(--gold);
+  letter-spacing:.02em;margin-bottom:2px;}
+.combo .parts i{color:var(--faint);font-style:normal;padding:0 3px;}
+.combo h3{font-size:17px;color:var(--text);}
+.combo .why{color:var(--dim);font-size:14.5px;margin:9px 0 0;}
+.caret{color:var(--faint);font-size:13px;flex:0 0 auto;transition:transform .15s;margin-top:3px;}
+.combo[aria-expanded="true"] .caret{transform:rotate(90deg);}
+.detail{margin-top:12px;padding-top:12px;border-top:2px dashed var(--line);}
+.detail dl{margin:0;}
+.detail dt{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--star);margin-top:11px;}
+.detail dt:first-child{margin-top:0;}
+.detail dd{margin:3px 0 0;font-size:14.5px;color:var(--text);}
+.detail dd.warn{color:var(--bad);}
+
+/* ---------- brawler card ---------- */
+.bw{display:flex;gap:11px;align-items:flex-start;}
+.pip{
+  flex:0 0 auto;width:42px;height:42px;border-radius:9px;
+  display:grid;place-items:center;font-family:var(--display);font-size:16px;
+  color:var(--shadow);box-shadow:0 2px 0 var(--shadow);
+}
+.bw .nm{font-family:var(--display);font-size:17px;line-height:1.1;}
+.bw .alt{font-size:12px;color:var(--faint);font-style:italic;}
+.bw .li{font-size:14px;color:var(--dim);margin-top:5px;}
+.bw .wf{font-size:13.5px;margin-top:7px;}
+.bw .wf div{margin-top:3px;}
+.bw .wf b{color:var(--good);font-weight:700;}
+.bw .wf i{color:var(--bad);font-style:normal;font-weight:700;}
+
+/* ---------- range ruler — the signature ---------- */
+.ruler{margin:16px 0 4px;}
+.ruler .track{
+  position:relative;height:16px;border-radius:99px;border:2px solid var(--line);
+  background:linear-gradient(90deg,
+    oklch(0.68 0.200 312 / .55) 0%,
+    oklch(0.72 0.170 48 / .5) 30%,
+    oklch(0.82 0.180 132 / .5) 58%,
+    oklch(0.78 0.140 202 / .55) 100%);
+  box-shadow:inset 0 2px 5px var(--shadow);
+}
+.ruler .band{position:absolute;top:-2px;bottom:-2px;border-left:2px dashed oklch(1 0 0 / .3);}
+.ruler .mk{
+  position:absolute;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;
+  border-radius:50%;border:3px solid var(--ink);
+  display:grid;place-items:center;font-family:var(--display);font-size:11px;
+  color:var(--shadow);box-shadow:0 2px 0 var(--shadow);
+}
+.ruler .labs{display:flex;justify-content:space-between;margin-top:7px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;}
+
+/* ---------- comp doctor ---------- */
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px;}
+.slot{
+  background:var(--ink-2);border:2.5px dashed var(--line);border-radius:var(--r);
+  min-height:84px;padding:8px 5px;display:grid;place-items:center;text-align:center;
+  color:var(--faint);font-size:12px;box-shadow:0 3px 0 var(--shadow);
+}
+.slot.full{border-style:solid;cursor:pointer;}
+.slot .sn{font-family:var(--display);font-size:14px;color:var(--text);line-height:1.1;margin-top:5px;
+  word-break:break-word;hyphens:auto;}
+.slot .sr{font-family:var(--mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;margin-top:2px;}
+.slot .plus{font-size:26px;font-family:var(--display);}
+.picker{max-height:210px;overflow-y:auto;border:2px solid var(--line);border-radius:var(--r);
+  background:var(--ink-2);padding:7px;display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px;}
+.pk{background:var(--ink-3);border:2px solid var(--line);border-radius:7px;padding:3px 8px;
+  font-size:12.5px;font-weight:700;}
+.pk:disabled{opacity:.28;cursor:not-allowed;}
+.dx{margin-top:4px;}
+.job{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--ink-3);
+  font-size:14.5px;}
+.job:last-child{border-bottom:0;}
+.job .ic{flex:0 0 auto;font-family:var(--display);font-size:15px;width:17px;text-align:center;line-height:1.4;}
+.job.ok .ic{color:var(--good);} .job.no .ic{color:var(--bad);}
+.job.no{color:var(--dim);}
+.job b{color:var(--text);}
+.syn{border-left-color:var(--gold) !important;background:oklch(0.84 0.160 88 / .09);}
+.syn .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--gold);
+  text-transform:uppercase;font-weight:700;}
+.empty{text-align:center;color:var(--faint);padding:34px 14px;font-size:14.5px;}
+.reset{background:var(--ink-2);border:2px solid var(--line);border-radius:99px;padding:5px 14px;
+  font-size:12.5px;font-weight:700;color:var(--dim);}
+
+/* ---------- loop diagram ---------- */
+.loop{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:5px;
+  margin:14px 0 4px;text-align:center;}
+.loop .n{background:var(--ink-3);border:2px solid var(--line);border-radius:9px;padding:9px 4px;
+  box-shadow:0 3px 0 var(--shadow);}
+.loop .n span{font-family:var(--display);font-size:13px;display:block;line-height:1.15;}
+.loop .n small{font-size:10px;color:var(--faint);font-family:var(--mono);}
+.loop .ar{font-family:var(--display);color:var(--gold);font-size:16px;}
+.loopnote{text-align:center;font-size:12.5px;color:var(--faint);margin-top:9px;font-style:italic;}
+
+/* ---------- prose blocks ---------- */
+.prose p{margin:0 0 9px;font-size:14.5px;}
+.prose p:last-child{margin-bottom:0;}
+.prose b{color:var(--gold);font-weight:700;}
+.prose ul{margin:6px 0 0;padding-left:19px;font-size:14.5px;}
+.prose li{margin-bottom:5px;}
+.prose li::marker{color:var(--star);}
+.kv{font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--star);font-weight:700;margin-bottom:3px;}
+
+footer{border-top:2px solid var(--line);margin-top:30px;padding:18px 0 28px;
+  color:var(--faint);font-size:12.5px;text-align:center;}
+footer a{color:var(--dim);}
+footer .inf{font-size:15px;color:var(--star);}
+main{padding-top:12px;min-height:52vh;}
+.count{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.06em;
+  text-transform:uppercase;margin-bottom:9px;}
+
+@media (max-width:420px){
+  .logo{font-size:16px;} .card{padding:12px;} .slots{gap:6px;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none !important;animation:none !important;scroll-behavior:auto !important;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="bar">
+      <div class="logo"><span class="lm">&#8734;</span> COMBO <b>LAB</b></div>
+      <div class="spacer"></div>
+      <div class="lang" role="group" aria-label="Language">
+        <button id="l-en" aria-pressed="true">EN</button>
+        <button id="l-fr" aria-pressed="false">FR</button>
+      </div>
+    </div>
+    <div class="searchrow">
+      <span class="si">&#128269;</span>
+      <input id="q" type="search" autocomplete="off" spellcheck="false" aria-label="Search">
+      <button class="clr hide" id="clr" aria-label="Clear">&times;</button>
+    </div>
+  </div>
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+</header>
+
+<main class="wrap" id="main"></main>
+
+<footer class="wrap">
+  <p id="foot"></p>
+  <p class="inf">&#8734;</p>
+</footer>
+
+<script>
+/* ============================================================================
+   DATA — everything the page knows lives here. Edit freely.
+
+   BRAWLER SCHEMA
+     id     unique key
+     en/fr  name (fr only when Supercell localises it — Gene is D'jinn in French)
+     cls    tank | assassin | marksman | artillery | controller | support | damage
+     reach  0-100. Ordinal, not tiles. Melee ~10, Shelly ~30, Colt ~60, Piper ~92.
+            It only has to put brawlers in the RIGHT ORDER, not the right metres.
+     tags   what jobs this brawler does for a team. The Comp Doctor reads these.
+              frontline heal shield stun pull knock slow zone wallbreak wallmake
+              burst poke dive speed invis turret vision buff mobility antitank
+     k      kit in one line
+     w      what it wants (map, situation)
+     f      what eats it
+
+   To add a brawler: copy any line, change it. Nothing else needs touching.
+   ========================================================================== */
+
+var T = {
+  en: {
+    ph: "Search a brawler, a combo, a mode…",
+    tabs: { combos:"Combos", brawlers:"Brawlers", doctor:"Comp Doctor", modes:"Modes", kit:"Gadgets & Gear", basics:"Fundamentals" },
+    combosL: "Every combo says why it works and when it doesn't. Tap one to open it.",
+    brawlersL: "Range, role, and the one thing that beats each of them.",
+    doctorL: "Pick three. The Lab tells you what your team can and can't do — it won't tell you who's strong this week. That part changes; this doesn't.",
+    modesL: "What each mode actually rewards.",
+    kitL: "Gadgets, Star Powers, Gears, Hypercharge — how to choose, not what to memorise.",
+    basicsL: "The habits that carry across every patch.",
+    nores: "Nothing matches that.", nores2: "Try a brawler name, a role like \"tank\", or a mode.",
+    found: "result", founds: "results",
+    mech:"What happens", win:"Why it wins", run:"How to run it", dont:"When not to",
+    slot:"Pick", reset:"Clear", pickers:"Tap to add",
+    dxTitle:"Diagnosis", ruler:"Range spread", synT:"Synergy found",
+    short:"Short", mid:"Mid", long:"Long", melee:"Melee",
+    doctorEmpty:"Pick at least two brawlers to get a diagnosis.",
+    wants:"Wants", fears:"Loses to",
+    foot: "Combos and principles, not a tier list — tier lists go stale in a week, this doesn't. For today's win rates check brawlify.com or noff.gg. Roster here is a solid core, not all 100+ brawlers: open the file and add yours.",
+    diff:["Easy","Medium","Hard"],
+    cls:{tank:"Tank",assassin:"Assassin",marksman:"Marksman",artillery:"Thrower",controller:"Controller",support:"Support",damage:"Damage"},
+    clsP:{tank:"tanks",assassin:"assassins",marksman:"marksmen",artillery:"throwers",controller:"controllers",support:"supports",damage:"damage dealers"}
+  },
+  fr: {
+    ph: "Cherche un brawler, un combo, un mode…",
+    tabs: { combos:"Combos", brawlers:"Brawlers", doctor:"Docteur d'équipe", modes:"Modes", kit:"Gadgets & Équipements", basics:"Les bases" },
+    combosL: "Chaque combo explique pourquoi il marche et quand il ne marche pas. Touche pour ouvrir.",
+    brawlersL: "Portée, rôle, et la chose qui les bat.",
+    doctorL: "Choisis-en trois. Le Labo te dit ce que ton équipe sait faire et ne sait pas faire — pas qui est fort cette semaine. Ça, ça change ; ça, non.",
+    modesL: "Ce que chaque mode récompense vraiment.",
+    kitL: "Gadgets, Pouvoirs Star, Équipements, Hypercharge — comment choisir, pas quoi apprendre par cœur.",
+    basicsL: "Les réflexes qui survivent à toutes les mises à jour.",
+    nores: "Rien ne correspond.", nores2: "Essaie un nom de brawler, un rôle comme « tank », ou un mode.",
+    found: "résultat", founds: "résultats",
+    mech:"Ce qui se passe", win:"Pourquoi ça gagne", run:"Comment le faire", dont:"Quand l'éviter",
+    slot:"Choisis", reset:"Effacer", pickers:"Touche pour ajouter",
+    dxTitle:"Diagnostic", ruler:"Répartition des portées", synT:"Synergie trouvée",
+    short:"Courte", mid:"Moyenne", long:"Longue", melee:"Corps à corps",
+    doctorEmpty:"Choisis au moins deux brawlers pour avoir un diagnostic.",
+    wants:"Veut", fears:"Perd contre",
+    foot: "Des combos et des principes, pas un tier list — un tier list est périmé en une semaine, ça non. Pour les win rates du jour : brawlify.com ou noff.gg. Le roster ici est un noyau solide, pas les 100+ brawlers : ouvre le fichier et ajoute les tiens.",
+    diff:["Facile","Moyen","Difficile"],
+    cls:{tank:"Tank",assassin:"Assassin",marksman:"Tireur d'élite",artillery:"Lanceur",controller:"Contrôleur",support:"Soutien",damage:"Dégâts"},
+    clsP:{tank:"tanks",assassin:"assassins",marksman:"tireurs d'élite",artillery:"lanceurs",controller:"contrôleurs",support:"soutiens",damage:"brawlers de dégâts"}
+  }
+};
+
+var BRAWLERS = [
+{id:"shelly",en:"Shelly",cls:"damage",reach:30,tags:["burst","wallbreak","antitank"],
+ k:{en:"Shotgun spread. Super deletes anything close and blows walls open.",fr:"Fusil à pompe. Le Super efface tout ce qui est proche et ouvre les murs."},
+ w:{en:"Bushes and corners — anywhere she starts a fight from 2 tiles away.",fr:"Buissons et coins — partout où elle commence un combat à 2 cases."},
+ f:{en:"Open maps. Anyone who never lets her arrive.",fr:"Les cartes ouvertes. Ceux qui ne la laissent jamais arriver."}},
+
+{id:"colt",en:"Colt",cls:"damage",reach:62,tags:["poke","wallbreak"],
+ k:{en:"Straight line of bullets. Super is a wall-shredding barrage.",fr:"Ligne de balles. Le Super est une rafale qui détruit les murs."},
+ w:{en:"Long open lanes and a target that has to stand still.",fr:"De longs couloirs dégagés et une cible obligée de rester immobile."},
+ f:{en:"Anything that moves sideways. Walls he hasn't broken yet.",fr:"Tout ce qui bouge latéralement. Les murs qu'il n'a pas encore cassés."}},
+
+{id:"bull",en:"Bull",cls:"tank",reach:22,tags:["frontline","dive","wallbreak"],
+ k:{en:"Shotgun. Super is a charge that flattens walls and people.",fr:"Fusil à pompe. Le Super est une charge qui écrase murs et joueurs."},
+ w:{en:"Bushes to hide in and a squishy who over-extends.",fr:"Des buissons pour se cacher et un fragile qui s'avance trop."},
+ f:{en:"Open ground. Getting kited by anyone with real range.",fr:"Le terrain découvert. Se faire promener par n'importe quelle grande portée."}},
+
+{id:"brock",en:"Brock",cls:"marksman",reach:78,tags:["poke","wallbreak","burst"],
+ k:{en:"Rockets. Super is a carpet bombing that erases cover.",fr:"Roquettes. Le Super est un bombardement qui efface le couvert."},
+ w:{en:"Long sightlines, and enemies stuck defending a spot.",fr:"De longues lignes de vue, et des ennemis coincés à défendre un point."},
+ f:{en:"Fast divers. His shots are slow — good players just walk around them.",fr:"Les plongeurs rapides. Ses tirs sont lents — les bons joueurs les contournent."}},
+
+{id:"jessie",en:"Jessie",cls:"damage",reach:58,tags:["turret","poke"],
+ k:{en:"Shots bounce between enemies. Super drops a turret that shoots for her.",fr:"Les tirs rebondissent entre ennemis. Le Super pose une tourelle qui tire à sa place."},
+ w:{en:"Enemies bunched up. A safe corner for the turret.",fr:"Des ennemis regroupés. Un coin sûr pour la tourelle."},
+ f:{en:"Throwers. A turret can't dodge a bottle.",fr:"Les lanceurs. Une tourelle n'esquive pas une bouteille."}},
+
+{id:"nita",en:"Nita",cls:"damage",reach:48,tags:["turret","frontline","poke"],
+ k:{en:"Shockwave that pierces. Super summons a bear that hunts on its own.",fr:"Onde de choc qui transperce. Le Super invoque un ours qui chasse tout seul."},
+ w:{en:"Close quarters where the bear can actually catch someone.",fr:"Les espaces serrés où l'ours peut vraiment attraper quelqu'un."},
+ f:{en:"Long range. Both she and the bear have to walk to you.",fr:"Les grandes portées. Elle et l'ours doivent venir à pied."}},
+
+{id:"dynamike",en:"Dynamike",cls:"artillery",reach:55,tags:["zone","wallbreak","burst"],
+ k:{en:"Two sticks of dynamite over walls. Super is a barrel that also jumps him out.",fr:"Deux bâtons de dynamite par-dessus les murs. Le Super est un baril qui le fait aussi sauter."},
+ w:{en:"A wall to hide behind and someone forced to hold a spot.",fr:"Un mur derrière lequel se cacher et quelqu'un forcé de tenir une position."},
+ f:{en:"Anyone who reaches him. He is made of paper.",fr:"Quiconque le rejoint. Il est en papier."}},
+
+{id:"bo",en:"Bo",cls:"controller",reach:60,tags:["zone","vision","knock"],
+ k:{en:"Three arrows. Super plants invisible mines that launch whoever steps on them.",fr:"Trois flèches. Le Super pose des mines invisibles qui projettent celui qui marche dessus."},
+ w:{en:"Chokepoints. One mined corridor is a corridor nobody uses.",fr:"Les goulots. Un couloir miné est un couloir que personne n'emprunte."},
+ f:{en:"Anyone who can see or trigger the mines from safety.",fr:"Ceux qui voient ou déclenchent les mines depuis un endroit sûr."}},
+
+{id:"tick",en:"Tick",cls:"artillery",reach:58,tags:["zone","poke"],
+ k:{en:"Mines that chase. Super throws his own head, which chases harder.",fr:"Des mines qui poursuivent. Le Super lance sa propre tête, qui poursuit encore plus."},
+ w:{en:"A wall, and enemies who want a spot he can spam.",fr:"Un mur, et des ennemis qui veulent un endroit qu'il peut arroser."},
+ f:{en:"Anything fast. Lowest health in the game, roughly.",fr:"Tout ce qui est rapide. Le moins de vie du jeu, à peu près."}},
+
+{id:"8bit",en:"8-Bit",fr:"A.R.K.A.D.",cls:"damage",reach:65,tags:["turret","buff","poke"],
+ k:{en:"Slow but heavy shots. Super plants a booster that raises the damage of every teammate near it.",fr:"Tirs lents mais lourds. Le Super plante un booster qui augmente les dégâts de chaque allié à proximité."},
+ w:{en:"A defensive spot with a teammate who never has to move.",fr:"Un point défensif avec un allié qui n'a jamais besoin de bouger."},
+ f:{en:"Throwers. He is enormous and slower than everyone.",fr:"Les lanceurs. Il est énorme et plus lent que tout le monde."}},
+
+{id:"emz",en:"Emz",fr:"Eliz@",cls:"controller",reach:38,tags:["zone","slow"],
+ k:{en:"Hairspray cone that lingers. Super is a bigger cloud that slows.",fr:"Cône de laque qui persiste. Le Super est un nuage plus large qui ralentit."},
+ w:{en:"Narrow maps where her cloud covers the only route.",fr:"Les cartes étroites où son nuage couvre le seul passage."},
+ f:{en:"Range. Her damage takes time and she has none against snipers.",fr:"La portée. Ses dégâts prennent du temps, et elle n'en a pas contre les snipers."}},
+
+{id:"stu",en:"Stu",cls:"assassin",reach:35,tags:["dive","mobility"],
+ k:{en:"Two shots charge a dash. Super is that dash, and it's off cooldown almost instantly.",fr:"Deux tirs chargent un dash. Le Super, c'est ce dash, et il revient presque instantanément."},
+ w:{en:"Walls to bounce around and a backline to reach.",fr:"Des murs pour rebondir et une backline à atteindre."},
+ f:{en:"Tanks who punish him the second he lands.",fr:"Les tanks qui le punissent dès qu'il atterrit."}},
+
+{id:"elprimo",en:"El Primo",fr:"El Costo",cls:"tank",reach:10,tags:["frontline","dive","knock"],
+ k:{en:"Fists. Super is an elbow drop from the sky that knocks people back.",fr:"Poings. Le Super est un coup de coude venu du ciel qui repousse."},
+ w:{en:"Anything he can jump onto. Walls to jump over.",fr:"Tout ce sur quoi il peut sauter. Des murs à franchir."},
+ f:{en:"Being kited. He has to touch you and everyone knows it.",fr:"Se faire promener. Il doit te toucher et tout le monde le sait."}},
+
+{id:"barley",en:"Barley",fr:"Bartaba",cls:"artillery",reach:55,tags:["zone","poke"],
+ k:{en:"Bottles that leave burning puddles. Super is six of them at once.",fr:"Bouteilles qui laissent des flaques enflammées. Le Super en envoie six d'un coup."},
+ w:{en:"A wall to sit behind and a target that can't leave (a gem carrier, a safe, a zone).",fr:"Un mur pour se planquer et une cible qui ne peut pas partir (porteur de gemmes, coffre, zone)."},
+ f:{en:"Assassins. Bottles are slow and he has nothing when someone arrives.",fr:"Les assassins. Les bouteilles sont lentes et il n'a rien quand quelqu'un arrive."}},
+
+{id:"poco",en:"Poco",cls:"support",reach:34,tags:["heal","poke"],
+ k:{en:"Wide sound wave that pierces. Super heals every teammate it touches.",fr:"Large onde sonore qui transperce. Le Super soigne chaque allié touché."},
+ w:{en:"A tank in front of him to keep alive.",fr:"Un tank devant lui à maintenir en vie."},
+ f:{en:"Burst damage that kills faster than he heals.",fr:"Les dégâts en burst qui tuent plus vite qu'il ne soigne."}},
+
+{id:"rosa",en:"Rosa",cls:"tank",reach:22,tags:["frontline","shield"],
+ k:{en:"Three punches. Super is a shield that cuts incoming damage hard.",fr:"Trois coups. Le Super est un bouclier qui réduit fortement les dégâts reçus."},
+ w:{en:"Bushes. Her star power heals her in them.",fr:"Les buissons. Son pouvoir star la soigne dedans."},
+ f:{en:"Being outranged while the shield ticks away.",fr:"Se faire distancer pendant que le bouclier s'écoule."}},
+
+{id:"carl",en:"Carl",cls:"damage",reach:50,tags:["poke","mobility"],
+ k:{en:"Pickaxe that flies out and comes back — he can't shoot again until it returns.",fr:"Pioche qui part et revient — il ne peut pas retirer avant qu'elle revienne."},
+ w:{en:"Lining up so the pickaxe hits twice, going and coming.",fr:"Se placer pour que la pioche touche deux fois, à l'aller et au retour."},
+ f:{en:"Anyone who dodges the return trip and punishes his empty hands.",fr:"Ceux qui esquivent le retour et le punissent les mains vides."}},
+
+{id:"penny",en:"Penny",cls:"artillery",reach:58,tags:["turret","zone","poke"],
+ k:{en:"Shot that splits behind the target. Super is a mortar that shells from far away.",fr:"Tir qui éclate derrière la cible. Le Super est un mortier qui pilonne de loin."},
+ w:{en:"Enemies stacked in a line, and high ground for the mortar.",fr:"Des ennemis alignés, et une position haute pour le mortier."},
+ f:{en:"Anyone who walks up and breaks the mortar.",fr:"Ceux qui montent et cassent le mortier."}},
+
+{id:"darryl",en:"Darryl",cls:"tank",reach:25,tags:["frontline","dive"],
+ k:{en:"Double shotgun. Super rolls him through walls into your face.",fr:"Double fusil. Le Super le fait rouler à travers les murs jusqu'à toi."},
+ w:{en:"Tight maps where the roll always lands on someone.",fr:"Les cartes serrées où le roulé atterrit toujours sur quelqu'un."},
+ f:{en:"Open maps. He rolls in and dies alone.",fr:"Les cartes ouvertes. Il roule et meurt tout seul."}},
+
+{id:"jacky",en:"Jacky",cls:"tank",reach:15,tags:["frontline"],
+ k:{en:"Drill that hits everything around her. Super pulls enemies toward her.",fr:"Marteau-piqueur qui touche tout autour d'elle. Le Super attire les ennemis vers elle."},
+ w:{en:"Being surrounded. She's the only one who wants that.",fr:"Être encerclée. Elle est la seule à vouloir ça."},
+ f:{en:"Distance. Any distance at all.",fr:"La distance. N'importe laquelle."}},
+
+{id:"rico",en:"Rico",fr:"Ricochet",cls:"damage",reach:60,tags:["poke"],
+ k:{en:"Bullets that bounce off walls and get stronger the further they travel.",fr:"Balles qui rebondissent sur les murs et deviennent plus fortes en voyageant."},
+ w:{en:"Corridors. He shoots around corners you thought were safe.",fr:"Les couloirs. Il tire dans les coins que tu croyais sûrs."},
+ f:{en:"Open maps with no walls to work with.",fr:"Les cartes ouvertes sans mur à exploiter."}},
+
+{id:"piper",en:"Piper",fr:"Polly",cls:"marksman",reach:92,tags:["burst","poke","mobility"],
+ k:{en:"More damage the further the shot travels. Super jumps her out and drops bombs.",fr:"Plus de dégâts plus le tir voyage loin. Le Super la fait sauter en lâchant des bombes."},
+ w:{en:"The longest sightline on the map, and staying at the very end of it.",fr:"La plus longue ligne de vue de la carte, et rester tout au bout."},
+ f:{en:"Anyone who closes the gap. Up close she does almost nothing.",fr:"Ceux qui comblent l'écart. De près, elle ne fait presque rien."}},
+
+{id:"pam",en:"Pam",cls:"support",reach:60,tags:["heal","turret","poke"],
+ k:{en:"Spray of scrap. Super drops a turret that heals every teammate near it.",fr:"Gerbe de ferraille. Le Super pose une tourelle qui soigne chaque allié autour."},
+ w:{en:"A spot the team has to hold anyway — Heist, Hot Zone.",fr:"Un endroit que l'équipe doit tenir de toute façon — Braquage, Zone Réservée."},
+ f:{en:"Throwers, who kill the turret and her from behind a wall.",fr:"Les lanceurs, qui tuent la tourelle et elle depuis derrière un mur."}},
+
+{id:"frank",en:"Frank",cls:"tank",reach:30,tags:["frontline","stun","wallbreak"],
+ k:{en:"Slow hammer with reach. Super smashes through walls and stuns everyone hit.",fr:"Marteau lent avec de l'allonge. Le Super traverse les murs et étourdit tout ce qu'il touche."},
+ w:{en:"Teammates ready to fire the instant the stun lands.",fr:"Des alliés prêts à tirer à l'instant où l'étourdissement touche."},
+ f:{en:"Being interrupted — his attack has a wind-up you can see coming.",fr:"Être interrompu — son attaque a un temps de charge visible."}},
+
+{id:"bibi",en:"Bibi",fr:"Billie",cls:"tank",reach:20,tags:["frontline","knock","dive"],
+ k:{en:"Bat that charges a home run. Super is a bubble that knocks people back.",fr:"Batte qui charge un home run. Le Super est une bulle qui repousse."},
+ w:{en:"Waiting for the bat to charge, then hitting someone who can't leave.",fr:"Attendre que la batte charge, puis frapper quelqu'un qui ne peut pas partir."},
+ f:{en:"Being poked while the bat is still charging.",fr:"Se faire harceler pendant que la batte charge."}},
+
+{id:"bea",en:"Bea",fr:"Béa",cls:"marksman",reach:80,tags:["burst","poke"],
+ k:{en:"Miss and you're weak. Hit and the next shot is enormous.",fr:"Rate et tu es faible. Touche et le tir suivant est énorme."},
+ w:{en:"A first hit. Everything about her depends on landing it.",fr:"Un premier tir touché. Tout chez elle en dépend."},
+ f:{en:"Divers who arrive between her two shots.",fr:"Les plongeurs qui arrivent entre ses deux tirs."}},
+
+{id:"sprout",en:"Sprout",fr:"Wally",cls:"artillery",reach:55,tags:["zone","wallmake","poke"],
+ k:{en:"Bouncing seed bomb. Super grows a wall wherever you want one.",fr:"Bombe-graine qui rebondit. Le Super fait pousser un mur où tu veux."},
+ w:{en:"A moment where one wall changes everything — blocking a goal, cutting a lane, trapping one enemy alone.",fr:"Un moment où un mur change tout — bloquer un but, couper un couloir, isoler un ennemi."},
+ f:{en:"Anyone who reaches it. Also its own wall, if you place it badly.",fr:"Quiconque l'atteint. Et son propre mur, si tu le places mal."}},
+
+{id:"nani",en:"Nani",cls:"marksman",reach:78,tags:["burst","poke"],
+ k:{en:"Three shots that fan out then converge. Super is a flying bot you steer into someone and detonate.",fr:"Trois tirs qui s'écartent puis convergent. Le Super est un robot volant qu'on pilote sur quelqu'un et qu'on fait exploser."},
+ w:{en:"Enemies who don't know Peep is coming. Full damage needs all three shots at once.",fr:"Des ennemis qui ne voient pas Peep arriver. Les dégâts max exigent les trois tirs ensemble."},
+ f:{en:"Anything close. She's a marksman with a manual bomb, not a defence.",fr:"Tout ce qui est proche. C'est une snipeuse avec une bombe télécommandée, pas une défense."}},
+
+{id:"gale",en:"Gale",fr:"Gaël",cls:"controller",reach:55,tags:["knock","slow","wallmake"],
+ k:{en:"Snow spread that slows. Super is a gust that shoves everyone backwards.",fr:"Gerbe de neige qui ralentit. Le Super est une bourrasque qui repousse tout le monde."},
+ w:{en:"A hazard behind the enemy — a wall, a pit, your assassin.",fr:"Un danger derrière l'ennemi — un mur, un trou, ton assassin."},
+ f:{en:"Being alone. The push is worth nothing if nobody follows it.",fr:"Être seul. La poussée ne vaut rien si personne ne suit."}},
+
+{id:"surge",en:"Surge",cls:"damage",reach:40,tags:["dive","mobility"],
+ k:{en:"Splitting shot. Every Super upgrades him — longer range, then a teleport, then more damage.",fr:"Tir qui se divise. Chaque Super l'améliore — plus de portée, puis un téléport, puis plus de dégâts."},
+ w:{en:"An early kill. He's weak at stage 1 and frightening at stage 3.",fr:"Un kill précoce. Faible au niveau 1, terrifiant au niveau 3."},
+ f:{en:"Dying. He resets to stage 1 and starts over.",fr:"Mourir. Il repart au niveau 1 et recommence."}},
+
+{id:"colette",en:"Colette",cls:"damage",reach:55,tags:["poke","dive","antitank"],
+ k:{en:"Damage based on a percentage of your health, not a flat number. Super is a charge that goes there and back.",fr:"Dégâts calculés en pourcentage de ta vie, pas un chiffre fixe. Le Super est une charge aller-retour."},
+ w:{en:"Fat targets. The bigger the health bar, the more she takes.",fr:"Les grosses cibles. Plus la barre de vie est grande, plus elle en prend."},
+ f:{en:"Low-health brawlers. Percentages of a small number are small.",fr:"Les brawlers à petite vie. Un pourcentage d'un petit nombre reste petit."}},
+
+{id:"amber",en:"Amber",fr:"Ambre",cls:"damage",reach:42,tags:["zone","poke"],
+ k:{en:"Continuous flamethrower running off a fuel tank. Super spills fire on the ground.",fr:"Lance-flammes continu alimenté par un réservoir. Le Super répand du feu au sol."},
+ w:{en:"Corridors she can hose, and fuel drops to keep going.",fr:"Des couloirs à arroser, et des bidons pour tenir."},
+ f:{en:"Running dry. An empty Amber is a free kill.",fr:"La panne sèche. Une Ambre vide est un kill gratuit."}},
+
+{id:"lou",en:"Lou",cls:"controller",reach:50,tags:["slow","zone"],
+ k:{en:"Ice that builds up — the colder they get, the slower they move, then they freeze.",fr:"Glace qui s'accumule — plus ils refroidissent, plus ils ralentissent, puis ils gèlent."},
+ w:{en:"Time on target. His whole kit is a stack that needs seconds.",fr:"Du temps sur la cible. Tout son kit est un cumul qui demande des secondes."},
+ f:{en:"Burst. He needs to be shooting you for a while.",fr:"Le burst. Il a besoin de te tirer dessus un moment."}},
+
+{id:"byron",en:"Byron",cls:"support",reach:72,tags:["heal","poke"],
+ k:{en:"One dart. It heals allies over time or poisons enemies over time. Super is the same, but bigger.",fr:"Une fléchette. Elle soigne les alliés dans la durée ou empoisonne les ennemis dans la durée."},
+ w:{en:"A brawler worth keeping alive from very far away.",fr:"Un brawler qui mérite d'être maintenu en vie, depuis très loin."},
+ f:{en:"Divers, and burst that kills before the heal ticks.",fr:"Les plongeurs, et le burst qui tue avant que le soin agisse."}},
+
+{id:"edgar",en:"Edgar",cls:"assassin",reach:12,tags:["dive","mobility"],
+ k:{en:"Punches that heal him. Super jumps over the wall onto your marksman.",fr:"Coups de poing qui le soignent. Le Super saute par-dessus le mur sur ton sniper."},
+ w:{en:"A marksman standing alone at the back.",fr:"Un sniper seul à l'arrière."},
+ f:{en:"A backline with a friend nearby. Landing on two people is landing on a grave.",fr:"Une backline avec un ami à côté. Atterrir sur deux personnes, c'est atterrir dans une tombe."}},
+
+{id:"griff",en:"Griff",cls:"damage",reach:45,tags:["burst"],
+ k:{en:"Three rows of coins. All three hit at point blank — that's a huge number.",fr:"Trois rangées de pièces. Les trois touchent à bout portant — ça fait un très gros chiffre."},
+ w:{en:"Enemies who walk into his face.",fr:"Des ennemis qui lui rentrent dedans."},
+ f:{en:"Distance, where only one row connects.",fr:"La distance, où une seule rangée touche."}},
+
+{id:"squeak",en:"Squeak",cls:"artillery",reach:52,tags:["zone","poke"],
+ k:{en:"Sticky blob that lands, waits, then bursts into fragments.",fr:"Boule collante qui atterrit, attend, puis éclate en fragments."},
+ w:{en:"Sticking it on a wall or a target that has to stay near it.",fr:"La coller sur un mur ou sur une cible obligée de rester à côté."},
+ f:{en:"Movement. The delay gives everyone a free second to leave.",fr:"Le mouvement. Le délai offre à tous une seconde pour partir."}},
+
+{id:"belle",en:"Belle",cls:"marksman",reach:82,tags:["poke","vision"],
+ k:{en:"Shot that chains between enemies. Super marks one enemy so everything hurts them more.",fr:"Tir qui s'enchaîne entre ennemis. Le Super marque un ennemi : tout lui fait plus mal."},
+ w:{en:"Enemies who stand near each other.",fr:"Des ennemis qui se tiennent proches."},
+ f:{en:"Divers. Marking someone doesn't stop them arriving.",fr:"Les plongeurs. Marquer quelqu'un ne l'empêche pas d'arriver."}},
+
+{id:"buzz",en:"Buzz",cls:"assassin",reach:18,tags:["dive","stun"],
+ k:{en:"Buoy that pulls him to whatever it hits, then stuns it.",fr:"Bouée qui l'attire sur ce qu'elle touche, puis l'étourdit."},
+ w:{en:"Bushes to charge his Super in, and a target near a wall.",fr:"Des buissons pour charger son Super, et une cible près d'un mur."},
+ f:{en:"Open ground where you see the buoy coming.",fr:"Le terrain découvert où l'on voit la bouée arriver."}},
+
+{id:"ash",en:"Ash",cls:"tank",reach:22,tags:["frontline"],
+ k:{en:"Broom. He gets angrier — and faster — the more damage he takes.",fr:"Balai. Il s'énerve — et accélère — plus il prend de dégâts."},
+ w:{en:"A long fight. He is at his best when he's nearly dead.",fr:"Un combat long. Il est à son meilleur quand il est presque mort."},
+ f:{en:"Being deleted before the rage builds.",fr:"Se faire effacer avant que la rage monte."}},
+
+{id:"lola",en:"Lola",cls:"damage",reach:55,tags:["poke","turret"],
+ k:{en:"Shots that spread. Super leaves a scarf-double that shoots on its own.",fr:"Tirs qui s'écartent. Le Super laisse un double en écharpe qui tire tout seul."},
+ w:{en:"Crossfire — she and the double shooting from two angles.",fr:"Le feu croisé — elle et le double tirant de deux angles."},
+ f:{en:"Anyone who kills her while she's fussing with the double.",fr:"Ceux qui la tuent pendant qu'elle s'occupe du double."}},
+
+{id:"fang",en:"Fang",cls:"assassin",reach:20,tags:["dive","frontline"],
+ k:{en:"Flying kick. His Super chains — a kill refunds it, so he can keep going.",fr:"Coup de pied volant. Son Super s'enchaîne — un kill le rembourse, donc il continue."},
+ w:{en:"A grouped-up team he can chain kills through.",fr:"Une équipe regroupée dans laquelle enchaîner les kills."},
+ f:{en:"Being kited by one person on an open map. The chain never starts.",fr:"Se faire promener par un seul joueur en terrain ouvert. La chaîne ne démarre jamais."}},
+
+{id:"eve",en:"Eve",cls:"damage",reach:58,tags:["turret","poke"],
+ k:{en:"Shots that grow with distance. Super hatches babies that chase people.",fr:"Tirs qui grossissent avec la distance. Le Super fait éclore des bébés qui poursuivent."},
+ w:{en:"Water she can walk over that nobody else can.",fr:"De l'eau qu'elle peut traverser et personne d'autre."},
+ f:{en:"Anything that reaches her — the babies won't save her.",fr:"Tout ce qui l'atteint — les bébés ne la sauveront pas."}},
+
+{id:"janet",en:"Janet",cls:"marksman",reach:70,tags:["poke","mobility"],
+ k:{en:"Cone that's tight at range, wide up close. Super flies her up and bombs from above.",fr:"Cône serré à distance, large de près. Le Super la fait décoller pour bombarder d'en haut."},
+ w:{en:"Height. From the air she sees and hits things nobody can answer.",fr:"L'altitude. Depuis les airs, elle voit et frappe sans réponse possible."},
+ f:{en:"Landing. She comes down eventually, and everyone knows where.",fr:"L'atterrissage. Elle redescend un jour, et tout le monde sait où."}},
+
+{id:"bonnie",en:"Bonnie",cls:"damage",reach:70,tags:["knock","dive","burst"],
+ k:{en:"Two brawlers in one: a long-range cannon, and Super fires herself out to fight up close.",fr:"Deux brawlers en un : un canon longue portée, et le Super la propulse au corps à corps."},
+ w:{en:"Switching at the right moment — cannon to poke, out to punish.",fr:"Changer au bon moment — canon pour harceler, sortie pour punir."},
+ f:{en:"Being caught in the wrong form.",fr:"Se faire attraper dans la mauvaise forme."}},
+
+{id:"sam",en:"Sam",cls:"assassin",reach:18,tags:["dive","frontline"],
+ k:{en:"Throws his knuckle busters and pulls himself back to them, damaging everything in the line.",fr:"Lance ses poings américains et se tire vers eux, blessant tout sur la ligne."},
+ w:{en:"Enemies between him and his gloves.",fr:"Des ennemis entre lui et ses gants."},
+ f:{en:"Being separated from the gloves. Bare-handed Sam is weak.",fr:"Être séparé des gants. Sam à mains nues est faible."}},
+
+{id:"gus",en:"Gus",cls:"support",reach:48,tags:["shield","heal"],
+ k:{en:"Ghost shots. Super gives a teammate a shield that absorbs damage before their health does.",fr:"Tirs fantômes. Le Super donne à un allié un bouclier qui absorbe avant sa vie."},
+ w:{en:"A tank about to dive. Shield first, then they go.",fr:"Un tank sur le point de plonger. Bouclier d'abord, puis il y va."},
+ f:{en:"Nobody to shield. Alone he does very little.",fr:"Personne à protéger. Seul, il ne fait pas grand-chose."}},
+
+{id:"buster",en:"Buster",cls:"tank",reach:30,tags:["frontline","shield","pull"],
+ k:{en:"Beam of light. Super pulls teammates behind him and blocks shots for them.",fr:"Rayon de lumière. Le Super attire les alliés derrière lui et bloque les tirs pour eux."},
+ w:{en:"Teammates who need to survive a push — or need rescuing from one.",fr:"Des alliés qui doivent survivre à une poussée — ou être sortis d'une."},
+ f:{en:"Damage that goes around him instead of through him.",fr:"Les dégâts qui le contournent au lieu de le traverser."}},
+
+{id:"chester",en:"Chester",cls:"damage",reach:35,tags:["poke","stun"],
+ k:{en:"Alternating shots. His Super is random every time — stun, poison, a big hit, a bounce.",fr:"Tirs alternés. Son Super est aléatoire à chaque fois — étourdissement, poison, gros coup, rebond."},
+ w:{en:"Knowing which Super is loaded before you commit. It's shown — look.",fr:"Savoir quel Super est chargé avant de s'engager. C'est affiché — regarde."},
+ f:{en:"Needing a specific answer. He can't choose.",fr:"Avoir besoin d'une réponse précise. Il ne choisit pas."}},
+
+{id:"gray",en:"Gray",cls:"support",reach:60,tags:["poke","mobility"],
+ k:{en:"Cane shots. Super places two portals — anyone on the team can walk between them.",fr:"Tirs de canne. Le Super place deux portails — toute l'équipe peut passer entre les deux."},
+ w:{en:"A wall the enemy trusts. Portals make it meaningless.",fr:"Un mur en qui l'ennemi a confiance. Les portails le rendent inutile."},
+ f:{en:"Portals that work both ways. They can walk through too.",fr:"Les portails marchent dans les deux sens. Eux aussi peuvent passer."}},
+
+{id:"mandy",en:"Mandy",cls:"marksman",reach:88,tags:["poke","burst"],
+ k:{en:"Stand still and her shot becomes a beam that goes almost the whole map and pierces.",fr:"Reste immobile et son tir devient un rayon qui traverse presque la carte et transperce."},
+ w:{en:"A lane. Standing still is the cost and the whole point.",fr:"Un couloir. Rester immobile est le prix et tout l'intérêt."},
+ f:{en:"Anything that makes her move.",fr:"Tout ce qui la force à bouger."}},
+
+{id:"rt",en:"R-T",cls:"damage",reach:55,tags:["poke","vision"],
+ k:{en:"Splits into two halves that shoot from different places. Marked enemies take more.",fr:"Se divise en deux moitiés qui tirent de deux endroits. Les ennemis marqués prennent plus."},
+ w:{en:"Crossfire angles nobody can stand between.",fr:"Des angles croisés entre lesquels personne ne peut tenir."},
+ f:{en:"Being split when the fight starts. Half of him is half a brawler.",fr:"Être divisé quand le combat démarre. La moitié de lui est un demi-brawler."}},
+
+{id:"willow",en:"Willow",cls:"controller",reach:60,tags:["zone","poke"],
+ k:{en:"Cursed brew. Super takes control of an enemy for a few seconds — you drive them.",fr:"Potion maudite. Le Super prend le contrôle d'un ennemi quelques secondes — tu le pilotes."},
+ w:{en:"Walking a stolen enemy into their own team's fire, or into a pit.",fr:"Emmener l'ennemi volé sous les tirs de son équipe, ou dans un trou."},
+ f:{en:"Doing nothing with the control. Three seconds go fast.",fr:"Ne rien faire du contrôle. Trois secondes, ça passe vite."}},
+
+{id:"doug",en:"Doug",cls:"support",reach:25,tags:["heal","frontline"],
+ k:{en:"Hot dog that heals allies it passes through. Super revives a dead teammate once.",fr:"Hot-dog qui soigne les alliés traversés. Le Super ressuscite un allié mort une fois."},
+ w:{en:"Standing where a teammate is about to die.",fr:"Être là où un allié va mourir."},
+ f:{en:"Being the one who dies. Nobody revives Doug.",fr:"Être celui qui meurt. Personne ne ressuscite Doug."}},
+
+{id:"charlie",en:"Charlie",cls:"controller",reach:55,tags:["stun","zone"],
+ k:{en:"Web that builds up. Super wraps one enemy in a cocoon — they can't move or shoot.",fr:"Toile qui s'accumule. Le Super enferme un ennemi dans un cocon — il ne peut ni bouger ni tirer."},
+ w:{en:"Teammates who kill the cocoon before it opens.",fr:"Des alliés qui tuent le cocon avant qu'il s'ouvre."},
+ f:{en:"Cocooning someone nobody can reach. It's a free escape for them.",fr:"Encoconner quelqu'un que personne n'atteint. C'est une évasion gratuite."}},
+
+{id:"mico",en:"Mico",cls:"assassin",reach:15,tags:["dive","mobility"],
+ k:{en:"Jumps over walls constantly. His Super is a big jump onto whoever he lands on.",fr:"Saute par-dessus les murs en permanence. Son Super est un grand saut sur qui il atterrit."},
+ w:{en:"Walls everywhere. He's the fastest thing on a maze map.",fr:"Des murs partout. Il est la chose la plus rapide sur une carte-labyrinthe."},
+ f:{en:"Open maps. He lands and there's nowhere to hop to.",fr:"Les cartes ouvertes. Il atterrit et n'a nulle part où sauter."}},
+
+{id:"kit",en:"Kit",cls:"support",reach:25,tags:["heal","stun","mobility"],
+ k:{en:"Rides on a teammate's back, healing them. Super pounces onto an enemy and pins them.",fr:"Monte sur le dos d'un allié en le soignant. Le Super bondit sur un ennemi et le cloue."},
+ w:{en:"A tank to ride. Kit is a passenger who turns one brawler into one-and-a-half.",fr:"Un tank à chevaucher. Kit est un passager qui transforme un brawler en un et demi."},
+ f:{en:"Having no ride. Alone, Kit is a very small cat.",fr:"Ne pas avoir de monture. Seul, Kit est un tout petit chat."}},
+
+{id:"larry",en:"Larry & Lawrie",cls:"artillery",reach:58,tags:["zone","turret","poke"],
+ k:{en:"Throws bombs from behind cover. Super calls in Lawrie, who hunts on his own.",fr:"Lance des bombes depuis un abri. Le Super appelle Lawrie, qui chasse tout seul."},
+ w:{en:"A wall, and Lawrie applying pressure somewhere else.",fr:"Un mur, et Lawrie qui met la pression ailleurs."},
+ f:{en:"Assassins, like every thrower.",fr:"Les assassins, comme tous les lanceurs."}},
+
+{id:"angelo",en:"Angelo",cls:"marksman",reach:88,tags:["poke","slow"],
+ k:{en:"Charged arrow that poisons. Super is a slick of poison on the ground.",fr:"Flèche chargée qui empoisonne. Le Super est une nappe de poison au sol."},
+ w:{en:"Water — he crosses it — and long lanes to hold.",fr:"L'eau — il la traverse — et de longs couloirs à tenir."},
+ f:{en:"Anything fast. Charging takes time he doesn't have up close.",fr:"Tout ce qui est rapide. Charger prend un temps qu'il n'a pas de près."}},
+
+{id:"melodie",en:"Melodie",cls:"assassin",reach:30,tags:["dive","mobility"],
+ k:{en:"Music notes orbit her. Super gives her three dashes she can spend in any direction.",fr:"Des notes gravitent autour d'elle. Le Super lui donne trois dashs dans toutes les directions."},
+ w:{en:"Notes stacked before she commits. Dashing in empty-handed is just dying closer.",fr:"Des notes accumulées avant de s'engager. Dasher les mains vides, c'est mourir plus près."},
+ f:{en:"Being caught with no notes and no dashes left.",fr:"Se faire attraper sans note et sans dash."}},
+
+{id:"lily",en:"Lily",cls:"assassin",reach:15,tags:["dive","invis","mobility"],
+ k:{en:"Slips into the shadow dimension — untouchable — then reappears next to you.",fr:"File dans la dimension d'ombre — intouchable — puis réapparaît à côté de toi."},
+ w:{en:"A target who forgot she exists.",fr:"Une cible qui a oublié qu'elle existe."},
+ f:{en:"Coming out of the shadows into three people.",fr:"Sortir de l'ombre au milieu de trois personnes."}},
+
+{id:"berry",en:"Berry",cls:"support",reach:40,tags:["heal","zone"],
+ k:{en:"Ice cream that heals allies on the way and pools on the ground.",fr:"Glace qui soigne les alliés au passage et forme une flaque au sol."},
+ w:{en:"A spot to sit and a teammate to top up.",fr:"Un endroit où rester et un allié à remplir."},
+ f:{en:"Pressure. He heals well and defends himself badly.",fr:"La pression. Il soigne bien et se défend mal."}},
+
+{id:"clancy",en:"Clancy",cls:"damage",reach:52,tags:["poke","burst"],
+ k:{en:"Levels up mid-match by hitting things. Stage 3 is a different, much scarier brawler.",fr:"Monte de niveau en cours de partie en touchant. Le niveau 3 est un brawler bien plus effrayant."},
+ w:{en:"Free hits early. He needs to farm the ramp.",fr:"Des touches gratuites au début. Il doit farmer sa montée."},
+ f:{en:"Being shut down at stage 1 and never getting going.",fr:"Être bloqué au niveau 1 et ne jamais démarrer."}},
+
+{id:"moe",en:"Moe",cls:"damage",reach:30,tags:["mobility","poke"],
+ k:{en:"Rocks. Super gives him a drill he rides around at speed, ramming people.",fr:"Cailloux. Le Super lui donne une foreuse qu'il chevauche à toute vitesse pour percuter."},
+ w:{en:"Room to drive and someone who can't get away.",fr:"De la place pour rouler et quelqu'un qui ne peut pas fuir."},
+ f:{en:"Being on foot with the drill on cooldown.",fr:"Être à pied avec la foreuse en recharge."}},
+
+{id:"kenji",en:"Kenji",cls:"assassin",reach:25,tags:["dive","mobility"],
+ k:{en:"Slash. Super dashes and, timed right, parries the shot that would have killed him.",fr:"Coup de sabre. Le Super dash et, bien timé, pare le tir qui l'aurait tué."},
+ w:{en:"Reading the enemy's shot. The parry is a skill, not a button.",fr:"Lire le tir de l'ennemi. La parade est une compétence, pas un bouton."},
+ f:{en:"Short range and modest damage — he has to be right, not just fast.",fr:"Portée courte et dégâts modestes — il doit avoir raison, pas juste être rapide."}},
+
+{id:"shade",en:"Shade",cls:"assassin",reach:20,tags:["dive","invis"],
+ k:{en:"A ghost who goes through walls and turns invisible.",fr:"Un fantôme qui traverse les murs et devient invisible."},
+ w:{en:"Walls nobody watches.",fr:"Des murs que personne ne surveille."},
+ f:{en:"Being seen. Once you know where he is, he's a squishy melee brawler.",fr:"Être vu. Une fois qu'on sait où il est, c'est un fragile au corps à corps."}},
+
+{id:"juju",en:"Juju",cls:"controller",reach:55,tags:["zone","poke"],
+ k:{en:"Her attack changes with the ground she stands on — grass, water, or dirt.",fr:"Son attaque change selon le sol où elle se tient — herbe, eau, ou terre."},
+ w:{en:"Knowing which terrain gives which attack, and standing on the right one.",fr:"Savoir quel terrain donne quelle attaque, et se placer sur le bon."},
+ f:{en:"Being forced onto the wrong ground.",fr:"Être forcée sur le mauvais sol."}},
+
+{id:"tara",en:"Tara",cls:"damage",reach:50,tags:["pull","poke"],
+ k:{en:"Three piercing cards. Super is a black hole that drags everyone nearby into one spot.",fr:"Trois cartes perforantes. Le Super est un trou noir qui traîne tout le monde au même endroit."},
+ w:{en:"Teammates with area damage. She gift-wraps three enemies in one place.",fr:"Des alliés avec des dégâts de zone. Elle emballe trois ennemis au même endroit."},
+ f:{en:"Pulling with nobody to follow up. Now they're all next to her.",fr:"Aspirer sans personne pour suivre. Maintenant ils sont tous à côté d'elle."}},
+
+{id:"gene",en:"Gene",fr:"D'jinn",cls:"support",reach:62,tags:["pull","heal","poke"],
+ k:{en:"Splitting shot. Super is a magic hand that grabs one enemy and yanks them to him.",fr:"Tir qui se divise. Le Super est une main magique qui attrape un ennemi et le tire vers lui."},
+ w:{en:"A teammate ready to punish the landing.",fr:"Un allié prêt à punir l'atterrissage."},
+ f:{en:"Pulling the wrong person — a tank you just teleported into your backline.",fr:"Aspirer la mauvaise personne — un tank que tu viens de téléporter dans ta backline."}},
+
+{id:"max",en:"Max",cls:"support",reach:58,tags:["speed","mobility","poke"],
+ k:{en:"Fast burst of shots. Super speeds up her whole team for a few seconds.",fr:"Rafale rapide. Le Super accélère toute son équipe pendant quelques secondes."},
+ w:{en:"A moment where being faster wins it — a goal, a gem grab, an escape.",fr:"Un moment où la vitesse décide — un but, une gemme, une fuite."},
+ f:{en:"Using the speed boost with nobody near her.",fr:"Utiliser le boost sans personne à côté."}},
+
+{id:"sandy",en:"Sandy",fr:"Émeri",cls:"controller",reach:42,tags:["invis","zone","slow"],
+ k:{en:"Sand shots. Super is a storm that turns the whole team invisible inside it.",fr:"Tirs de sable. Le Super est une tempête qui rend toute l'équipe invisible dedans."},
+ w:{en:"A push the enemy can't aim at. Invisibility is not safety — it's confusion.",fr:"Une poussée que l'ennemi ne peut pas viser. L'invisibilité n'est pas la sécurité — c'est la confusion."},
+ f:{en:"Enemies who just shoot into the storm anyway.",fr:"Les ennemis qui tirent quand même dans la tempête."}},
+
+{id:"spike",en:"Spike",cls:"damage",reach:55,tags:["zone","slow","poke"],
+ k:{en:"Cactus grenade that bursts into spikes. Super is a field that slows and shreds.",fr:"Grenade-cactus qui éclate en épines. Le Super est un champ qui ralentit et déchire."},
+ w:{en:"Enemies who can't leave the field — pinned, cornered, or greedy.",fr:"Des ennemis qui ne peuvent pas quitter le champ — bloqués, coincés, ou trop gourmands."},
+ f:{en:"Anyone who reaches him. Tiny health.",fr:"Quiconque l'atteint. Très peu de vie."}},
+
+{id:"crow",en:"Crow",fr:"Corbac",cls:"assassin",reach:40,tags:["dive","poke"],
+ k:{en:"Poison daggers that stop healing. Super jumps him in and out.",fr:"Dagues empoisonnées qui bloquent les soins. Le Super le fait entrer et sortir."},
+ w:{en:"Enemies with a healer — his poison turns that healer off.",fr:"Des ennemis avec un soigneur — son poison éteint ce soigneur."},
+ f:{en:"Anything with real health. His damage is small and slow.",fr:"Tout ce qui a de la vraie vie. Ses dégâts sont petits et lents."}},
+
+{id:"leon",en:"Leon",fr:"Léon",cls:"assassin",reach:30,tags:["dive","invis"],
+ k:{en:"Spinners that hurt more up close. Super turns him invisible.",fr:"Lames rotatives qui font plus mal de près. Le Super le rend invisible."},
+ w:{en:"An isolated target and a clear line to it.",fr:"Une cible isolée et une ligne dégagée jusqu'à elle."},
+ f:{en:"Anything that reveals him — a thrower's puddle, Bo's vision, a good guess.",fr:"Tout ce qui le révèle — la flaque d'un lanceur, la vision de Bo, une bonne intuition."}},
+
+{id:"mortis",en:"Mortis",cls:"assassin",reach:15,tags:["dive","mobility"],
+ k:{en:"Dashes forward with every swing. He can only move in dashes — he has no normal attack.",fr:"Dash à chaque coup. Il ne se déplace qu'en dashs — il n'a pas d'attaque normale."},
+ w:{en:"Kills to refill the bar. A fed Mortis never stops.",fr:"Des kills pour remplir la barre. Un Mortis nourri ne s'arrête jamais."},
+ f:{en:"Shotguns and tanks. Dashing into Shelly is suicide.",fr:"Les fusils à pompe et les tanks. Dasher sur Shelly, c'est du suicide."}},
+
+{id:"grom",en:"Grom",cls:"artillery",reach:65,tags:["zone","poke","burst"],
+ k:{en:"A cross-shaped blast at a fixed distance. Super is a bigger one you steer.",fr:"Explosion en croix à distance fixe. Le Super est une version plus grosse que l'on dirige."},
+ w:{en:"Standing behind a wall and hitting a fixed point over and over.",fr:"Rester derrière un mur et frapper un point fixe encore et encore."},
+ f:{en:"Anyone inside his minimum range. He literally cannot hit them.",fr:"Ceux qui entrent sous sa portée minimale. Il ne peut littéralement pas les toucher."}},
+
+{id:"hank",en:"Hank",cls:"tank",reach:40,tags:["frontline","burst"],
+ k:{en:"Charge a bubble — the longer you hold, the bigger and further it goes.",fr:"Charge une bulle — plus tu tiens, plus elle est grosse et va loin."},
+ w:{en:"Time to charge. A full Hank bubble is a huge number.",fr:"Du temps pour charger. Une bulle pleine, c'est un chiffre énorme."},
+ f:{en:"Being rushed. A half-charged bubble is a tickle.",fr:"Se faire rusher. Une bulle à moitié chargée, c'est une chatouille."}},
+
+{id:"maisie",en:"Maisie",cls:"damage",reach:60,tags:["knock","poke"],
+ k:{en:"Shot that travels and bursts at the end. Super knocks enemies away and stuns briefly.",fr:"Tir qui voyage et éclate au bout. Le Super repousse les ennemis et étourdit brièvement."},
+ w:{en:"Tanks trying to walk at her — she pushes them straight back out.",fr:"Des tanks qui essaient de l'approcher — elle les repousse d'où ils viennent."},
+ f:{en:"Getting the distance wrong. Her shot has a sweet spot.",fr:"Se tromper de distance. Son tir a un point idéal."}},
+
+{id:"pearl",en:"Pearl",cls:"damage",reach:45,tags:["zone","poke"],
+ k:{en:"Cookies that heat her up — the hotter she gets, the more damage, until she overheats.",fr:"Des cookies qui la chauffent — plus elle chauffe, plus elle frappe, jusqu'à la surchauffe."},
+ w:{en:"A sustained fight she can heat up through.",fr:"Un combat long pendant lequel elle monte en température."},
+ f:{en:"Overheating at the wrong moment.",fr:"Surchauffer au mauvais moment."}},
+
+{id:"cordelius",en:"Cordelius",cls:"assassin",reach:35,tags:["dive","mobility"],
+ k:{en:"Super drags one enemy into a private dimension — 1v1, nobody can help either of you.",fr:"Le Super entraîne un ennemi dans une dimension privée — 1v1, personne ne peut aider."},
+ w:{en:"Taking the one enemy who was carrying the team, alone, where their friends can't reach.",fr:"Isoler celui qui portait l'équipe, seul, là où ses amis n'arrivent pas."},
+ f:{en:"Picking a fight he loses. In there, nobody helps him either.",fr:"Choisir un duel qu'il perd. Là-dedans, personne ne l'aide non plus."}},
+
+{id:"otis",en:"Otis",cls:"controller",reach:60,tags:["zone","poke"],
+ k:{en:"Ink that pierces. Super silences an enemy — no attacks, no Super, nothing.",fr:"Encre perforante. Le Super rend un ennemi muet — plus d'attaque, plus de Super, rien."},
+ w:{en:"Silencing the one brawler whose Super would have won the fight.",fr:"Museler le brawler dont le Super aurait gagné le combat."},
+ f:{en:"Silencing someone who was going to lose anyway.",fr:"Museler quelqu'un qui allait perdre de toute façon."}},
+
+{id:"meg",en:"Meg",cls:"tank",reach:50,tags:["frontline","burst"],
+ k:{en:"Small and weak — until her Super builds a mech and she becomes a monster.",fr:"Petite et faible — jusqu'à ce que son Super construise un méca et qu'elle devienne un monstre."},
+ w:{en:"Reaching the mech. Out of it she's a stalling problem.",fr:"Atteindre le méca. Hors du méca, c'est un problème à faire durer."},
+ f:{en:"Losing the mech early with no way to rebuild it.",fr:"Perdre le méca tôt sans moyen de le reconstruire."}},
+
+{id:"chuck",en:"Chuck",cls:"damage",reach:30,tags:["mobility","zone"],
+ k:{en:"Plants posts and rides between them at speed, hitting everything on the rail.",fr:"Plante des poteaux et roule entre eux à toute vitesse, touchant tout sur le rail."},
+ w:{en:"Posts placed before the fight, not during it.",fr:"Des poteaux plantés avant le combat, pas pendant."},
+ f:{en:"Posts in stupid places. Then he's a slow brawler with a train ticket to nowhere.",fr:"Des poteaux mal placés. Là, c'est un brawler lent avec un billet pour nulle part."}},
+
+{id:"ruffs",en:"Colonel Ruffs",fr:"Colonel Médor",cls:"support",reach:60,tags:["buff","poke"],
+ k:{en:"Bouncing laser. Super drops power-ups that permanently buff whoever picks them up.",fr:"Laser rebondissant. Le Super largue des bonus qui améliorent définitivement celui qui les ramasse."},
+ w:{en:"Teammates who actually walk over to collect them.",fr:"Des alliés qui vont vraiment les ramasser."},
+ f:{en:"Dropping buffs where nobody dares go.",fr:"Larguer des bonus là où personne n'ose aller."}},
+
+{id:"damian",en:"Damian",cls:"tank",reach:16,tags:["frontline","knock","burst","zone"],
+ k:{en:"Two punches charge a third — an explosive kick that knocks back, burns, and chain-explodes to anyone nearby. Charges his Super from damage he TAKES.",fr:"Deux coups de poing en chargent un troisième — un coup de pied explosif qui repousse, brûle et explose en chaîne sur tous ceux qui sont autour. Charge son Super avec les dégâts qu'il ENCAISSE."},
+ w:{en:"Enemies bunched up, and people shooting him. Both feed him.",fr:"Des ennemis groupés, et des gens qui lui tirent dessus. Les deux le nourrissent."},
+ f:{en:"Anyone who keeps their distance and never lets him land punch number two.",fr:"Ceux qui gardent leurs distances et ne le laissent jamais placer le deuxième poing."}},
+
+{id:"starrnova",en:"Starr Nova",cls:"assassin",reach:52,tags:["dive","mobility","burst"],
+ k:{en:"Fires two piercing sparkles — the fastest projectiles in the game. Super dashes forward and transforms her for ~7 seconds: sword, faster, heals a little on hit.",fr:"Tire deux étincelles perforantes — les projectiles les plus rapides du jeu. Son Super fonce et la transforme ~7 secondes : épée, plus rapide, se soigne un peu en touchant."},
+ w:{en:"A fight already in progress. She cleans up; she doesn't open.",fr:"Un combat déjà commencé. Elle nettoie ; elle n'ouvre pas."},
+ f:{en:"Diving first. Her healing is far weaker than Edgar's or Mortis's — she melts.",fr:"Plonger en premier. Ses soins sont bien plus faibles que ceux d'Edgar ou Mortis — elle fond."}},
+
+{id:"bolt",en:"Bolt",cls:"tank",reach:16,tags:["frontline","mobility","speed"],
+ k:{en:"Gets faster the longer he drives in a straight line. Every turn resets it. Charges his Super just by moving.",fr:"Accélère tant qu'il roule en ligne droite. Chaque virage remet le compteur à zéro. Charge son Super rien qu'en se déplaçant."},
+ w:{en:"Long open lanes. Plan the route before you move.",fr:"De longs couloirs ouverts. Planifie le trajet avant de bouger."},
+ f:{en:"Mazes and tight corners. Stop-start movement makes him a worse tank.",fr:"Les labyrinthes et les coins serrés. Le stop-and-go en fait un tank médiocre."}},
+
+{id:"sirius",en:"Sirius",cls:"controller",reach:78,tags:["turret","zone","poke","slow"],
+ k:{en:"Fires two projectiles at once: a straight Shadow Strike and a Starr Bomb that lobs over walls. Every 4th hit steals that brawler's Shadow. Super summons your stored Shadows as weaker clones — and re-aiming the Super steers them.",fr:"Tire deux projectiles à la fois : une Frappe d'ombre en ligne droite et une Starr Bomb qui passe par-dessus les murs. Chaque 4e coup vole l'Ombre du brawler touché. Le Super invoque tes Ombres stockées en clones plus faibles — et viser à nouveau les dirige."},
+ w:{en:"A tank to farm Shadows from behind, and long fights. Save up 3 before you summon.",fr:"Un tank derrière lequel farmer les Ombres, et des combats longs. Stocke-en 3 avant d'invoquer."},
+ f:{en:"Splash damage — Nita, Tara, Emz, Penny wipe every Shadow at once. He's weak alone: low damage, thin HP.",fr:"Les dégâts de zone — Nita, Tara, Emz, Penny effacent toutes les Ombres d'un coup. Il est faible seul : peu de dégâts, peu de PV."}},
+
+{id:"najia",en:"Najia",cls:"artillery",reach:68,tags:["zone","poke"],
+ k:{en:"Throws a jar she can still steer after releasing. It breaks, a snake pops out, hunts the nearest enemy and poisons it. Poison stacks. Super throws three exploding paper snakes.",fr:"Lance une jarre qu'elle peut encore diriger après le tir. Elle se brise, un serpent en sort, chasse l'ennemi le plus proche et l'empoisonne. Le poison se cumule. Son Super lance trois serpents de papier explosifs."},
+ w:{en:"Grouped enemies — every extra snake is another poison stack.",fr:"Des ennemis groupés — chaque serpent en plus est un cumul de poison supplémentaire."},
+ f:{en:"Anything that closes the gap. She's a thrower: no wall, no Najia.",fr:"Tout ce qui comble la distance. C'est une lanceuse : pas de mur, pas de Najia."}}
+];
+/* ============================================================================
+   COMBOS
+
+   Every entry answers four questions, in this order:
+     mech  what physically happens
+     win   why that solves a problem
+     run   the order and the timing
+     dont  when it's a trap
+
+   "dont" is the field nobody writes and the one that makes you better.
+
+   parts  brawler ids from BRAWLERS. 2 or 3.
+   modes  gemgrab brawlball heist bounty knockout hotzone showdown
+   diff   0 easy · 1 medium · 2 hard
+   ========================================================================== */
+
+var COMBOS = [
+{id:"pullpuddle",parts:["gene","barley"],diff:1,modes:["gemgrab","hotzone","brawlball"],
+ n:{en:"Pull into the puddle",fr:"Aspiration dans la flaque"},
+ why:{en:"The oldest trick in the game and still the cleanest. A pull is only worth it if the landing spot hurts.",fr:"Le plus vieux tour du jeu, et toujours le plus propre. Une aspiration ne vaut le coup que si l'atterrissage fait mal."},
+ mech:{en:"Gene's hand yanks one enemy across the map to him. Barley has already covered that ground in fire. The enemy lands inside it, at close range, away from their team.",fr:"La main de D'jinn arrache un ennemi à travers la carte. Bartaba a déjà couvert le sol de feu. L'ennemi atterrit dedans, au corps à corps, loin de son équipe."},
+ win:{en:"You didn't just damage someone — you moved them. They're now alone, burning, and their two teammates are somewhere else with a hole in their formation. Most fights are won by making it 3v2 for four seconds.",fr:"Tu ne l'as pas juste blessé — tu l'as déplacé. Il est seul, il brûle, et ses deux alliés sont ailleurs avec un trou dans leur formation. La plupart des combats se gagnent en créant un 3v2 pendant quatre secondes."},
+ run:{en:"Barley throws FIRST. Puddle on the ground, then Gene pulls. Doing it the other way round gives the enemy a free second to walk out. Works the same with Dynamike, Tick, Sprout, Spike, Willow — any teammate who owns a patch of ground.",fr:"Bartaba lance EN PREMIER. La flaque au sol, puis D'jinn aspire. Dans l'autre sens, tu offres une seconde pour sortir. Marche pareil avec Dynamike, Tick, Wally, Spike, Willow — tout allié qui possède un bout de terrain."},
+ dont:{en:"Never pull a tank. You just teleported El Primo into your backline for free, and he's delighted. Pull the marksman, the thrower, the healer — the ones who die to a puddle.",fr:"N'aspire jamais un tank. Tu viens de téléporter El Costo gratuitement dans ta backline, et il est ravi. Aspire le sniper, le lanceur, le soigneur — ceux qui meurent dans une flaque."}},
+
+{id:"blackholespike",parts:["tara","spike"],diff:1,modes:["gemgrab","hotzone","knockout"],
+ n:{en:"Black hole, then spikes",fr:"Trou noir, puis épines"},
+ why:{en:"Tara doesn't move one enemy. She stacks all three of them into a single square metre.",fr:"Tara ne déplace pas un ennemi. Elle empile les trois sur un mètre carré."},
+ mech:{en:"Tara's Super drags every enemy nearby into one point. Spike's Super drops a slowing, damaging field on that exact point. Nobody walks out of a slow field they're standing in the middle of.",fr:"Le Super de Tara traîne chaque ennemi proche en un seul point. Le Super de Spike pose un champ ralentissant et blessant sur ce point exact. Personne ne sort d'un champ de ralentissement quand il est au milieu."},
+ win:{en:"Three enemies, one place, area damage. This is how you win a whole round in two seconds instead of trading kills for a minute.",fr:"Trois ennemis, un endroit, des dégâts de zone. C'est comme ça qu'on gagne une manche en deux secondes au lieu d'échanger des kills pendant une minute."},
+ run:{en:"Tara Supers first — the hole has to close before Spike commits. Spike aims at where they'll end up, not where they are. Also brilliant with Barley, Dynamike, Emz, Amber, or Colt's barrage.",fr:"Tara Super en premier — le trou doit se refermer avant que Spike s'engage. Spike vise là où ils vont finir, pas où ils sont. Excellent aussi avec Bartaba, Dynamike, Eliz@, Ambre, ou la rafale de Colt."},
+ dont:{en:"Don't pull one enemy. Tara's Super on a single target is a waste of the best Super in the game — hold it until at least two are close. And don't pull a Shelly onto your own head.",fr:"N'aspire pas un seul ennemi. Le Super de Tara sur une cible unique gâche le meilleur Super du jeu — garde-le jusqu'à ce qu'au moins deux soient proches. Et n'aspire pas une Shelly sur ta propre tête."}},
+
+{id:"stunburst",parts:["frank","colt"],diff:0,modes:["gemgrab","heist","hotzone","brawlball"],
+ n:{en:"Stun, then delete",fr:"Étourdis, puis efface"},
+ why:{en:"A stun is a gift certificate. Somebody has to spend it.",fr:"Un étourdissement est un bon d'achat. Quelqu'un doit le dépenser."},
+ mech:{en:"Frank's hammer goes through walls and freezes everyone it hits. For that moment they can't move, shoot, or Super. Colt empties a magazine into a target that has stopped dodging.",fr:"Le marteau de Frank traverse les murs et fige tout ce qu'il touche. Pendant cet instant, ils ne peuvent ni bouger, ni tirer, ni Super. Colt vide un chargeur dans une cible qui a arrêté d'esquiver."},
+ win:{en:"Colt's problem is that people move sideways. Frank solves it. Any brawler who needs the target to stand still — Colt, Rico, Piper, Brock, Bea, Mandy, Griff — doubles in value next to a stun.",fr:"Le problème de Colt, c'est que les gens bougent latéralement. Frank le règle. Tout brawler qui a besoin d'une cible immobile — Colt, Ricochet, Polly, Brock, Béa, Mandy, Griff — double de valeur à côté d'un étourdissement."},
+ run:{en:"The follow-up has to be aimed BEFORE the hammer lands, not after. The stun is short. If you're still lining up when it ends, you got nothing. Same idea with Charlie's cocoon, Buzz's stun, Maisie's knock.",fr:"Le tir doit être visé AVANT que le marteau touche, pas après. L'étourdissement est court. Si tu vises encore quand il finit, tu n'as rien eu. Même idée avec le cocon de Charlie, l'étourdissement de Buzz, la poussée de Maisie."},
+ dont:{en:"Frank has a wind-up you can see from across the map. If the enemy has anyone with a stun, a knockback or a dash, they interrupt him and you've spent nothing but your Super.",fr:"Frank a un temps de charge visible à l'autre bout de la carte. Si l'ennemi a un étourdissement, une poussée ou un dash, il l'interrompt et tu n'as dépensé que ton Super."}},
+
+{id:"tankheal",parts:["bull","poco"],diff:0,modes:["gemgrab","brawlball","hotzone","heist"],
+ n:{en:"The wall that heals",fr:"Le mur qui se soigne"},
+ why:{en:"A tank's job is to be in the way. A healer's job is to make that job last.",fr:"Le boulot d'un tank, c'est d'être dans le passage. Le boulot d'un soigneur, c'est de faire durer ce boulot."},
+ mech:{en:"Bull walks forward and absorbs everything aimed at the team. Poco stands behind him and refills him faster than the chip damage empties him.",fr:"Bull avance et absorbe tout ce qui vise l'équipe. Poco reste derrière et le remplit plus vite que les dégâts ne le vident."},
+ win:{en:"Individually they lose. Bull gets kited to death; Poco gets outranged. Together they're an object that moves forward and does not stop, and the enemy has to solve it or give up the ground.",fr:"Séparément, ils perdent. Bull se fait promener à mort ; Poco se fait distancer. Ensemble, c'est un objet qui avance et ne s'arrête pas, et l'ennemi doit le résoudre ou céder le terrain."},
+ run:{en:"Poco holds his Super until Bull is actually low — healing a full tank heals nothing. Bull never walks further than Poco can follow. Works with El Primo, Rosa, Frank, Darryl, Ash, Jacky + Poco, Byron, Berry, Gus, Pam, Doug.",fr:"Poco garde son Super jusqu'à ce que Bull soit vraiment bas — soigner un tank plein ne soigne rien. Bull ne va jamais plus loin que Poco ne peut suivre. Marche avec El Costo, Rosa, Frank, Darryl, Ash, Jacky + Poco, Byron, Berry, Gus, Pam, Doug."},
+ dont:{en:"Against Crow. His poison switches healing off, and then it's just a Bull walking into three people. Also useless against burst — Poco can't out-heal a Piper shot.",fr:"Contre Corbac. Son poison éteint les soins, et ce n'est plus qu'un Bull qui marche vers trois personnes. Inutile aussi contre le burst — Poco ne peut pas dépasser un tir de Polly."}},
+
+{id:"shieldrush",parts:["rosa","gus"],diff:0,modes:["brawlball","hotzone","gemgrab"],
+ n:{en:"Shield first, then go",fr:"Bouclier d'abord, puis fonce"},
+ why:{en:"A shield spent before the fight is worth double a heal spent during it.",fr:"Un bouclier dépensé avant le combat vaut le double d'un soin dépensé pendant."},
+ mech:{en:"Gus gives Rosa a spirit shield that eats damage before her health bar does. Rosa then uses her own shield Super on top. Two layers of damage reduction on a brawler already built to walk into things.",fr:"Gus donne à Rosa un bouclier d'esprit qui mange les dégâts avant sa barre de vie. Rosa met ensuite son propre Super par-dessus. Deux couches de réduction sur une brawler déjà faite pour foncer."},
+ win:{en:"Shields are pre-paid health. Healing is a race you can lose; a shield is already there. Against a team that was going to burst Rosa down in one window, the window closes.",fr:"Un bouclier, c'est de la vie prépayée. Le soin est une course qu'on peut perdre ; le bouclier est déjà là. Contre une équipe qui allait effacer Rosa en une fenêtre, la fenêtre se ferme."},
+ run:{en:"Shield BEFORE she walks in. Gus shielding a Rosa who is already surrounded is a Gus wasting a Super. Same logic for Buster's shield and Ruffs' buff drops.",fr:"Le bouclier AVANT qu'elle entre. Gus qui protège une Rosa déjà encerclée, c'est un Gus qui gâche son Super. Même logique pour le bouclier de Buster et les bonus de Colonel Médor."},
+ dont:{en:"On an open map. Two shields don't fix being outranged by a Piper — they just make the walk longer.",fr:"Sur une carte ouverte. Deux boucliers ne règlent pas le fait d'être distancé par une Polly — ils rallongent juste la marche."}},
+
+{id:"sandpush",parts:["sandy","elprimo"],diff:1,modes:["gemgrab","hotzone","brawlball","heist"],
+ n:{en:"The storm push",fr:"La poussée dans la tempête"},
+ why:{en:"Invisibility isn't safety. It's confusion — and confusion is enough.",fr:"L'invisibilité n'est pas la sécurité. C'est la confusion — et la confusion suffit."},
+ mech:{en:"Sandy's sandstorm hides everyone inside it. The enemy can still shoot into it, but they're shooting at a guess. El Primo walks through the storm and arrives without ever being aimed at.",fr:"La tempête d'Émeri cache tout le monde dedans. L'ennemi peut toujours tirer dedans, mais il tire au hasard. El Costo traverse la tempête et arrive sans jamais avoir été visé."},
+ win:{en:"Tanks lose because everyone shoots them for the whole walk. Delete the walk and the tank arrives at full health, which is the only version of a tank that's actually scary.",fr:"Les tanks perdent parce que tout le monde leur tire dessus pendant toute la marche. Supprime la marche et le tank arrive à pleine vie, la seule version d'un tank qui fait vraiment peur."},
+ run:{en:"Sandy places the storm ON the route, not on the enemy. The whole team commits at once — a storm with one person in it is just a hint about where that person is.",fr:"Émeri place la tempête SUR le trajet, pas sur l'ennemi. Toute l'équipe s'engage en même temps — une tempête avec une seule personne dedans est juste un indice sur sa position."},
+ dont:{en:"Against a thrower. Barley doesn't need to see you to cover the storm in fire, and neither does Tick.",fr:"Contre un lanceur. Bartaba n'a pas besoin de te voir pour couvrir la tempête de feu, et Tick non plus."}},
+
+{id:"speedball",parts:["max","frank"],diff:1,modes:["brawlball","gemgrab"],
+ n:{en:"Speed into the goal",fr:"Vitesse vers le but"},
+ why:{en:"Brawl Ball is a footrace with weapons. Whoever is faster in the last three seconds scores.",fr:"Le Brawl Ball est une course à pied avec des armes. Le plus rapide sur les trois dernières secondes marque."},
+ mech:{en:"Max's Super speeds up the entire team. The ball carrier goes from catchable to uncatchable, and Frank arrives at the goalie before the goalie has finished reloading.",fr:"Le Super de Max accélère toute l'équipe. Le porteur du ballon passe de rattrapable à intouchable, et Frank arrive sur le gardien avant qu'il ait fini de recharger."},
+ win:{en:"Most Brawl Ball goals are lost by half a second. Max buys you two. She also un-loses fights: the boost works just as well running away as running in.",fr:"La plupart des buts se perdent d'une demi-seconde. Max t'en achète deux. Elle dé-perd aussi des combats : le boost marche aussi bien pour fuir que pour foncer."},
+ run:{en:"Save it. A Max Super used to walk across an empty map is the most common mistake with her. It's for the goal, the gem grab, or the escape — nothing else.",fr:"Garde-le. Un Super de Max utilisé pour traverser une carte vide est l'erreur la plus fréquente avec elle. C'est pour le but, la gemme, ou la fuite — rien d'autre."},
+ dont:{en:"When your team is spread out. The boost is an area around Max, not a team-wide buff you can fire from home.",fr:"Quand l'équipe est éparpillée. Le boost est une zone autour de Max, pas un buff d'équipe qu'on déclenche de la maison."}},
+
+{id:"heistturret",parts:["8bit","piper"],diff:0,modes:["heist"],
+ n:{en:"Booster and sniper",fr:"Booster et sniper"},
+ why:{en:"A damage buff is worth the most on the brawler who never has to move.",fr:"Un bonus de dégâts vaut le plus sur le brawler qui n'a jamais besoin de bouger."},
+ mech:{en:"8-Bit plants his damage booster. Anyone standing in it hits harder. Piper stands in it and shoots the safe from maximum range, where her damage is already at its highest.",fr:"A.R.K.A.D. plante son booster de dégâts. Ceux qui se tiennent dedans frappent plus fort. Polly reste dedans et tire sur le coffre à portée maximale, là où ses dégâts sont déjà au plus haut."},
+ win:{en:"Two multipliers on the same shot: Piper's distance bonus and 8-Bit's booster. Heist is a damage race against a target that can't dodge — this is the highest number you can put on a stationary object.",fr:"Deux multiplicateurs sur le même tir : le bonus de distance de Polly et le booster d'A.R.K.A.D. Le Braquage est une course aux dégâts contre une cible qui n'esquive pas — c'est le plus gros chiffre possible sur un objet immobile."},
+ run:{en:"Booster goes down where Piper can shoot the safe from, not where 8-Bit feels safe. Any long-range brawler works: Brock, Bea, Colt, Mandy, Nani, Grom.",fr:"Le booster se pose là d'où Polly peut tirer sur le coffre, pas là où A.R.K.A.D. se sent bien. N'importe quelle longue portée marche : Brock, Béa, Colt, Mandy, Nani, Grom."},
+ dont:{en:"Against a diver. Two immobile brawlers standing on the same tile is a Mortis's dream. You need a third who can peel.",fr:"Contre un plongeur. Deux brawlers immobiles sur la même case, c'est le rêve d'un Mortis. Il te faut un troisième qui protège."}},
+
+{id:"heistdefense",parts:["pam","jessie"],diff:0,modes:["heist","hotzone"],
+ n:{en:"Two turrets, one corner",fr:"Deux tourelles, un coin"},
+ why:{en:"Defending a fixed point is the one situation where things that can't move are good.",fr:"Défendre un point fixe est la seule situation où les choses immobiles sont bonnes."},
+ mech:{en:"Jessie's turret shoots anyone approaching the safe. Pam's turret heals Jessie's turret and both brawlers. Attackers have to kill three things instead of two, and one of them keeps repairing the others.",fr:"La tourelle de Jessie tire sur quiconque approche du coffre. La tourelle de Pam soigne la tourelle de Jessie et les deux brawlers. Les attaquants doivent tuer trois choses au lieu de deux, et l'une répare les autres."},
+ win:{en:"Every second the attacker spends killing a turret is a second they're not spending on your safe. You aren't trying to win the fight — you're trying to make it take too long.",fr:"Chaque seconde que l'attaquant passe à tuer une tourelle est une seconde qu'il ne passe pas sur ton coffre. Tu n'essaies pas de gagner le combat — tu essaies de le faire durer trop longtemps."},
+ run:{en:"Turrets go slightly to the SIDE of the safe, not on it. On it, one Barley bottle kills both turrets and chips the safe.",fr:"Les tourelles se posent légèrement à CÔTÉ du coffre, pas dessus. Dessus, une bouteille de Bartaba tue les deux tourelles et grignote le coffre."},
+ dont:{en:"Against throwers. Turrets can't dodge and neither can Pam. A Barley or a Tick turns this whole plan into free Super charge for them.",fr:"Contre les lanceurs. Les tourelles n'esquivent pas, et Pam non plus. Un Bartaba ou un Tick transforme tout ce plan en charge de Super gratuite pour eux."}},
+
+{id:"wallbounce",parts:["sprout","rico"],diff:2,modes:["gemgrab","hotzone","bounty"],
+ n:{en:"Build a wall to shoot around",fr:"Un mur pour tirer dans les coins"},
+ why:{en:"Rico's damage lives in walls. Sprout sells walls.",fr:"Les dégâts de Ricochet vivent dans les murs. Wally vend des murs."},
+ mech:{en:"Sprout grows a wall in open ground. Rico's bullets now bounce off it and hit people standing where nothing could reach them a second ago. His shots also get stronger the further they travel — and a bounce is extra travel.",fr:"Wally fait pousser un mur en terrain découvert. Les balles de Ricochet rebondissent dessus et touchent des gens là où rien ne les atteignait une seconde plus tôt. Ses tirs deviennent aussi plus forts en voyageant — et un rebond, c'est du voyage en plus."},
+ win:{en:"You changed the map. The enemy's safe corner isn't safe any more and they haven't noticed yet.",fr:"Tu as changé la carte. Le coin sûr de l'ennemi ne l'est plus et il ne l'a pas encore remarqué."},
+ run:{en:"Sprout walls the OPEN side, turning a two-way corridor into a bounce chamber. Tell Rico first, or he'll just shoot the wall.",fr:"Wally ferme le côté OUVERT, transformant un couloir à deux voies en chambre à rebonds. Préviens Ricochet, sinon il tirera juste dans le mur."},
+ dont:{en:"When the wall also blocks your own team's line. Sprout walls are honest — they stop your bullets too.",fr:"Quand le mur bloque aussi la ligne de ton équipe. Les murs de Wally sont honnêtes — ils arrêtent aussi tes balles."}},
+
+{id:"snipershield",parts:["sprout","piper"],diff:1,modes:["bounty","knockout","heist"],
+ n:{en:"A wall for the sniper",fr:"Un mur pour la sniper"},
+ why:{en:"Piper doesn't die to damage. She dies to arrival.",fr:"Polly ne meurt pas des dégâts. Elle meurt de l'arrivée."},
+ mech:{en:"Sprout drops a wall between Piper and the only lane an assassin can reach her through. The Mortis dashes into a wall that wasn't there when he committed.",fr:"Wally pose un mur entre Polly et le seul couloir par lequel un assassin peut l'atteindre. Le Mortis dash dans un mur qui n'existait pas quand il s'est engagé."},
+ win:{en:"Marksmen are worth a fortune if they survive and nothing if they don't. The cheapest way to protect one isn't healing — it's geometry.",fr:"Un sniper vaut une fortune s'il survit et rien s'il meurt. La façon la moins chère d'en protéger un n'est pas le soin — c'est la géométrie."},
+ run:{en:"React, don't pre-build. The wall goes down when the dive starts, in the gap he's using. Buster's shield Super and Gale's push do the same job differently.",fr:"Réagis, ne construis pas d'avance. Le mur se pose quand le plongeon démarre, dans la brèche qu'il utilise. Le bouclier de Buster et la poussée de Gaël font le même boulot autrement."},
+ dont:{en:"Against Mico or Shade, who go over or through walls. Against them a wall is a decoration.",fr:"Contre Mico ou Shade, qui passent par-dessus ou à travers. Contre eux, un mur est une décoration."}},
+
+{id:"pushmines",parts:["gale","bo"],diff:2,modes:["gemgrab","hotzone","brawlball"],
+ n:{en:"Push them onto the mines",fr:"Repousse-les sur les mines"},
+ why:{en:"A knockback is a question: what's behind them?",fr:"Une poussée est une question : qu'y a-t-il derrière eux ?"},
+ mech:{en:"Bo's mines are invisible and sit on a route the enemy uses. Gale's gust shoves whoever's in front of him backwards — directly onto them.",fr:"Les mines de Bo sont invisibles et posées sur une route que l'ennemi emprunte. La bourrasque de Gaël repousse celui qui est devant lui — droit dessus."},
+ win:{en:"The enemy is careful about the mines when they choose to walk. Gale removes the choosing. Same trick with a pit, a wall, or your own tank standing behind them.",fr:"L'ennemi fait attention aux mines quand il choisit d'avancer. Gaël supprime le choix. Même astuce avec un trou, un mur, ou ton propre tank posté derrière."},
+ run:{en:"Bo mines the route BEFORE the fight, in a place the enemy has to cross. Gale then only has to push in one direction, which is the direction he's already facing.",fr:"Bo mine la route AVANT le combat, à un endroit obligatoire. Gaël n'a plus qu'à pousser dans une direction, celle où il est déjà tourné."},
+ dont:{en:"When the push saves them. Gale's gust is long — you can shove an enemy out of your own tank's reach and hand them the escape.",fr:"Quand la poussée les sauve. La bourrasque de Gaël est longue — tu peux éjecter un ennemi hors de portée de ton tank et lui offrir la fuite."}},
+
+{id:"catride",parts:["kit","bull"],diff:0,modes:["gemgrab","brawlball","hotzone","showdown"],
+ n:{en:"The passenger",fr:"Le passager"},
+ why:{en:"Kit isn't a support standing behind you. Kit is on you.",fr:"Kit n'est pas un soutien derrière toi. Kit est sur toi."},
+ mech:{en:"Kit jumps onto Bull's back and stays there, healing him constantly and adding damage. They move as one brawler with two health bars and one hitbox.",fr:"Kit saute sur le dos de Bull et y reste, le soignant en continu et ajoutant des dégâts. Ils se déplacent comme un brawler avec deux barres de vie et une hitbox."},
+ win:{en:"Every other healer has a range problem — they have to keep up. Kit doesn't. A tank with Kit on board can go anywhere a tank can go and stay healed the whole way there.",fr:"Tous les autres soigneurs ont un problème de portée — ils doivent suivre. Pas Kit. Un tank avec Kit à bord peut aller partout où un tank va, soigné tout le trajet."},
+ run:{en:"Ride the brawler who is going to be in the fight, not the one who is safe. Kit on a Piper is a wasted cat. Jump off to pounce something, then get straight back on.",fr:"Chevauche celui qui va être dans le combat, pas celui qui est à l'abri. Kit sur une Polly, c'est un chat gâché. Saute pour clouer quelqu'un, puis remonte tout de suite."},
+ dont:{en:"Against area damage. Two brawlers in one hitbox is one Barley bottle hitting both, every time, forever.",fr:"Contre les dégâts de zone. Deux brawlers dans une hitbox, c'est une bouteille de Bartaba qui touche les deux, à chaque fois, pour toujours."}},
+
+{id:"portal",parts:["gray","elprimo"],diff:2,modes:["gemgrab","brawlball","heist","hotzone"],
+ n:{en:"Portal the tank in",fr:"Téléporte le tank"},
+ why:{en:"The enemy's whole defence is built on the assumption that you have to walk.",fr:"Toute la défense adverse repose sur l'idée que tu dois marcher."},
+ mech:{en:"Gray places two portals. Anyone on your team can step into one and come out the other. El Primo skips the entire approach and appears next to the marksman who thought a wall protected her.",fr:"Gray place deux portails. N'importe quel allié peut entrer dans l'un et sortir de l'autre. El Costo saute toute l'approche et apparaît à côté de la sniper qui se croyait protégée par un mur."},
+ win:{en:"Tanks lose the walk, not the fight. Delete the walk and the matchup inverts — the marksman is now the one in trouble.",fr:"Les tanks perdent la marche, pas le combat. Supprime la marche et le duel s'inverse — c'est la sniper qui a un problème."},
+ run:{en:"Place the exit somewhere the enemy isn't looking, not somewhere convenient. Tell your team the portal is up — most Gray Supers die of nobody using them.",fr:"Place la sortie là où l'ennemi ne regarde pas, pas là où c'est pratique. Préviens ton équipe que le portail est ouvert — la plupart des Supers de Gray meurent parce que personne ne s'en sert."},
+ dont:{en:"Near your own safe or gem carrier. Portals work both directions. You built the enemy a door into your house.",fr:"Près de ton coffre ou de ton porteur de gemmes. Les portails marchent dans les deux sens. Tu viens de construire une porte chez toi."}},
+
+{id:"peel",parts:["buster","mandy"],diff:1,modes:["knockout","bounty","heist"],
+ n:{en:"The bodyguard",fr:"Le garde du corps"},
+ why:{en:"Mandy's damage requires her to stand still. Someone has to make standing still survivable.",fr:"Les dégâts de Mandy exigent qu'elle reste immobile. Quelqu'un doit rendre l'immobilité survivable."},
+ mech:{en:"Mandy stands and charges her beam across half the map. When a diver comes, Buster's Super pulls Mandy behind him and his shield blocks the shots she was about to eat.",fr:"Mandy se plante et charge son rayon sur la moitié de la carte. Quand un plongeur arrive, le Super de Buster tire Mandy derrière lui et son bouclier bloque les tirs qu'elle allait prendre."},
+ win:{en:"The best marksman in the world is worth zero if she's dead at 30 seconds. Buster converts her fragility into a non-issue and lets her play the whole round.",fr:"La meilleure sniper du monde vaut zéro si elle est morte à 30 secondes. Buster transforme sa fragilité en non-problème et la laisse jouer toute la manche."},
+ run:{en:"Buster stands in FRONT of her and slightly to the side, in the diver's lane. His Super is a rescue button — hold it for the dive, don't spend it pushing.",fr:"Buster se place DEVANT elle et légèrement de côté, dans le couloir du plongeur. Son Super est un bouton de sauvetage — garde-le pour le plongeon, ne le dépense pas pour avancer."},
+ dont:{en:"When the damage is coming from a thrower. Buster blocks bullets, not bottles arcing over him.",fr:"Quand les dégâts viennent d'un lanceur. Buster bloque les balles, pas les bouteilles qui lui passent au-dessus."}},
+
+{id:"cocoon",parts:["charlie","griff"],diff:1,modes:["knockout","gemgrab","bounty"],
+ n:{en:"Cocoon and cash in",fr:"Cocon et encaisse"},
+ why:{en:"Charlie removes one enemy from the game for three seconds. Three seconds is enough to end a round.",fr:"Charlie retire un ennemi du jeu pendant trois secondes. Trois secondes suffisent à finir une manche."},
+ mech:{en:"Charlie's Super wraps an enemy in a cocoon — they cannot move, shoot, or use anything. Griff walks up and unloads all three rows of coins point-blank into a target that cannot leave.",fr:"Le Super de Charlie enferme un ennemi dans un cocon — il ne peut ni bouger, ni tirer, ni rien utiliser. Griff s'approche et vide ses trois rangées de pièces à bout portant dans une cible qui ne peut pas partir."},
+ win:{en:"It's briefly 3v2, AND you get to choose who's missing. Take the one who was carrying — the marksman, the healer, the one with a full Super bar.",fr:"C'est brièvement un 3v2, ET tu choisis qui manque. Prends celui qui portait l'équipe — le sniper, le soigneur, celui qui a une barre de Super pleine."},
+ run:{en:"Cocoon someone your team can actually walk to. The follow-up starts moving before the cocoon lands, not after.",fr:"Encoconne quelqu'un que ton équipe peut vraiment atteindre. Le suiveur commence à bouger avant que le cocon touche, pas après."},
+ dont:{en:"On a diver who was losing. You just made him invulnerable and gave him a free reset. Cocoon the threat, not the corpse.",fr:"Sur un plongeur qui perdait. Tu viens de le rendre invulnérable et de lui offrir un reset gratuit. Encoconne la menace, pas le cadavre."}},
+
+{id:"healblock",parts:["crow","colette"],diff:1,modes:["gemgrab","brawlball","hotzone","knockout"],
+ n:{en:"Turn the healer off",fr:"Éteins le soigneur"},
+ why:{en:"This is a draft, not a combo. It's here because it's the most useful thing to understand about tank comps.",fr:"C'est un draft, pas un combo. Il est là parce que c'est la chose la plus utile à comprendre sur les compos de tanks."},
+ mech:{en:"Crow's poison stops the target healing at all. Colette's damage is a percentage of the enemy's maximum health, so the fatter the tank the harder she hits.",fr:"Le poison de Corbac empêche complètement les soins. Les dégâts de Colette sont un pourcentage de la vie max de l'ennemi, donc plus le tank est gros, plus elle frappe fort."},
+ win:{en:"A Bull-and-Poco wall has exactly two weaknesses: healing that gets switched off, and health that gets taxed by percentage. This picks both at once. The tank comp doesn't get outplayed — it gets deleted from the draft.",fr:"Un mur Bull-et-Poco a exactement deux faiblesses : des soins qu'on éteint, et de la vie taxée en pourcentage. Ça prend les deux d'un coup. La compo tank ne se fait pas outplay — elle se fait supprimer au draft."},
+ run:{en:"Crow poisons the tank, not the healer — the point is to stop the tank benefiting. Colette focuses the biggest health bar on the field, always.",fr:"Corbac empoisonne le tank, pas le soigneur — le but est d'empêcher le tank d'en profiter. Colette focus toujours la plus grosse barre de vie du terrain."},
+ dont:{en:"Against squishies. Colette's percentage of a small health bar is a small number, and Crow's damage is genuinely weak. This comp beats fat and loses to thin.",fr:"Contre les fragiles. Le pourcentage de Colette sur une petite barre est un petit chiffre, et les dégâts de Corbac sont vraiment faibles. Cette compo bat le gros et perd contre le maigre."}},
+
+{id:"zonestack",parts:["emz","barley"],diff:0,modes:["hotzone","gemgrab","heist"],
+ n:{en:"Two clouds, no room",fr:"Deux nuages, plus de place"},
+ why:{en:"One area of denied ground is annoying. Two overlapping ones is a wall made of damage.",fr:"Une zone interdite, c'est agaçant. Deux qui se chevauchent, c'est un mur fait de dégâts."},
+ mech:{en:"Emz's cloud lingers and slows. Barley's puddles burn. Put them on the same chokepoint and there is no version of walking through that doesn't cost most of your health.",fr:"Le nuage d'Eliz@ persiste et ralentit. Les flaques de Bartaba brûlent. Mets-les sur le même goulot et il n'existe aucune façon de passer sans y laisser presque toute sa vie."},
+ win:{en:"Hot Zone and Gem Grab are about owning a spot, not killing people. This owns a spot without either of you needing to win a single duel.",fr:"La Zone Réservée et la Razzia de Gemmes, c'est posséder un endroit, pas tuer des gens. Ça possède un endroit sans qu'aucun des deux ne gagne un seul duel."},
+ run:{en:"Cover the entrance, not the middle. You want the cost paid on the way in, so they arrive at half health or don't arrive.",fr:"Couvre l'entrée, pas le milieu. Tu veux que le prix soit payé à l'entrée, pour qu'ils arrivent à moitié vie ou n'arrivent pas."},
+ dont:{en:"On an open map with three entrances. You can't cover them all and you've picked two brawlers who need to.",fr:"Sur une carte ouverte à trois entrées. Tu ne peux pas toutes les couvrir et tu as pris deux brawlers qui en ont besoin."}},
+
+{id:"longheal",parts:["byron","bull"],diff:1,modes:["gemgrab","brawlball","heist"],
+ n:{en:"Healing from a safe distance",fr:"Soigner de loin"},
+ why:{en:"Poco has to be near the fight. Byron doesn't.",fr:"Poco doit être près du combat. Byron non."},
+ mech:{en:"Byron's dart heals over time from very far away. He tops Bull up from a position no assassin wants to walk to, and the same dart poisons an enemy if he aims the other way.",fr:"La fléchette de Byron soigne dans la durée, de très loin. Il remplit Bull depuis un endroit où aucun assassin ne veut aller, et la même fléchette empoisonne un ennemi s'il vise dans l'autre sens."},
+ win:{en:"The usual counter to a tank-and-healer comp is to kill the healer. Byron makes that a long walk past your whole team. He also has real range, so he isn't dead weight when there's nothing to heal.",fr:"La réponse habituelle à une compo tank-soigneur, c'est de tuer le soigneur. Byron transforme ça en longue marche devant toute ton équipe. Il a aussi une vraie portée, donc il n'est pas un poids mort quand il n'y a rien à soigner."},
+ run:{en:"His heal ticks over time — start it BEFORE Bull is low, not after. A dart thrown at a dying tank arrives too late by design.",fr:"Son soin agit dans la durée — commence-le AVANT que Bull soit bas, pas après. Une fléchette lancée sur un tank mourant arrive trop tard par conception."},
+ dont:{en:"Against burst. Byron heals in ticks; Piper deals damage in one lump. Ticks lose that race.",fr:"Contre le burst. Byron soigne par paliers ; Polly frappe en un bloc. Les paliers perdent cette course."}},
+
+{id:"healbear",parts:["nita","poco"],diff:0,modes:["gemgrab","brawlball","showdown","hotzone"],
+ n:{en:"Heal the bear",fr:"Soigne l'ours"},
+ why:{en:"Almost nobody realises the bear counts as a teammate.",fr:"Presque personne ne réalise que l'ours compte comme un allié."},
+ mech:{en:"Poco's Super heals allies — and Nita's bear is an ally. A healed bear stops being a distraction and starts being a third brawler that hunts on its own.",fr:"Le Super de Poco soigne les alliés — et l'ours de Nita est un allié. Un ours soigné cesse d'être une diversion et devient un troisième brawler qui chasse tout seul."},
+ win:{en:"The bear normally dies in a few seconds and buys you a moment. Kept alive, it's a permanent extra body on the map that the enemy has to deal with while you do something else.",fr:"L'ours meurt normalement en quelques secondes et t'achète un instant. Maintenu en vie, c'est un corps en plus permanent que l'ennemi doit gérer pendant que tu fais autre chose."},
+ run:{en:"Poco aims his wave so it catches Nita AND the bear — it pierces, so line them up. Nita's star power that heals the bear stacks with this.",fr:"Poco vise son onde pour attraper Nita ET l'ours — elle transperce, donc aligne-les. Le pouvoir star de Nita qui soigne l'ours se cumule avec ça."},
+ dont:{en:"Against Crow — poison shuts the healing down — or against anything that just walks around the bear. The bear is slow and not very smart.",fr:"Contre Corbac — le poison coupe les soins — ou contre tout ce qui contourne simplement l'ours. L'ours est lent et pas très malin."}},
+
+{id:"mindcontrol",parts:["willow","dynamike"],diff:2,modes:["brawlball","gemgrab","knockout"],
+ n:{en:"Borrow an enemy",fr:"Emprunte un ennemi"},
+ why:{en:"For three seconds you have four brawlers and they have two.",fr:"Pendant trois secondes, tu as quatre brawlers et ils en ont deux."},
+ mech:{en:"Willow's Super lets you drive an enemy. Walk them out of cover, into your Dynamike's dynamite, or into a pit if the map has one. You control the movement — their own team is now shooting at a friend.",fr:"Le Super de Willow te fait piloter un ennemi. Sors-le du couvert, emmène-le dans la dynamite de ton Dynamike, ou dans un trou si la carte en a un. Tu contrôles le déplacement — son équipe tire maintenant sur un ami."},
+ win:{en:"Most control effects stop an enemy. This one turns an enemy into a liability for the people next to them.",fr:"La plupart des effets de contrôle arrêtent un ennemi. Celui-ci transforme un ennemi en danger pour ceux qui l'entourent."},
+ run:{en:"Decide where you're taking them BEFORE you press it. Three seconds go faster than you think, and the most common Willow mistake is spending them wandering.",fr:"Décide où tu l'emmènes AVANT d'appuyer. Trois secondes passent plus vite que tu crois, et l'erreur la plus fréquente avec Willow, c'est de les passer à errer."},
+ dont:{en:"On a brawler who's already out of position. Take the one whose absence breaks their formation — the healer, the goalie, the one holding the zone.",fr:"Sur un brawler déjà mal placé. Prends celui dont l'absence casse leur formation — le soigneur, le gardien, celui qui tient la zone."}},
+
+{id:"isolate",parts:["cordelius","otis"],diff:2,modes:["knockout","bounty","gemgrab"],
+ n:{en:"Take their best player out of the game",fr:"Sors leur meilleur joueur du jeu"},
+ why:{en:"Two different ways to remove one person. Most teams have exactly one person worth removing.",fr:"Deux façons de retirer une personne. La plupart des équipes n'en ont qu'une qui mérite d'être retirée."},
+ mech:{en:"Cordelius drags one enemy into a private dimension — a forced 1v1 where nobody can help either of them. Otis silences one enemy — no attack, no Super, nothing, for a few seconds.",fr:"Cordelius entraîne un ennemi dans une dimension privée — un 1v1 forcé où personne ne peut aider ni l'un ni l'autre. Otis rend un ennemi muet — pas d'attaque, pas de Super, rien, quelques secondes."},
+ win:{en:"In Knockout there are no respawns, so the round is decided by whoever loses a player first. These two both answer 'which player' and let you pick.",fr:"En Hors-jeu, pas de réapparition, donc la manche se décide sur qui perd un joueur en premier. Ces deux-là répondent tous les deux à « quel joueur » et te laissent choisir."},
+ run:{en:"Cordelius takes the one he BEATS in a duel, not the scariest one. Otis silences the one whose Super is charged and about to swing the round.",fr:"Cordelius prend celui qu'il BAT en duel, pas le plus effrayant. Otis muselle celui dont le Super est chargé et sur le point de tout renverser."},
+ dont:{en:"Cordelius on a tank. In there, nobody helps you either — you've booked yourself a private appointment with a Frank.",fr:"Cordelius sur un tank. Là-dedans, personne ne t'aide non plus — tu viens de te réserver un rendez-vous privé avec un Frank."}},
+
+{id:"markfocus",parts:["belle","brock"],diff:0,modes:["bounty","knockout","gemgrab"],
+ n:{en:"Mark, then everyone shoots",fr:"Marque, puis tout le monde tire"},
+ why:{en:"Focus fire wins fights. Belle just tells you where to point.",fr:"Le feu concentré gagne les combats. Belle te dit juste où viser."},
+ mech:{en:"Belle's Super marks an enemy. Everything that hits them from then on hurts more — for the whole team, not just her. Brock's rockets land on a target that's now taking bonus damage from every source.",fr:"Le Super de Belle marque un ennemi. Tout ce qui le touche ensuite fait plus mal — pour toute l'équipe, pas juste elle. Les roquettes de Brock atterrissent sur une cible qui prend maintenant un bonus de tous les côtés."},
+ win:{en:"The single most common way to lose a 3v3 is three people damaging three different enemies and killing none of them. A mark is a shared target call that nobody has to type.",fr:"La façon la plus fréquente de perdre un 3v3, c'est trois personnes qui blessent trois ennemis différents et n'en tuent aucun. Une marque, c'est un appel de cible partagé que personne n'a besoin d'écrire."},
+ run:{en:"Mark the one you can actually kill this second — not the tank, not the one behind a wall. The mark expires.",fr:"Marque celui que tu peux vraiment tuer maintenant — pas le tank, pas celui derrière un mur. La marque expire."},
+ dont:{en:"Marking early to 'set up'. It runs out and you've announced your plan for nothing.",fr:"Marquer tôt pour « préparer ». Ça expire et tu as annoncé ton plan pour rien."}},
+
+{id:"funnel",parts:["emz","mandy"],diff:1,modes:["bounty","knockout","hotzone"],
+ n:{en:"Close the doors, open the lane",fr:"Ferme les portes, ouvre le couloir"},
+ why:{en:"Mandy's beam is unanswerable — if the enemy is in it. Emz decides where they can be.",fr:"Le rayon de Mandy est sans réponse — si l'ennemi est dedans. Eliz@ décide où il peut être."},
+ mech:{en:"Emz's cloud makes two of the three routes cost too much. The one route left happens to be the lane Mandy is charging her beam down.",fr:"Le nuage d'Eliz@ rend deux des trois routes trop chères. La seule route restante est justement le couloir dans lequel Mandy charge son rayon."},
+ win:{en:"You're not aiming better. You're reducing the number of places the enemy is allowed to exist until aiming is easy. This is what 'map control' actually means.",fr:"Tu ne vises pas mieux. Tu réduis le nombre d'endroits où l'ennemi a le droit d'exister jusqu'à ce que viser soit facile. C'est ça, le vrai sens de « contrôle de carte »."},
+ run:{en:"Emz commits to the SIDE lanes and stays there. Mandy holds the middle and does not move — moving cancels the beam, which is the entire point of her.",fr:"Eliz@ s'engage sur les couloirs LATÉRAUX et y reste. Mandy tient le centre et ne bouge pas — bouger annule le rayon, ce qui est tout l'intérêt d'elle."},
+ dont:{en:"Against a diver who ignores lanes. Mico hops the wall, Shade walks through it, and Mandy is standing perfectly still by design.",fr:"Contre un plongeur qui ignore les couloirs. Mico saute le mur, Shade le traverse, et Mandy est parfaitement immobile par conception."}},
+
+{id:"chokehold",parts:["bo","barley"],diff:0,modes:["heist","hotzone","gemgrab"],
+ n:{en:"Nobody uses that corridor",fr:"Personne n'emprunte ce couloir"},
+ why:{en:"You don't have to win the chokepoint. You have to make it not worth trying.",fr:"Tu n'as pas besoin de gagner le goulot. Tu dois le rendre pas rentable."},
+ mech:{en:"Bo's invisible mines sit in the corridor. Barley's puddles burn the ground in front of them. Walking in costs health; walking in fast costs a launch and then health.",fr:"Les mines invisibles de Bo sont dans le couloir. Les flaques de Bartaba brûlent le sol devant. Entrer coûte de la vie ; entrer vite coûte un envol puis de la vie."},
+ win:{en:"Two brawlers now control a route without either of them standing in it. They're free to be somewhere else while the corridor defends itself.",fr:"Deux brawlers contrôlent une route sans qu'aucun n'y soit. Ils sont libres d'être ailleurs pendant que le couloir se défend tout seul."},
+ run:{en:"Mines go around the corner, where the enemy is already committed and can't back out. Not at the entrance, where they see the animation and stop.",fr:"Les mines se posent après le virage, là où l'ennemi est déjà engagé et ne peut plus reculer. Pas à l'entrée, où il voit l'animation et s'arrête."},
+ dont:{en:"When they have a wall-breaker. Colt, Brock, Shelly, Dynamike and Frank will just make a new corridor next to yours.",fr:"Quand ils ont un casseur de murs. Colt, Brock, Shelly, Dynamike et Frank vont simplement créer un nouveau couloir à côté du tien."}},
+
+{id:"breakcharge",parts:["shelly","bull"],diff:1,modes:["brawlball","gemgrab","heist"],
+ n:{en:"Break the wall, then charge through it",fr:"Casse le mur, puis charge à travers"},
+ why:{en:"A wall is only cover until somebody removes it. Then it's a marked route.",fr:"Un mur n'est un abri que jusqu'à ce que quelqu'un l'enlève. Ensuite, c'est un itinéraire balisé."},
+ mech:{en:"Shelly's Super blows a hole in the cover the enemy is hiding behind. Bull charges through the hole into a brawler who had planned their whole position around that wall existing.",fr:"Le Super de Shelly troue le couvert derrière lequel l'ennemi se cache. Bull charge à travers le trou sur un brawler qui avait bâti toute sa position sur l'existence de ce mur."},
+ win:{en:"Tanks lose to geometry, not to damage. Change the geometry and the tank wins. This is the cheapest way to make a stalled Brawl Ball map move.",fr:"Les tanks perdent contre la géométrie, pas contre les dégâts. Change la géométrie et le tank gagne. C'est le moyen le moins cher de débloquer une carte de Brawl Ball figée."},
+ run:{en:"Break the wall on the side the enemy ISN'T watching. Bull's own Super also breaks walls — chain them and you make a tunnel, not a door.",fr:"Casse le mur du côté que l'ennemi NE regarde PAS. Le Super de Bull casse aussi les murs — enchaîne-les et tu fais un tunnel, pas une porte."},
+ dont:{en:"Breaking walls near your own gem carrier or safe. Cover is symmetrical. Every hole you make is a hole they can shoot through too.",fr:"Casser des murs près de ton porteur de gemmes ou de ton coffre. Le couvert est symétrique. Chaque trou que tu fais est un trou par lequel ils peuvent tirer aussi."}},
+
+{id:"stunwall",parts:["buzz","spike"],diff:2,modes:["knockout","gemgrab","bounty"],
+ n:{en:"Pin them in the field",fr:"Cloue-les dans le champ"},
+ why:{en:"Spike's field is easy to walk out of. Unless you can't walk.",fr:"Le champ de Spike est facile à quitter. Sauf si tu ne peux pas marcher."},
+ mech:{en:"Buzz's buoy latches onto a target, drags him to them and stuns them on arrival. Spike drops his slowing field on the spot. The stun ends and they're still slowed, still inside it, still taking damage.",fr:"La bouée de Buzz s'accroche à une cible, l'y attire et l'étourdit à l'arrivée. Spike pose son champ ralentissant dessus. L'étourdissement finit et ils sont toujours ralentis, toujours dedans, toujours en train de prendre des dégâts."},
+ win:{en:"Stuns are short and slows are long. Chaining a short hard control into a long soft control means the escape window never actually opens.",fr:"Les étourdissements sont courts et les ralentissements sont longs. Enchaîner un contrôle dur et court dans un contrôle mou et long fait que la fenêtre de fuite ne s'ouvre jamais."},
+ run:{en:"Buzz charges his Super faster near enemies and in bushes — get the bar full before you're seen. Spike throws the field where Buzz is going, not where he is.",fr:"Buzz charge son Super plus vite près des ennemis et dans les buissons — remplis la barre avant d'être vu. Spike lance le champ là où Buzz va, pas là où il est."},
+ dont:{en:"Buzz diving into two people. The stun hits one; the other one kills him while he's standing in his own combo.",fr:"Buzz qui plonge sur deux personnes. L'étourdissement en touche un ; l'autre le tue pendant qu'il est planté dans son propre combo."}},
+
+{id:"pulldyna",parts:["jacky","dynamike"],diff:1,modes:["hotzone","gemgrab","heist"],
+ n:{en:"Hold them still under the dynamite",fr:"Tiens-les sous la dynamite"},
+ why:{en:"Dynamike's problem is that dynamite takes a second to land and people have legs.",fr:"Le problème de Dynamike, c'est que la dynamite met une seconde à tomber et que les gens ont des jambes."},
+ mech:{en:"Jacky's Super pulls everyone nearby toward her and her drill keeps hitting all of them at once. Dynamike throws into the pile. Nobody in that pile is going anywhere while Jacky is alive.",fr:"Le Super de Jacky attire tout le monde vers elle et son marteau les touche tous en même temps. Dynamike balance dans le tas. Personne dans ce tas ne va nulle part tant que Jacky est en vie."},
+ win:{en:"Jacky is the only brawler in the game who genuinely wants to be surrounded. Pair her with someone whose damage also wants people bunched together and her weakness becomes the setup.",fr:"Jacky est la seule brawler du jeu qui veut vraiment être encerclée. Associe-la à quelqu'un dont les dégâts veulent aussi des gens groupés et sa faiblesse devient la mise en place."},
+ run:{en:"Dynamike throws where Jacky WILL be after the pull, which is where she already is. She isn't moving; that's the whole plan.",fr:"Dynamike lance là où Jacky SERA après l'aspiration, c'est-à-dire là où elle est déjà. Elle ne bouge pas ; c'est tout le plan."},
+ dont:{en:"Dynamike hits your Jacky too. This combo trades her health for their health — check she can afford it before you throw.",fr:"Dynamike touche aussi ta Jacky. Ce combo échange sa vie contre la leur — vérifie qu'elle peut se le permettre avant de lancer."}},
+
+{id:"sprootgoal",parts:["sprout","frank"],diff:1,modes:["brawlball"],
+ n:{en:"Wall the goal, then push",fr:"Mure le but, puis pousse"},
+ why:{en:"A Sprout wall in the goalmouth is a goalkeeper that can't be shot.",fr:"Un mur de Wally dans la cage, c'est un gardien qu'on ne peut pas tirer."},
+ mech:{en:"Sprout grows a wall directly across the enemy's shooting lane to your goal. It blocks the ball. While they're solving that, Frank hammers through their half and the ball comes back the other way.",fr:"Wally fait pousser un mur en travers du couloir de tir adverse vers ton but. Il bloque le ballon. Pendant qu'ils gèrent ça, Frank écrase leur moitié et le ballon repart dans l'autre sens."},
+ win:{en:"Brawl Ball is decided by tempo. A wall doesn't kill anyone — it just deletes their shot and gives you the ten seconds you needed.",fr:"Le Brawl Ball se décide au tempo. Un mur ne tue personne — il supprime juste leur tir et t'offre les dix secondes qu'il te fallait."},
+ run:{en:"Wall AS the shot is charging, not before. Placed early it's just a wall they walk around — and it blocks your clearance too.",fr:"Le mur PENDANT que le tir se charge, pas avant. Posé trop tôt, c'est juste un mur qu'ils contournent — et il bloque aussi ton dégagement."},
+ dont:{en:"Against a wall-breaker. Colt, Brock, Shelly, Dynamike and Frank all delete Sprout's goalkeeper on the way past.",fr:"Contre un casseur de murs. Colt, Brock, Shelly, Dynamike et Frank effacent tous le gardien de Wally au passage."}},
+
+{id:"turretbooster",parts:["8bit","jessie"],diff:0,modes:["heist","hotzone"],
+ n:{en:"Buff the turret",fr:"Booste la tourelle"},
+ why:{en:"8-Bit's booster works on turrets. Most people never test this.",fr:"Le booster d'A.R.K.A.D. marche sur les tourelles. Presque personne ne le teste."},
+ mech:{en:"Jessie's turret sits inside 8-Bit's damage booster. It now shoots harder, forever, without anybody aiming it or standing next to it.",fr:"La tourelle de Jessie est posée dans le booster d'A.R.K.A.D. Elle tire plus fort, en permanence, sans que personne la vise ni reste à côté."},
+ win:{en:"Two Supers spent once, producing damage for the rest of the round with no ongoing cost. In Heist, that's a defence that runs itself while your third brawler goes and does something useful.",fr:"Deux Supers dépensés une fois, produisant des dégâts jusqu'à la fin de la manche sans coût continu. En Braquage, c'est une défense autonome pendant que ton troisième brawler va faire quelque chose d'utile."},
+ run:{en:"Booster first, turret inside it. Both slightly off to the side of the safe so one thrown bottle can't clear the whole setup.",fr:"Le booster d'abord, la tourelle dedans. Les deux légèrement à côté du coffre pour qu'une seule bouteille ne nettoie pas tout."},
+ dont:{en:"Stacking everything in one square. You've built a very expensive pile of things that all die to the same Barley Super.",fr:"Tout empiler sur une case. Tu as construit un tas très cher de choses qui meurent toutes au même Super de Bartaba."}},
+
+{id:"doublepull",parts:["gene","tara","spike"],diff:2,modes:["gemgrab","hotzone","knockout"],
+ n:{en:"Two hands and a field",fr:"Deux mains et un champ"},
+ why:{en:"The full version. Rare, hard to set up, and it ends rounds.",fr:"La version complète. Rare, difficile à mettre en place, et ça termine des manches."},
+ mech:{en:"Gene pulls one isolated enemy into the group. Tara's black hole then catches all three at once instead of two. Spike's field lands on the pile.",fr:"D'jinn aspire un ennemi isolé vers le groupe. Le trou noir de Tara attrape ensuite les trois d'un coup au lieu de deux. Le champ de Spike atterrit sur le tas."},
+ win:{en:"Tara's Super is limited by the enemy spreading out. Gene fixes that by fetching the straggler. You've turned a positioning problem into a button press.",fr:"Le Super de Tara est limité par l'écartement des ennemis. D'jinn règle ça en allant chercher le retardataire. Tu as transformé un problème de placement en appui de bouton."},
+ run:{en:"Gene pulls the one standing APART, toward the other two. Tara Supers on the group the instant he lands. Spike throws last. Three Supers, one second, in that order — practice it in a friendly match first.",fr:"D'jinn aspire celui qui est À L'ÉCART, vers les deux autres. Tara Super sur le groupe dès qu'il atterrit. Spike lance en dernier. Trois Supers, une seconde, dans cet ordre — entraîne-toi d'abord en match amical."},
+ dont:{en:"Ever, without three Supers ready and a team that knows the plan. Half of this combo is worse than none of it — you've spent everything and moved one enemy closer to your squishies.",fr:"Jamais, sans trois Supers prêts et une équipe au courant. La moitié de ce combo est pire que rien — tu as tout dépensé et rapproché un ennemi de tes fragiles."}},
+
+{id:"moshpit",parts:["damian","barley"],diff:2,modes:["gemgrab","hotzone","brawlball"],
+ n:{en:"Mosh pit, then the floor is lava",fr:"Le mosh pit, puis le sol devient lave"},
+ why:{en:"Damian's Super doesn't kill anyone. It just holds them still while somebody else does.",fr:"Le Super de Damian ne tue personne. Il les maintient immobiles pendant que quelqu'un d'autre s'en charge."},
+ mech:{en:"Damian jumps a wall and lands on two enemies. Speakers ring them in and launch them toward the centre. While airborne they cannot move, attack, use a Gadget, or use their Super — but they're immune to direct damage. Barley's fire is already on the landing spot.",fr:"Damian saute un mur et atterrit sur deux ennemis. Les enceintes les encerclent et les projettent vers le centre. En l'air, ils ne peuvent ni bouger, ni attaquer, ni utiliser de Gadget ou de Super — mais ils sont immunisés aux dégâts directs. Le feu de Bartaba est déjà sur la zone d'atterrissage."},
+ win:{en:"A wall is not protection against Damian — he jumps it. This turns the enemy's safest square into their worst one. Because they're immune in the air, the value isn't hitting them mid-flight: it's that you know exactly where they'll land, seconds early, and they can't do anything about it.",fr:"Un mur ne protège pas de Damian — il le saute. Ça transforme la case la plus sûre de l'ennemi en la pire. Comme ils sont immunisés en l'air, la valeur n'est pas de les frapper en vol : c'est que tu sais exactement où ils vont atterrir, des secondes à l'avance, et qu'ils n'y peuvent rien."},
+ run:{en:"Charge Damian's Super by walking into their poke on purpose — he charges from damage taken. Jump onto TWO enemies, never one. Barley throws the moment Damian leaves the ground, not before. Any ground-holder works: Dynamike, Sprout, Tick, Willow, Spike.",fr:"Charge le Super de Damian en avançant volontairement dans leur poke — il charge avec les dégâts subis. Saute sur DEUX ennemis, jamais un. Bartaba lance au moment où Damian décolle, pas avant. N'importe qui tenant le sol marche : Dynamike, Sprout, Tick, Willow, Spike."},
+ dont:{en:"Solo-jumping into three enemies because the Super is ready. Without a teammate to punish the landing you have simply delivered yourself into the middle of their team, and the pit ends before your punches do.",fr:"Sauter seul sur trois ennemis parce que le Super est prêt. Sans allié pour punir l'atterrissage, tu t'es simplement livré au milieu de leur équipe, et la fosse se termine avant tes poings."}},
+
+{id:"shadowfarm",parts:["sirius","frank"],diff:2,modes:["hotzone","heist","gemgrab"],
+ n:{en:"Farm the Shadows, then send them in",fr:"Farmer les Ombres, puis les envoyer"},
+ why:{en:"Sirius alone is a weak brawler. Sirius with three Shadows is a fourth, fifth and sixth player.",fr:"Sirius seul est un brawler faible. Sirius avec trois Ombres, c'est un quatrième, cinquième et sixième joueur."},
+ mech:{en:"Every 4th hit Sirius lands steals that brawler's Shadow. He stores up to three. His Super spawns them as weaker clones of whoever he stole them from — and re-aiming the Super steers them to a spot on the map instead of following him.",fr:"Chaque 4e coup placé par Sirius vole l'Ombre du brawler touché. Il en stocke jusqu'à trois. Son Super les fait apparaître en clones plus faibles de ceux à qui il les a volées — et viser à nouveau les envoie à un endroit de la carte au lieu de le suivre."},
+ win:{en:"Shadows can stand on an objective that you can't. In Hot Zone they hold the ring while Sirius stays safe; in Heist they chew the safe and body-block at the same time. You're not adding damage — you're adding bodies, which is the one thing no other brawler can do.",fr:"Les Ombres peuvent tenir un objectif que toi tu ne peux pas tenir. En Zone réservée, elles occupent le cercle pendant que Sirius reste en sécurité ; en Braquage, elles rongent le coffre et bloquent en même temps. Tu n'ajoutes pas des dégâts — tu ajoutes des corps, et c'est la seule chose qu'aucun autre brawler ne sait faire."},
+ run:{en:"Hide behind the tank and poke — the Starr Bomb lobs over walls, so you can farm hits safely. Bank THREE Shadows before you summon; one Shadow is a wasted Super. Steal from their tank, not their marksman: you get a copy of the biggest health bar on the map.",fr:"Cache-toi derrière le tank et gratte — la Starr Bomb passe par-dessus les murs, donc tu peux farmer des coups en sécurité. Stocke TROIS Ombres avant d'invoquer ; une seule Ombre, c'est un Super gâché. Vole au tank, pas au tireur d'élite : tu obtiens une copie de la plus grosse barre de vie de la carte."},
+ dont:{en:"Summon into splash. Nita, Tara, Emz, Penny and Carl delete all three Shadows with one attack, and they all vanish instantly if Sirius dies — so never summon while you're the one being dived.",fr:"Invoquer dans des dégâts de zone. Nita, Tara, Emz, Penny et Carl effacent les trois Ombres d'un seul coup, et elles disparaissent toutes instantanément si Sirius meurt — donc n'invoque jamais quand c'est toi qu'on plonge."}},
+
+{id:"novacleanup",parts:["damian","starrnova"],diff:2,modes:["brawlball","gemgrab","bounty"],
+ n:{en:"Trap it, then cut it",fr:"Piéger, puis trancher"},
+ why:{en:"Starr Nova can't open a fight and survive. Damian can't finish one. Together that's a whole assassin.",fr:"Starr Nova ne peut pas ouvrir un combat et survivre. Damian ne peut pas en finir un. Ensemble, ça fait un assassin complet."},
+ mech:{en:"Damian's mosh pit locks two enemies in place and strips their ability to act. Starr Nova Supers in during that window, transforms, and swings a wide sword arc. Every sword hit stacks +5% damage, up to +30% — and the stack survives a second Super.",fr:"Le mosh pit de Damian bloque deux ennemis sur place et leur retire toute action. Starr Nova entre avec son Super pendant cette fenêtre, se transforme et balaie un large arc d'épée. Chaque coup d'épée cumule +5 % de dégâts, jusqu'à +30 % — et le cumul survit à un second Super."},
+ win:{en:"Her Star Power rewards hitting several bodies, and Damian has just stacked several bodies into one small circle for you. Her whole weakness is that she has ~7 seconds and no escape; the pit means none of those seconds are spent chasing.",fr:"Son Pouvoir Star récompense les coups sur plusieurs corps, et Damian vient justement d'empiler plusieurs corps dans un petit cercle pour toi. Toute sa faiblesse, c'est ses ~7 secondes sans échappatoire ; la fosse fait qu'aucune de ces secondes n'est perdue à poursuivre."},
+ run:{en:"Damian jumps first, always. Starr Nova dashes in as they land, not while they're airborne — they're immune in the air and you'd waste half your timer. Count the seconds out loud: leave at five, not seven, or you turn back into the squishy form inside their team.",fr:"Damian saute en premier, toujours. Starr Nova fonce quand ils atterrissent, pas quand ils sont en l'air — ils y sont immunisés et tu gâcherais la moitié de ton chrono. Compte à voix haute : sors à cinq secondes, pas sept, sinon tu redeviens fragile au milieu de leur équipe."},
+ dont:{en:"Send Starr Nova first. Without the pit she's diving a full team with the worst healing of any assassin, and she dies before the sword stack is worth anything.",fr:"Envoyer Starr Nova en premier. Sans la fosse, elle plonge sur une équipe entière avec les pires soins de tous les assassins, et elle meurt avant que le cumul d'épée ne vaille quoi que ce soit."}}
+];
+/* ============================================================================
+   MODES · KIT · FUNDAMENTALS
+   ========================================================================== */
+
+var MODES = [
+{id:"gemgrab",n:{en:"Gem Grab",fr:"Razzia de Gemmes"},
+ rew:{en:"Holding the middle. Not kills — the middle.",fr:"Tenir le centre. Pas les kills — le centre."},
+ b:{en:"<p>Ten gems and a countdown. The team that holds the centre collects for free; the team that doesn't has to fight for every gem, and gems are lost when you die.</p><p><b>The one rule:</b> the gem carrier does not fight. Ever. Their job is to be boring and alive behind two teammates. If your carrier has 7 gems and is duelling, you have already lost and the scoreboard just hasn't caught up.</p><p><b>Pick:</b> someone who owns the middle (a thrower, a controller), someone who can take space (a tank), someone who punishes from range. Three of the same thing loses to a team with three different things.</p>",
+    fr:"<p>Dix gemmes et un décompte. L'équipe qui tient le centre récolte gratuitement ; l'autre doit se battre pour chaque gemme, et on perd ses gemmes en mourant.</p><p><b>La règle unique :</b> le porteur de gemmes ne se bat pas. Jamais. Son boulot est d'être ennuyeux et vivant derrière deux alliés. Si ton porteur a 7 gemmes et duelle, tu as déjà perdu et le score n'a pas encore rattrapé.</p><p><b>Choisis :</b> quelqu'un qui possède le centre (un lanceur, un contrôleur), quelqu'un qui prend l'espace (un tank), quelqu'un qui punit à distance. Trois fois la même chose perd contre une équipe qui a trois choses différentes.</p>"}},
+
+{id:"brawlball",n:{en:"Brawl Ball",fr:"Brawl Ball"},
+ rew:{en:"Tempo. Being faster than them for three seconds.",fr:"Le tempo. Être plus rapide qu'eux pendant trois secondes."},
+ b:{en:"<p>Football with weapons. Holding the ball slows you down and makes you the only target on the map.</p><p><b>The one rule:</b> don't solo the ball into three people. Pass it. A pass is instant and a walk is not. The most common loss in Brawl Ball is one player dribbling into a wall of enemies while two teammates stand behind them doing nothing.</p><p><b>Pick:</b> a wall-breaker (Colt, Brock, Shelly, Dynamike, Frank) — stalled Brawl Ball maps are stalled because of walls. Something with a speed or knockback Super for the last three seconds. Someone who can defend the goal without being in it.</p>",
+    fr:"<p>Du foot avec des armes. Porter le ballon te ralentit et fait de toi la seule cible de la carte.</p><p><b>La règle unique :</b> ne fonce pas seul dans trois personnes. Fais la passe. Une passe est instantanée, une marche non. La défaite la plus fréquente en Brawl Ball, c'est un joueur qui dribble dans un mur d'ennemis pendant que deux alliés attendent derrière.</p><p><b>Choisis :</b> un casseur de murs (Colt, Brock, Shelly, Dynamike, Frank) — une carte figée est figée à cause des murs. Un truc avec un Super de vitesse ou de poussée pour les trois dernières secondes. Quelqu'un qui défend le but sans être dedans.</p>"}},
+
+{id:"heist",n:{en:"Heist",fr:"Braquage"},
+ rew:{en:"Damage on something that never dodges.",fr:"Des dégâts sur une chose qui n'esquive jamais."},
+ b:{en:"<p>Two safes. Break theirs before they break yours. There is no third objective and no points for kills.</p><p><b>The one rule:</b> know whether you're attacking or defending, and don't do both badly. Heist is a race, and the team that commits first usually wins it. Trading kills in the middle is losing to both teams at once.</p><p><b>Pick:</b> burst damage on a stationary target (Colt, Bull, Darryl, Piper, Bea, Shelly, Bonnie, Dynamike) and something that makes the walk survivable. If defending: turrets, throwers, and anything that costs the attacker time.</p>",
+    fr:"<p>Deux coffres. Casse le leur avant qu'ils cassent le tien. Pas de troisième objectif, pas de points pour les kills.</p><p><b>La règle unique :</b> sache si tu attaques ou si tu défends, et ne fais pas les deux mal. Le Braquage est une course, et l'équipe qui s'engage la première la gagne en général. Échanger des kills au milieu, c'est perdre contre les deux équipes à la fois.</p><p><b>Choisis :</b> des dégâts en burst sur cible immobile (Colt, Bull, Darryl, Polly, Béa, Shelly, Bonnie, Dynamike) et quelque chose qui rend la marche survivable. En défense : tourelles, lanceurs, et tout ce qui coûte du temps à l'attaquant.</p>"}},
+
+{id:"bounty",n:{en:"Bounty",fr:"Prime"},
+ rew:{en:"Not dying. Your stars are worth more than theirs.",fr:"Ne pas mourir. Tes étoiles valent plus que les leurs."},
+ b:{en:"<p>Every kill gives them a star, and your bounty grows each time you kill. Dying with 7 stars on your head hands them the round.</p><p><b>The one rule:</b> the moment you are the highest bounty on the map, you become a support player. Play behind everyone. It feels bad. Do it anyway — that is the entire mode.</p><p><b>Pick:</b> range, range, and something that watches a bush. Bounty maps are open, which is why Piper, Brock, Bea, Belle, Mandy and Angelo live here. Bring one brawler who can punish a diver, or your snipers die at 30 seconds.</p>",
+    fr:"<p>Chaque kill leur donne une étoile, et ta prime grandit à chaque kill que tu fais. Mourir avec 7 étoiles sur la tête leur offre la manche.</p><p><b>La règle unique :</b> dès que tu es la plus grosse prime de la carte, tu deviens un joueur de soutien. Joue derrière tout le monde. C'est frustrant. Fais-le quand même — c'est tout le mode.</p><p><b>Choisis :</b> de la portée, de la portée, et quelqu'un qui surveille un buisson. Les cartes de Prime sont ouvertes, c'est pour ça que Polly, Brock, Béa, Belle, Mandy et Angelo y vivent. Prends un brawler qui punit les plongeurs, sinon tes snipers meurent à 30 secondes.</p>"}},
+
+{id:"knockout",n:{en:"Knockout",fr:"Hors-jeu"},
+ rew:{en:"Patience. There are no respawns.",fr:"La patience. Il n'y a pas de réapparition."},
+ b:{en:"<p>Three lives per round, total. Once you're gone, you're gone until the round ends.</p><p><b>The one rule:</b> never take a fair fight. A 1v1 you win at 20% health is a fight you lost, because now you're the free kill that makes it 3v2. Poison closes in eventually — let them come to you.</p><p><b>Pick:</b> anything that removes one enemy (Cordelius, Otis, Charlie), anything with range, and a healer. Sustain is worth far more here than in any respawn mode, because there's no second chance to trade with.</p>",
+    fr:"<p>Trois vies par manche, en tout. Une fois mort, tu es mort jusqu'à la fin de la manche.</p><p><b>La règle unique :</b> ne prends jamais un combat équitable. Un 1v1 gagné à 20 % de vie est un combat perdu, parce que tu es maintenant le kill gratuit qui crée le 3v2. Le poison se resserre de toute façon — laisse-les venir.</p><p><b>Choisis :</b> tout ce qui retire un ennemi (Cordelius, Otis, Charlie), tout ce qui a de la portée, et un soigneur. Le sustain vaut bien plus ici que dans un mode avec réapparition, parce qu'il n'y a pas de seconde chance pour échanger.</p>"}},
+
+{id:"hotzone",n:{en:"Hot Zone",fr:"Zone Réservée"},
+ rew:{en:"Standing in a circle. Denying a circle.",fr:"Rester dans un cercle. Interdire un cercle."},
+ b:{en:"<p>Hold the zone for points. You don't need to be alive-and-winning — you need to be in the circle.</p><p><b>The one rule:</b> you don't have to be in the zone if they can't be either. Denying the zone scores nothing for anybody, and nothing-for-anybody is a win when you're ahead. Throwers understand this and everyone else forgets it.</p><p><b>Pick:</b> zone denial (Barley, Tick, Sprout, Emz, Spike, Amber, Grom) and someone who can actually sit in the circle and survive — a tank with a healer. Multiple people standing in the same zone earns nothing extra: send them somewhere useful.</p>",
+    fr:"<p>Tiens la zone pour marquer. Tu n'as pas besoin d'être vivant-et-gagnant — tu dois être dans le cercle.</p><p><b>La règle unique :</b> tu n'as pas besoin d'être dans la zone s'ils ne peuvent pas y être non plus. Interdire la zone ne marque rien pour personne, et rien-pour-personne est une victoire quand tu mènes. Les lanceurs le savent et tous les autres l'oublient.</p><p><b>Choisis :</b> de l'interdiction de zone (Bartaba, Tick, Wally, Eliz@, Spike, Ambre, Grom) et quelqu'un qui peut vraiment tenir le cercle — un tank avec un soigneur. Être plusieurs dans la même zone ne rapporte rien de plus : envoie-les ailleurs.</p>"}},
+
+{id:"showdown",n:{en:"Showdown",fr:"Survivant"},
+ rew:{en:"Third place. Seriously.",fr:"La troisième place. Sérieusement."},
+ b:{en:"<p>Ten players, one winner, poison closing in. But you gain trophies from 4th place upward — you do not need to win.</p><p><b>The one rule:</b> let other people fight. Every duel you skip is two brawlers damaging each other for free while you collect power cubes. The player who arrives third to a 1v1 wins the 1v1.</p><p><b>Pick:</b> anything that heals itself, hides, or escapes — Shelly, Edgar, Leon, Bull, Rosa, Crow, Kit, Mortis, Sam, Fang. Throwers and immobile brawlers struggle here because there is no team to protect them.</p>",
+    fr:"<p>Dix joueurs, un gagnant, le poison qui se resserre. Mais tu gagnes des trophées dès la 4e place — tu n'as pas besoin de gagner.</p><p><b>La règle unique :</b> laisse les autres se battre. Chaque duel évité, ce sont deux brawlers qui s'abîment gratuitement pendant que tu ramasses des cubes. Celui qui arrive troisième sur un 1v1 gagne le 1v1.</p><p><b>Choisis :</b> tout ce qui se soigne, se cache ou s'échappe — Shelly, Edgar, Léon, Bull, Rosa, Corbac, Kit, Mortis, Sam, Fang. Les lanceurs et les brawlers immobiles galèrent ici, parce qu'il n'y a pas d'équipe pour les protéger.</p>"}}
+];
+
+var KIT = [
+{n:{en:"Gadget",fr:"Gadget"},
+ b:{en:"<p>A few uses per match, then it's gone. That scarcity is the design: a gadget is <b>a plan you can afford three times</b>, not a button you press when it's off cooldown.</p><p>Pick the gadget that solves the problem you actually have. Facing divers? Take the escape. Facing a wall? Take the mobility. Most brawlers have one gadget that's good in every match and one that's excellent in a specific matchup — the second one wins more games than the first, if you're honest about the matchup.</p><p><b>The habit:</b> before the match starts, say what your gadget is for. If you can't, you picked wrong.</p>",
+    fr:"<p>Quelques utilisations par match, puis c'est fini. Cette rareté, c'est le design : un gadget, c'est <b>un plan que tu peux te payer trois fois</b>, pas un bouton qu'on appuie dès qu'il est prêt.</p><p>Prends le gadget qui règle le problème que tu as vraiment. Des plongeurs en face ? Prends la fuite. Un mur ? Prends la mobilité. La plupart des brawlers ont un gadget bon dans tous les matchs et un excellent dans un match précis — le second gagne plus de parties, si tu es honnête sur le match.</p><p><b>Le réflexe :</b> avant le match, dis à quoi sert ton gadget. Si tu ne peux pas, tu as mal choisi.</p>"}},
+
+{n:{en:"Star Power",fr:"Pouvoir Star"},
+ b:{en:"<p>Always on, no cost, no decision during the match. Which means the decision is entirely made before it starts.</p><p>The trap is picking the one with the biggest number. Read what the star power actually does to <i>how you play</i>. A star power that heals you in bushes changes where you stand for the whole match. A star power that adds 10% damage changes nothing about your decisions — it just makes your existing decisions slightly better.</p><p><b>The habit:</b> prefer the one that changes your options over the one that changes your numbers.</p>",
+    fr:"<p>Toujours actif, gratuit, aucune décision pendant le match. Donc la décision se prend entièrement avant.</p><p>Le piège, c'est de prendre celui avec le plus gros chiffre. Lis ce que le pouvoir star fait vraiment à <i>ta façon de jouer</i>. Un pouvoir qui te soigne dans les buissons change où tu te places pendant tout le match. Un pouvoir qui ajoute 10 % de dégâts ne change aucune de tes décisions — il rend juste tes décisions actuelles un peu meilleures.</p><p><b>Le réflexe :</b> préfère celui qui change tes options à celui qui change tes chiffres.</p>"}},
+
+{n:{en:"Gears",fr:"Équipements"},
+ b:{en:"<p>Small percentage upgrades in two slots. They are the least exciting part of the game and one of them is quietly the most important.</p><p><b>Vision</b> lets you see further into bushes. Most fights you lose in this game, you lose because someone was in a bush and you weren't. That is not a damage problem and no amount of damage gear fixes it.</p><p><b>Speed</b> wins the reposition, and the reposition is what decides whether you were in range or not. Everything else — damage, health, shield — makes a fight you were already having slightly better. Vision and Speed decide which fights happen.</p><p><b>The habit:</b> Vision + Speed is the boring correct default for most brawlers. Deviate on purpose, not by accident. Gears change between updates — check what's in your game.</p>",
+    fr:"<p>De petites améliorations en pourcentage, sur deux emplacements. C'est la partie la moins excitante du jeu et l'une d'elles est discrètement la plus importante.</p><p><b>Vision</b> te fait voir plus loin dans les buissons. La plupart des combats que tu perds, tu les perds parce que quelqu'un était dans un buisson et pas toi. Ce n'est pas un problème de dégâts et aucun équipement de dégâts ne le règle.</p><p><b>Vitesse</b> gagne le replacement, et le replacement décide si tu étais à portée ou non. Tout le reste — dégâts, vie, bouclier — rend légèrement meilleur un combat que tu avais déjà. Vision et Vitesse décident quels combats ont lieu.</p><p><b>Le réflexe :</b> Vision + Vitesse est le défaut ennuyeux et correct pour la plupart des brawlers. Dévie exprès, pas par accident. Les équipements changent entre les mises à jour — vérifie ce qu'il y a dans ton jeu.</p>"}},
+
+{n:{en:"Hypercharge",fr:"Hypercharge"},
+ b:{en:"<p>A supercharged version of your Super that you charge by using your normal Super. It doesn't just make the Super bigger — it usually adds speed, damage reduction, and a new effect on top.</p><p>The real change is to <i>when</i> you play. A brawler with a hypercharge has a window: a few seconds where they beat almost anything. Your job stops being 'use my Super when it's ready' and becomes 'get to the window, then commit'.</p><p><b>The habit:</b> know whether the enemy's hypercharge is up. If their Frank has it, do not group up. Half of playing against hypercharge is just counting.</p>",
+    fr:"<p>Une version surchargée de ton Super, que tu charges en utilisant ton Super normal. Ça ne fait pas que grossir le Super — ça ajoute en général de la vitesse, de la réduction de dégâts, et un nouvel effet par-dessus.</p><p>Le vrai changement, c'est <i>quand</i> tu joues. Un brawler avec une hypercharge a une fenêtre : quelques secondes où il bat presque tout. Ton boulot n'est plus « utiliser mon Super quand il est prêt » mais « atteindre la fenêtre, puis s'engager ».</p><p><b>Le réflexe :</b> sache si l'hypercharge adverse est prête. Si leur Frank l'a, ne vous regroupez pas. Jouer contre l'hypercharge, c'est à moitié juste compter.</p>"}}
+];
+
+var BASICS = [
+{n:{en:"The loop",fr:"La boucle"},loop:true,
+ b:{en:"<p>This is the shape of the whole game. It's not exact — a good player breaks it constantly — but if you don't know where you sit in it, you're guessing.</p><p><b>Tanks</b> beat <b>assassins</b>, because an assassin who dives a tank has jumped into a fight they can't leave. <b>Assassins</b> beat <b>marksmen</b>, because a marksman up close is a person holding a rifle by the barrel. <b>Marksmen</b> beat <b>tanks</b>, because a tank has to walk and walking takes time you spend shooting them.</p><p>Around the loop: <b>throwers</b> punish anyone who stands still, and die to anyone who arrives. <b>Supports</b> and <b>controllers</b> don't sit in the loop — they change who wins the matchups that are already happening.</p>",
+    fr:"<p>Voilà la forme de tout le jeu. Ce n'est pas exact — un bon joueur la casse en permanence — mais si tu ne sais pas où tu te situes dedans, tu devines.</p><p>Les <b>tanks</b> battent les <b>assassins</b>, parce qu'un assassin qui plonge sur un tank a sauté dans un combat qu'il ne peut pas quitter. Les <b>assassins</b> battent les <b>tireurs d'élite</b>, parce qu'un sniper de près est quelqu'un qui tient un fusil par le canon. Les <b>tireurs d'élite</b> battent les <b>tanks</b>, parce qu'un tank doit marcher et que la marche prend un temps que tu passes à lui tirer dessus.</p><p>Autour de la boucle : les <b>lanceurs</b> punissent tout ce qui reste immobile, et meurent de tout ce qui arrive. Les <b>soutiens</b> et les <b>contrôleurs</b> ne sont pas dans la boucle — ils changent qui gagne les duels qui ont déjà lieu.</p>"}},
+
+{n:{en:"Count their Supers",fr:"Compte leurs Supers"},
+ b:{en:"<p>This is the skill that separates good players from everyone else, and it costs nothing but attention.</p><p>Every Super in the game is visible on the enemy's health bar. When the enemy Frank has his Super, you do not stand next to your teammates. When he spends it, you have about fifteen seconds where his entire threat is a slow hammer, and that is your window to do anything you want.</p><p>Most players react to Supers. Better players wait for them to be gone. Same brawlers, same aim, completely different match.</p><p><b>Start with one:</b> pick the scariest enemy and track only theirs. Add more when it's automatic.</p>",
+    fr:"<p>C'est la compétence qui sépare les bons joueurs de tous les autres, et elle ne coûte que de l'attention.</p><p>Chaque Super du jeu est visible sur la barre de vie de l'ennemi. Quand le Frank adverse a son Super, tu ne restes pas collé à tes alliés. Quand il le dépense, tu as environ quinze secondes où toute sa menace est un marteau lent, et c'est ta fenêtre pour faire ce que tu veux.</p><p>La plupart des joueurs réagissent aux Supers. Les meilleurs attendent qu'ils soient partis. Mêmes brawlers, même visée, match complètement différent.</p><p><b>Commence par un seul :</b> prends l'ennemi le plus effrayant et suis uniquement le sien. Ajoute les autres quand c'est automatique.</p>"}},
+
+{n:{en:"Bushes are the map",fr:"Les buissons sont la carte"},
+ b:{en:"<p>You don't lose fights. You lose the two seconds before the fight, in a bush you didn't check.</p><p>Every bush is either yours or theirs. Yours means you know what's in it. Theirs means you're guessing, and guessing is how a Shelly gets to full-Super range for free.</p><p>Ways to own a bush without walking into it: shoot into it (any hit reveals), throw something over it, Bo's vision star power, a Vision gear, a teammate standing where they can see. Ways to lose to a bush: walk past it while looking somewhere else.</p><p><b>The habit:</b> when a lane goes quiet, someone is in a bush. Quiet is information.</p>",
+    fr:"<p>Tu ne perds pas les combats. Tu perds les deux secondes d'avant, dans un buisson que tu n'as pas vérifié.</p><p>Chaque buisson est le tien ou le leur. Le tien, ça veut dire que tu sais ce qu'il y a dedans. Le leur, ça veut dire que tu devines, et deviner, c'est comme ça qu'une Shelly arrive à portée de Super gratuitement.</p><p>Comment posséder un buisson sans y entrer : tirer dedans (toute touche révèle), lancer quelque chose par-dessus, le pouvoir star de vision de Bo, un équipement Vision, un allié placé de façon à voir. Comment perdre contre un buisson : passer à côté en regardant ailleurs.</p><p><b>Le réflexe :</b> quand un couloir devient silencieux, quelqu'un est dans un buisson. Le silence est une information.</p>"}},
+
+{n:{en:"Make it 3v2",fr:"Fais-en un 3v2"},
+ b:{en:"<p>Almost every combo on this page is a way of doing the same thing: briefly making it three of you against two of them.</p><p>You don't need a wipe. You need one enemy to be somewhere else for four seconds — pulled, stunned, cocooned, dead, or simply walked too far forward. Everything after that is easy, because 3v2 is not a small advantage. It's the whole fight.</p><p>This also tells you what to do when it happens to you: when you're the one who's alone, do not fight. Walk back. The 3v2 expires by itself if you don't feed it.</p>",
+    fr:"<p>Presque tous les combos de cette page font la même chose : créer brièvement un trois contre deux.</p><p>Tu n'as pas besoin d'un ace. Tu as besoin qu'un ennemi soit ailleurs pendant quatre secondes — aspiré, étourdi, encoconné, mort, ou simplement trop avancé. Tout le reste devient facile, parce que le 3v2 n'est pas un petit avantage. C'est tout le combat.</p><p>Ça te dit aussi quoi faire quand ça t'arrive : quand c'est toi qui es seul, ne te bats pas. Recule. Le 3v2 expire tout seul si tu ne le nourris pas.</p>"}},
+
+{n:{en:"Range is a resource",fr:"La portée est une ressource"},
+ b:{en:"<p>Damage numbers are visible. Range is not, and it decides more matches.</p><p>A brawler at their best range is a different brawler from the same one two tiles closer. Piper at maximum range beats almost anything; Piper at three tiles loses to almost anything. Same brawler, same level, opposite result.</p><p>So the question in any duel isn't 'who does more damage' — it's <b>'who gets to choose the distance'</b>. If you can pick the range, you've already won. If they can, walk away and find a fight where you can.</p><p><b>The habit:</b> before you engage, ask whose range you're standing in. If the answer is theirs, that's not a fight, it's a donation.</p>",
+    fr:"<p>Les chiffres de dégâts sont visibles. La portée, non, et c'est elle qui décide le plus de matchs.</p><p>Un brawler à sa portée idéale est un brawler différent du même deux cases plus près. Polly à portée maximale bat presque tout ; Polly à trois cases perd contre presque tout. Même brawler, même niveau, résultat opposé.</p><p>Donc la question dans un duel n'est pas « qui fait le plus de dégâts » — c'est <b>« qui choisit la distance »</b>. Si tu peux choisir la portée, tu as déjà gagné. Si c'est eux, va-t'en et trouve un combat où tu peux.</p><p><b>Le réflexe :</b> avant de t'engager, demande-toi dans la portée de qui tu te tiens. Si la réponse est « la leur », ce n'est pas un combat, c'est un don.</p>"}},
+
+{n:{en:"How to actually get better",fr:"Comment progresser vraiment"},
+ b:{en:"<p>Playing more games is not practice. It's just playing more games.</p><p><b>Pick one brawler for a week.</b> Not your favourite three — one. You cannot learn a matchup you experience once a day. The players who climb fastest have a smaller roster than the players who don't.</p><p><b>After a loss, say the sentence out loud:</b> \"I lost because ___\". If the sentence is \"my teammates were bad\", you learned nothing and the next match will be the same. Make it something you did: I walked into a bush. I used my Super on a full-health tank. I fought a Piper at her range.</p><p><b>Learn one combo properly instead of ten badly.</b> A combo you can do under pressure is worth more than nine you can describe. Start with the two-brawler ones marked Easy.</p><p><b>Watch replays of your own losses, not other people's wins.</b> Your mistakes are more useful than a pro's highlights, because they're yours and you'll make them again tomorrow.</p>",
+    fr:"<p>Jouer plus de parties n'est pas de l'entraînement. C'est juste jouer plus de parties.</p><p><b>Prends un seul brawler pour une semaine.</b> Pas tes trois préférés — un. Tu ne peux pas apprendre un matchup que tu vis une fois par jour. Les joueurs qui montent le plus vite ont un roster plus petit que les autres.</p><p><b>Après une défaite, dis la phrase à voix haute :</b> « J'ai perdu parce que ___ ». Si la phrase est « mes coéquipiers étaient nuls », tu n'as rien appris et le match suivant sera identique. Trouve quelque chose que TU as fait : je suis entré dans un buisson. J'ai utilisé mon Super sur un tank plein. J'ai combattu une Polly à sa portée.</p><p><b>Apprends un combo correctement plutôt que dix mal.</b> Un combo que tu réussis sous pression vaut plus que neuf que tu sais décrire. Commence par ceux à deux brawlers marqués Facile.</p><p><b>Regarde les replays de tes défaites, pas les victoires des autres.</b> Tes erreurs sont plus utiles que les highlights d'un pro, parce qu'elles sont à toi et que tu les referas demain.</p>"}}
+];
+/* ============================================================================
+   APP
+   ========================================================================== */
+var L = "en", TAB = "combos", PICKS = [], OPEN = {};
+var B = {}; BRAWLERS.forEach(function(b){ B[b.id] = b; });
+
+function t(){ return T[L]; }
+function nm(b){ return (L === "fr" && b.fr) ? b.fr : b.en; }
+function alt(b){ return b.fr ? (L === "fr" ? b.en : b.fr) : null; }
+function tx(o){ return o ? (o[L] || o.en) : ""; }
+function norm(s){
+  return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, " ");
+}
+function band(r){ return r <= 35 ? "short" : (r <= 68 ? "mid" : "long"); }
+function roleVar(c){ return "var(--r-" + c + ")"; }
+function initial(b){ var n = b.en.replace(/[^A-Za-z0-9]/g, ""); return n.slice(0, 2).toUpperCase(); }
+
+/* ---------- search index ---------- */
+function hay(kind, o){
+  var s = [];
+  if (kind === "brawler"){
+    s.push(o.en, o.fr || "", o.cls, T.en.cls[o.cls], T.fr.cls[o.cls], o.tags.join(" "),
+           o.k.en, o.k.fr, o.w.en, o.w.fr, o.f.en, o.f.fr, band(o.reach));
+  } else if (kind === "combo"){
+    s.push(o.n.en, o.n.fr, o.why.en, o.why.fr, o.mech.en, o.mech.fr, o.win.en, o.win.fr,
+           o.run.en, o.run.fr, o.dont.en, o.dont.fr, o.modes.join(" "));
+    o.parts.forEach(function(p){
+      var b = B[p]; if (!b) return;
+      s.push(b.en, b.fr || "", b.cls, T.en.cls[b.cls], T.fr.cls[b.cls], b.tags.join(" "));
+    });
+    o.modes.forEach(function(m){
+      var md = MODES.filter(function(x){ return x.id === m; })[0];
+      if (md) s.push(md.n.en, md.n.fr);
+    });
+  } else if (kind === "mode"){
+    s.push(o.n.en, o.n.fr, o.rew.en, o.rew.fr, o.b.en.replace(/<[^>]+>/g, " "), o.b.fr.replace(/<[^>]+>/g, " "));
+  } else {
+    s.push(o.n.en, o.n.fr, o.b.en.replace(/<[^>]+>/g, " "), o.b.fr.replace(/<[^>]+>/g, " "));
+  }
+  return norm(s.join(" "));
+}
+/* _h is everything; _t is only names and labels, so a search for "bull"
+   ranks Bull above the twelve combos that mention bulls in passing. */
+BRAWLERS.forEach(function(o){
+  o._h = hay("brawler", o);
+  o._t = norm([o.en, o.fr || "", o.cls, T.en.cls[o.cls], T.fr.cls[o.cls], o.tags.join(" "), band(o.reach)].join(" "));
+});
+COMBOS.forEach(function(o){
+  o._h = hay("combo", o);
+  var s = [o.n.en, o.n.fr];
+  o.parts.forEach(function(p){ var b = B[p]; if (b) s.push(b.en, b.fr || "", b.cls, T.en.cls[b.cls], T.fr.cls[b.cls]); });
+  o.modes.forEach(function(mi){
+    var md = MODES.filter(function(x){ return x.id === mi; })[0];
+    if (md) s.push(md.n.en, md.n.fr);
+  });
+  o._t = norm(s.join(" "));
+});
+MODES.forEach(function(o){ o._h = hay("mode", o); o._t = norm(o.n.en + " " + o.n.fr); });
+KIT.forEach(function(o){ o._h = hay("kit", o); o._t = norm(o.n.en + " " + o.n.fr); });
+BASICS.forEach(function(o){ o._h = hay("basic", o); o._t = norm(o.n.en + " " + o.n.fr); });
+
+function match(o, terms){
+  return terms.every(function(w){ return o._h.indexOf(w) !== -1; });
+}
+function rank(list, terms){
+  return list.filter(function(o){ return match(o, terms); }).map(function(o){
+    var s = 0;
+    terms.forEach(function(w){ if (o._t.indexOf(w) !== -1) s++; });
+    return { o: o, s: s };
+  }).sort(function(a, b){ return b.s - a.s; }).map(function(x){ return x.o; });
+}
+
+/* ---------- pieces ---------- */
+function chipRole(cls){
+  return '<span class="chip role" style="background:' + roleVar(cls) + '">' + t().cls[cls] + '</span>';
+}
+function pip(b){
+  return '<div class="pip" style="background:' + roleVar(b.cls) + '">' + initial(b) + '</div>';
+}
+function brawlerCard(b){
+  var a = alt(b);
+  return '<article class="card" style="border-left-color:' + roleVar(b.cls) + '">' +
+    '<div class="bw">' + pip(b) +
+      '<div style="flex:1;min-width:0">' +
+        '<div class="nm">' + nm(b) + (a ? ' <span class="alt">(' + a + ')</span>' : '') + '</div>' +
+        '<div class="li">' + tx(b.k) + '</div>' +
+        '<div class="wf">' +
+          '<div><b>' + t().wants + ':</b> ' + tx(b.w) + '</div>' +
+          '<div><i>' + t().fears + ':</i> ' + tx(b.f) + '</div>' +
+        '</div>' +
+        '<div class="chips">' + chipRole(b.cls) +
+          '<span class="chip">' + t()[band(b.reach)] + '</span>' +
+          b.tags.slice(0, 3).map(function(g){ return '<span class="chip">' + g + '</span>'; }).join('') +
+        '</div>' +
+      '</div>' +
+    '</div></article>';
+}
+function comboCard(c){
+  var open = !!OPEN[c.id];
+  var parts = c.parts.map(function(p){ return B[p] ? nm(B[p]) : p; }).join(' <i>+</i> ');
+  var mds = c.modes.map(function(m){
+    var md = MODES.filter(function(x){ return x.id === m; })[0];
+    return md ? '<span class="chip">' + tx(md.n) + '</span>' : '';
+  }).join('');
+  var lead = B[c.parts[0]];
+  var d = '<div class="detail">' +
+    '<dl>' +
+      '<dt>' + t().mech + '</dt><dd>' + tx(c.mech) + '</dd>' +
+      '<dt>' + t().win + '</dt><dd>' + tx(c.win) + '</dd>' +
+      '<dt>' + t().run + '</dt><dd>' + tx(c.run) + '</dd>' +
+      '<dt>' + t().dont + '</dt><dd class="warn">' + tx(c.dont) + '</dd>' +
+    '</dl><div class="chips">' + mds + '</div></div>';
+  return '<article class="card combo" tabindex="0" role="button" data-c="' + c.id + '" aria-expanded="' + open + '"' +
+    ' style="border-left-color:' + (lead ? roleVar(lead.cls) : 'var(--gold)') + '">' +
+    '<div class="top"><div class="names">' +
+      '<div class="parts">' + parts + '</div>' +
+      '<h3>' + tx(c.n) + '</h3>' +
+    '</div><span class="caret">&#9654;</span></div>' +
+    '<p class="why">' + tx(c.why) + '</p>' +
+    '<div class="chips"><span class="chip diff d' + (c.diff + 1) + '">' + t().diff[c.diff] + '</span></div>' +
+    (open ? d : '') + '</article>';
+}
+function modeCard(m){
+  return '<article class="card" style="border-left-color:var(--star)">' +
+    '<h3>' + tx(m.n) + '</h3>' +
+    '<div class="kv">' + tx(m.rew) + '</div>' +
+    '<div class="prose" style="margin-top:8px">' + tx(m.b) + '</div></article>';
+}
+function proseCard(p){
+  return '<article class="card" style="border-left-color:var(--gold)">' +
+    '<h3>' + tx(p.n) + '</h3>' +
+    (p.loop ? loopHTML() : '') +
+    '<div class="prose" style="margin-top:10px">' + tx(p.b) + '</div></article>';
+}
+function loopHTML(){
+  var c = t().cls;
+  var w = L === "fr" ? ["Encaisse", "Plonge", "Distance"] : ["Absorbs", "Dives", "Outranges"];
+  return '<div class="loop">' +
+    '<div class="n" style="border-color:var(--r-tank)"><span>' + c.tank + '</span><small>' + w[0] + '</small></div>' +
+    '<div class="ar">&#9654;</div>' +
+    '<div class="n" style="border-color:var(--r-assassin)"><span>' + c.assassin + '</span><small>' + w[1] + '</small></div>' +
+    '<div class="ar">&#9654;</div>' +
+    '<div class="n" style="border-color:var(--r-marksman)"><span>' + c.marksman + '</span><small>' + w[2] + '</small></div>' +
+    '</div><div class="loopnote">' +
+    (L === "fr" ? "…et le tireur d'élite reboucle sur le tank. &#9654; veut dire « bat »."
+                : "…and the marksman loops back to the tank. &#9654; means \"beats\".") +
+    '</div>';
+}
+
+/* ---------- the range ruler ---------- */
+function ruler(list){
+  if (!list.length) return "";
+  var sorted = list.slice().sort(function(a, b){ return a.reach - b.reach; });
+  var lastX = -99, up = true;
+  var marks = sorted.map(function(b){
+    var off = 0;
+    if (b.reach - lastX < 10){ off = up ? -15 : 15; up = !up; } else { up = true; }
+    lastX = b.reach;
+    var x = Math.max(4, Math.min(96, b.reach));
+    return '<div class="mk" style="left:' + x + '%;background:' + roleVar(b.cls) +
+      ';margin-top:' + (off - 13) + 'px" title="' + nm(b) + '">' + initial(b) + '</div>';
+  }).join('');
+  return '<div class="ruler"><div class="kv">' + t().ruler + '</div>' +
+    '<div class="track" style="margin-top:22px;margin-bottom:22px">' +
+      '<div class="band" style="left:35%"></div><div class="band" style="left:68%"></div>' + marks +
+    '</div><div class="labs"><span>' + t().melee + '</span><span>' + t().mid + '</span><span>' + t().long + '</span></div></div>';
+}
+
+/* ---------- the comp doctor ---------- */
+function has(list, tag){ return list.some(function(b){ return b.tags.indexOf(tag) !== -1; }); }
+function whoHas(list, tags){
+  return list.filter(function(b){ return tags.some(function(g){ return b.tags.indexOf(g) !== -1; }); })
+             .map(nm).join(", ");
+}
+function suggest(tags, n){
+  var out = BRAWLERS.filter(function(b){
+    return PICKS.indexOf(b.id) === -1 && tags.some(function(g){ return b.tags.indexOf(g) !== -1; });
+  });
+  return out.slice(0, n || 2).map(nm).join(" " + (L === "fr" ? "ou" : "or") + " ");
+}
+function job(ok, txt){
+  return '<div class="job ' + (ok ? "ok" : "no") + '"><span class="ic">' + (ok ? "&#10003;" : "&#10007;") + '</span><div>' + txt + '</div></div>';
+}
+
+function diagnose(){
+  var p = PICKS.map(function(i){ return B[i]; });
+  if (p.length < 2) return '<p class="empty">' + t().doctorEmpty + '</p>';
+  var fr = L === "fr", out = "", jobs = "";
+  var bands = { short: 0, mid: 0, long: 0 };
+  p.forEach(function(b){ bands[band(b.reach)]++; });
+
+  out += ruler(p);
+
+  /* range spread */
+  var spread = Object.keys(bands).filter(function(k){ return bands[k] > 0; }).length;
+  if (spread === 1){
+    var only = band(p[0].reach);
+    jobs += job(false, fr
+      ? "<b>Tout le monde a la même portée (" + t()[only].toLowerCase() + ").</b> Un seul contre bien choisi neutralise ton équipe entière. Ajoute une portée différente : " + suggest(only === "long" ? ["frontline", "dive"] : ["poke", "burst"], 2) + "."
+      : "<b>Everyone has the same range (" + t()[only].toLowerCase() + ").</b> One well-picked counter shuts down your whole team at once. Add a different band: " + suggest(only === "long" ? ["frontline", "dive"] : ["poke", "burst"], 2) + ".");
+  } else {
+    jobs += job(true, fr
+      ? "<b>Portées variées.</b> L'ennemi ne peut pas régler ton équipe avec un seul pick."
+      : "<b>Range is spread.</b> The enemy can't answer your team with one pick.");
+  }
+  if (!bands.long && p.length >= 3){
+    jobs += job(false, fr
+      ? "<b>Aucune longue portée.</b> Un sniper te tient à distance toute la partie et tu n'as rien à répondre. Essaie " + suggest(["poke", "burst"], 2) + "."
+      : "<b>No long range.</b> A sniper holds you off all match and you have no reply. Try " + suggest(["poke", "burst"], 2) + ".");
+  }
+
+  /* frontline */
+  if (has(p, "frontline")){
+    jobs += job(true, fr
+      ? "<b>Quelqu'un prend l'espace</b> (" + whoHas(p, ["frontline"]) + ") — il y a un corps devant."
+      : "<b>Someone takes space</b> (" + whoHas(p, ["frontline"]) + ") — there's a body out front.");
+  } else {
+    jobs += job(false, fr
+      ? "<b>Personne devant.</b> Aucun de vous ne peut avancer et survivre : vous allez jouer toute la partie sur la défensive. Essaie " + suggest(["frontline"], 2) + "."
+      : "<b>Nobody up front.</b> None of you can walk forward and live, so you'll play the whole match on the back foot. Try " + suggest(["frontline"], 2) + ".");
+  }
+
+  /* sustain */
+  if (has(p, "heal") || has(p, "shield")){
+    jobs += job(true, fr
+      ? "<b>Du sustain</b> (" + whoHas(p, ["heal", "shield"]) + ") — vous gagnez les combats longs."
+      : "<b>You have sustain</b> (" + whoHas(p, ["heal", "shield"]) + ") — you win the long fights.");
+  } else {
+    jobs += job(false, fr
+      ? "<b>Aucun soin, aucun bouclier.</b> Chaque échange est définitif. Ça marche si tu tues vite ; sinon essaie " + suggest(["heal", "shield"], 2) + "."
+      : "<b>No healing, no shields.</b> Every trade is permanent. Fine if you kill fast; otherwise try " + suggest(["heal", "shield"], 2) + ".");
+  }
+
+  /* control */
+  var cc = ["stun", "pull", "knock", "slow"];
+  if (has(p, "stun") || has(p, "pull") || has(p, "knock") || has(p, "slow")){
+    jobs += job(true, fr
+      ? "<b>Du contrôle</b> (" + whoHas(p, cc) + ") — tu peux décider où l'ennemi se trouve."
+      : "<b>You have control</b> (" + whoHas(p, cc) + ") — you get to decide where the enemy is.");
+  } else {
+    jobs += job(false, fr
+      ? "<b>Aucun contrôle.</b> Tu ne peux pas créer de 3v2 — tu dois attendre qu'ils se trompent. Essaie " + suggest(["pull", "stun", "knock"], 2) + "."
+      : "<b>No control.</b> You can't make a 3v2 happen — you have to wait for them to make a mistake. Try " + suggest(["pull", "stun", "knock"], 2) + ".");
+  }
+
+  /* zone */
+  if (has(p, "zone")){
+    jobs += job(true, fr
+      ? "<b>Interdiction de zone</b> (" + whoHas(p, ["zone"]) + ") — tu peux tenir un point sans t'y trouver."
+      : "<b>Area denial</b> (" + whoHas(p, ["zone"]) + ") — you can hold a point without standing on it.");
+  } else {
+    jobs += job(false, fr
+      ? "<b>Aucune zone.</b> Tenir le centre ou une zone voudra dire y rester physiquement, et se faire tirer dessus. Essaie " + suggest(["zone"], 2) + "."
+      : "<b>No area denial.</b> Holding the middle or a zone means physically standing there and getting shot. Try " + suggest(["zone"], 2) + ".");
+  }
+
+  /* anti-dive */
+  var peel = p.filter(function(b){
+    return b.cls !== "assassin" && (b.tags.indexOf("frontline") !== -1 || b.tags.indexOf("stun") !== -1 ||
+      b.tags.indexOf("knock") !== -1 || b.tags.indexOf("shield") !== -1 || (b.reach <= 42 && b.tags.indexOf("burst") !== -1));
+  });
+  var squishy = p.filter(function(b){ return b.reach >= 69; });
+  if (squishy.length && !peel.length){
+    jobs += job(false, fr
+      ? "<b>Tes snipers sont sans protection.</b> " + squishy.map(nm).join(", ") + " meurent au premier plongeur et personne ne peut les sortir de là. Essaie " + suggest(["frontline", "knock", "shield"], 2) + "."
+      : "<b>Your snipers have no protection.</b> " + squishy.map(nm).join(", ") + " die to the first diver and nobody can pull them out. Try " + suggest(["frontline", "knock", "shield"], 2) + ".");
+  } else if (peel.length){
+    jobs += job(true, fr
+      ? "<b>Quelqu'un punit les plongeurs</b> (" + peel.map(nm).join(", ") + ")."
+      : "<b>Someone punishes divers</b> (" + peel.map(nm).join(", ") + ").");
+  }
+
+  /* wallbreak */
+  if (has(p, "wallbreak")){
+    jobs += job(true, fr
+      ? "<b>Tu peux casser les murs</b> (" + whoHas(p, ["wallbreak"]) + ") — utile en Brawl Ball et Braquage."
+      : "<b>You can break walls</b> (" + whoHas(p, ["wallbreak"]) + ") — useful in Brawl Ball and Heist.");
+  }
+
+  /* redundancy */
+  var cls = {}; p.forEach(function(b){ cls[b.cls] = (cls[b.cls] || 0) + 1; });
+  var dup = Object.keys(cls).filter(function(k){ return cls[k] >= (p.length === 3 ? 3 : 2); });
+  if (dup.length && p.length === 3){
+    jobs += job(false, fr
+      ? "<b>Trois " + t().clsP[dup[0]] + ".</b> Vous faites tous le même boulot, donc vous avez tous la même faiblesse."
+      : "<b>Three " + t().clsP[dup[0]] + ".</b> You're all doing the same job, so you all have the same weakness.");
+  }
+
+  out += '<div class="kv" style="margin-top:18px">' + t().dxTitle + '</div><div class="dx">' + jobs + '</div>';
+
+  /* synergies from the library */
+  var found = COMBOS.filter(function(c){
+    return c.parts.length >= 2 && c.parts.every(function(x){ return PICKS.indexOf(x) !== -1; });
+  });
+  if (found.length){
+    out += found.map(function(c){
+      return '<article class="card syn" style="margin-top:12px">' +
+        '<div class="lbl">' + t().synT + '</div>' +
+        '<div class="parts" style="font-family:var(--display);font-size:15px;color:var(--gold);margin:3px 0 2px">' +
+          c.parts.map(function(x){ return nm(B[x]); }).join(' <i style="color:var(--faint);font-style:normal">+</i> ') + '</div>' +
+        '<h3 style="font-size:16px">' + tx(c.n) + '</h3>' +
+        '<p class="why" style="margin-top:6px">' + tx(c.run) + '</p></article>';
+    }).join('');
+  } else if (p.length >= 2){
+    var setup = p.filter(function(b){ return ["pull", "stun", "knock", "slow", "invis", "speed", "shield"].some(function(g){ return b.tags.indexOf(g) !== -1; }); });
+    var payoff = p.filter(function(b){ return ["zone", "burst", "frontline", "dive"].some(function(g){ return b.tags.indexOf(g) !== -1; }); });
+    setup = setup.filter(function(b){ return payoff.indexOf(b) === -1; });
+    if (setup.length && payoff.length){
+      out += '<article class="card syn" style="margin-top:12px"><div class="lbl">' + t().synT + '</div>' +
+        '<p class="why" style="margin-top:5px">' + (fr
+          ? "<b>" + setup.map(nm).join(", ") + "</b> met en place, <b>" + payoff.map(nm).join(", ") + "</b> encaisse. C'est le schéma de presque tous les combos : quelqu'un crée le moment, quelqu'un le dépense. La mise en place passe en premier, toujours."
+          : "<b>" + setup.map(nm).join(", ") + "</b> sets up, <b>" + payoff.map(nm).join(", ") + "</b> cashes in. That's the shape of almost every combo: someone makes the moment, someone spends it. The setup goes first, always.") + '</p></article>';
+    }
+  }
+  return out;
+}
+
+function doctorView(){
+  var slots = [0, 1, 2].map(function(i){
+    var id = PICKS[i];
+    if (!id) return '<div class="slot"><div><div class="plus">+</div><div>' + t().slot + '</div></div></div>';
+    var b = B[id];
+    return '<div class="slot full" data-drop="' + id + '" tabindex="0" role="button" style="border-color:' + roleVar(b.cls) + '">' +
+      '<div>' + pip(b) + '<div class="sn">' + nm(b) + '</div>' +
+      '<div class="sr" style="color:' + roleVar(b.cls) + '">' + t().cls[b.cls] + '</div></div></div>';
+  }).join('');
+  var pick = BRAWLERS.map(function(b){
+    var on = PICKS.indexOf(b.id) !== -1;
+    return '<button class="pk" data-add="' + b.id + '"' + (on || PICKS.length >= 3 ? " disabled" : "") +
+      ' style="border-color:' + (on ? roleVar(b.cls) : "var(--line)") + '">' + nm(b) + '</button>';
+  }).join('');
+  return '<p class="lede">' + t().doctorL + '</p>' +
+    '<div class="slots">' + slots + '</div>' +
+    (PICKS.length ? '<div style="text-align:right;margin:-4px 0 10px"><button class="reset" id="rst">' + t().reset + '</button></div>' : '') +
+    '<div class="kv">' + t().pickers + '</div><div class="picker">' + pick + '</div>' +
+    diagnose();
+}
+
+/* ---------- render ---------- */
+function render(){
+  var d = T[L], q = norm(document.getElementById("q").value).trim();
+  var terms = q ? q.split(/\s+/).filter(Boolean) : [];
+  document.documentElement.lang = L;
+  document.getElementById("q").placeholder = d.ph;
+  document.getElementById("foot").textContent = d.foot;
+  document.getElementById("clr").classList.toggle("hide", !q);
+
+  document.getElementById("tabs").innerHTML = Object.keys(d.tabs).map(function(k){
+    return '<button class="tab" role="tab" data-t="' + k + '" aria-selected="' + (!terms.length && TAB === k) + '">' + d.tabs[k] + '</button>';
+  }).join('');
+
+  var m = document.getElementById("main"), h = "";
+
+  if (terms.length){
+    var cb = rank(COMBOS, terms);
+    var bw = rank(BRAWLERS, terms);
+    var md = rank(MODES, terms);
+    var pg = rank(KIT.concat(BASICS), terms);
+    var n = cb.length + bw.length + md.length + pg.length;
+    if (!n){
+      h = '<p class="empty">' + d.nores + '<br><span style="font-size:13px">' + d.nores2 + '</span></p>';
+    } else {
+      h += '<div class="count">' + n + " " + (n === 1 ? d.found : d.founds) + '</div>';
+      if (cb.length) h += '<div class="sect-h">' + d.tabs.combos + '</div>' + cb.map(comboCard).join('');
+      if (bw.length) h += '<div class="sect-h">' + d.tabs.brawlers + '</div>' + bw.map(brawlerCard).join('');
+      if (md.length) h += '<div class="sect-h">' + d.tabs.modes + '</div>' + md.map(modeCard).join('');
+      if (pg.length) h += '<div class="sect-h">' + d.tabs.basics + '</div>' + pg.map(proseCard).join('');
+    }
+  } else if (TAB === "combos"){
+    h = '<p class="lede">' + d.combosL + '</p>' + COMBOS.map(comboCard).join('');
+  } else if (TAB === "brawlers"){
+    var by = { tank: 1, assassin: 2, marksman: 3, artillery: 4, controller: 5, support: 6, damage: 7 };
+    h = '<p class="lede">' + d.brawlersL + '</p>' +
+      BRAWLERS.slice().sort(function(a, b){ return (by[a.cls] - by[b.cls]) || (a.reach - b.reach); })
+        .map(brawlerCard).join('');
+  } else if (TAB === "doctor"){
+    h = doctorView();
+  } else if (TAB === "modes"){
+    h = '<p class="lede">' + d.modesL + '</p>' + MODES.map(modeCard).join('');
+  } else if (TAB === "kit"){
+    h = '<p class="lede">' + d.kitL + '</p>' + KIT.map(proseCard).join('');
+  } else if (TAB === "basics"){
+    h = '<p class="lede">' + d.basicsL + '</p>' + BASICS.map(proseCard).join('');
+  }
+  m.innerHTML = h;
+}
+
+/* ---------- events ---------- */
+function setLang(x){
+  L = x;
+  document.getElementById("l-en").setAttribute("aria-pressed", x === "en");
+  document.getElementById("l-fr").setAttribute("aria-pressed", x === "fr");
+  render();
+}
+document.getElementById("l-en").onclick = function(){ setLang("en"); };
+document.getElementById("l-fr").onclick = function(){ setLang("fr"); };
+document.getElementById("q").addEventListener("input", render);
+document.getElementById("clr").onclick = function(){
+  document.getElementById("q").value = ""; render(); document.getElementById("q").focus();
+};
+document.getElementById("tabs").addEventListener("click", function(e){
+  var b = e.target.closest("[data-t]"); if (!b) return;
+  TAB = b.dataset.t; document.getElementById("q").value = ""; render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+function act(e){
+  var c = e.target.closest("[data-c]");
+  if (c){ OPEN[c.dataset.c] = !OPEN[c.dataset.c]; render(); return; }
+  var a = e.target.closest("[data-add]");
+  if (a && !a.disabled){ if (PICKS.length < 3 && PICKS.indexOf(a.dataset.add) === -1) PICKS.push(a.dataset.add); render(); return; }
+  var r = e.target.closest("[data-drop]");
+  if (r){ PICKS = PICKS.filter(function(x){ return x !== r.dataset.drop; }); render(); return; }
+  if (e.target.id === "rst"){ PICKS = []; render(); }
+}
+document.getElementById("main").addEventListener("click", act);
+document.getElementById("main").addEventListener("keydown", function(e){
+  if (e.key === "Enter" || e.key === " "){
+    if (e.target.closest("[data-c],[data-drop]")){ e.preventDefault(); act(e); }
+  }
+});
+
+if ((navigator.language || "en").toLowerCase().indexOf("fr") === 0) L = "fr";
+setLang(L);
+</script>
+</body>
+</html>
