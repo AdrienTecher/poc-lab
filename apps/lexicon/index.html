@@ -5,10 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lexicon — a word you probably don't know</title>
 <meta name="description" content="Draws a word you probably don't know: five levels of erudition, toggleable domains, and a printable memory card.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,200..600;1,6..72,200..500&display=swap" rel="stylesheet">
 <style>
+  /* Self-hosted, subsetted to Latin + IPA + the Greek letters phonetics needs.
+     Newsreader carries no IPA glyphs at all, so transcriptions are set in Inter —
+     otherwise they fall through to whatever serif the machine happens to have. */
+  @font-face{
+    font-family:"Newsreader";font-style:normal;font-weight:400;font-display:swap;
+    src:url("fonts/newsreader-400.woff2") format("woff2");
+  }
+  @font-face{
+    font-family:"Newsreader";font-style:italic;font-weight:400;font-display:swap;
+    src:url("fonts/newsreader-italic-400.woff2") format("woff2");
+  }
+  @font-face{
+    font-family:"Inter";font-style:normal;font-weight:400;font-display:swap;
+    src:url("fonts/inter-400.woff2") format("woff2");
+  }
+  @font-face{
+    font-family:"Inter";font-style:normal;font-weight:500;font-display:swap;
+    src:url("fonts/inter-500.woff2") format("woff2");
+  }
+
   :root{
     color-scheme:light dark;
     --paper:#f5f2eb; --panel:#fffdf8; --ink:#1a1917; --soft:#4c4840; --muted:#8b8375;
@@ -126,7 +143,7 @@
     margin:1.1rem 0 .5rem;overflow-wrap:break-word;hyphens:auto;
   }
   .phon{margin:0;color:var(--muted);font-size:.92rem;display:flex;flex-wrap:wrap;align-items:baseline;gap:.55rem;}
-  .phon .ipa{font-family:var(--serif);font-size:1rem;}
+  .phon .ipa{font-family:var(--sans);font-size:.93rem;letter-spacing:.005em;}
   .phon .sep{opacity:.5;}
   .phon .pos{font-style:italic;font-family:var(--serif);font-size:1rem;}
   .rule{border:0;border-top:1px solid var(--hair);margin:1.25rem 0 1.15rem;}
@@ -708,10 +725,27 @@ const renderCard = (entry) => {
   ctx.textAlign = "center";
   word.lines.forEach((line, i) => ctx.fillText(line, left + CARD.w / 2, wordY + i * word.size * 1.1));
 
-  ctx.font = serif(19, "300", "italic");
-  ctx.fillStyle = INK.muted;
-  ctx.fillText(`${entry.ipa}   ·   ${POS[entry.pos] || entry.pos}`, left + CARD.w / 2, wordY + (word.lines.length - 1) * word.size * 1.1 + IPA_GAP);
+  // Two runs, centred as one line: the transcription in the sans that actually
+  // has IPA glyphs, the part of speech in the italic serif.
+  const ipaY = wordY + (word.lines.length - 1) * word.size * 1.1 + IPA_GAP;
+  const posText = POS[entry.pos] || entry.pos;
+  const ipaFont = sans(16, "400");
+  const posFont = serif(19, "400", "italic");
+  ctx.font = ipaFont;
+  const wIpa = ctx.measureText(entry.ipa).width;
+  ctx.font = posFont;
+  const wSep = ctx.measureText("   ·   ").width;
+  const wPos = ctx.measureText(posText).width;
+
   ctx.textAlign = "left";
+  ctx.fillStyle = INK.muted;
+  let px = left + CARD.w / 2 - (wIpa + wSep + wPos) / 2;
+  ctx.font = ipaFont;
+  ctx.fillText(entry.ipa, px, ipaY);
+  px += wIpa;
+  ctx.font = posFont;
+  ctx.fillText("   ·   ", px, ipaY);
+  ctx.fillText(posText, px + wSep, ipaY);
 
   kicker(ctx, "poc-lab · lexicon", fx, CARD.margin + CARD.h - CARD.pad + 12, "left", "#b9b1a1");
 
@@ -765,7 +799,7 @@ const download = async () => {
   try {
     // The card is typeset in the same faces as the page, so wait for them.
     if (document.fonts) {
-      await Promise.all(["400 62px Newsreader", "italic 300 19px Newsreader", "400 14px Inter"].map((f) => document.fonts.load(f)));
+      await Promise.all(["400 62px Newsreader", "italic 400 19px Newsreader", "400 16px Inter", "500 12px Inter"].map((f) => document.fonts.load(f)));
       await document.fonts.ready;
     }
     const canvas = renderCard(entry);
