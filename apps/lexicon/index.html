@@ -4,7 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lexicon — a word you probably don't know</title>
-<meta name="description" content="Draws a word you probably don't know: five levels of erudition, toggleable domains, and a printable memory card.">
+<meta name="description" content="Draws a word you probably don't know, in English or French: five levels of erudition, toggleable domains, and a printable memory card.">
+<!-- Static, so a shared word link previews as the app rather than the word: the
+     card is drawn in the browser and there is no server to render an image per
+     entry. The link still reopens the exact word. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="poc-lab">
+<meta property="og:title" content="Lexicon — a word you probably don't know">
+<meta property="og:description" content="A rare word per draw, in English or French, with its transcription, definition and root — and a memory card to take away.">
+<meta name="twitter:card" content="summary">
 <style>
   /* Self-hosted, subsetted to Latin + IPA + the Greek letters phonetics needs.
      Newsreader carries no IPA glyphs at all, so transcriptions are set in Inter —
@@ -177,6 +185,28 @@
   .btn.primary{background:var(--accent);border-color:var(--accent);color:#fffdf8;}
   .btn.primary:hover{filter:brightness(1.08);}
   .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .sheet{
+    margin-top:.85rem;padding:1rem 1.1rem 1.1rem;
+    background:var(--panel);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);
+    max-width:34rem;
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .sheet{animation:sheetIn .26s cubic-bezier(.2,.7,.2,1) both;}
+    @keyframes sheetIn{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:none;}}
+  }
+  .sheet__t{
+    margin:0 0 .7rem;font-family:var(--mono);font-size:.64rem;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--muted);
+  }
+  .sheet__row{display:flex;flex-wrap:wrap;gap:.4rem;}
+  .sheet__row + .sheet__row{margin-top:.45rem;}
+  .sheet__b{
+    font-family:var(--sans);font-size:.82rem;color:var(--soft);text-decoration:none;
+    background:transparent;border:1px solid var(--rule);border-radius:999px;
+    padding:.34rem .8rem;cursor:pointer;transition:all .18s ease;
+  }
+  .sheet__b:hover{color:var(--ink);border-color:var(--muted);transform:translateY(-1px);}
+  .sheet__n{margin:.75rem 0 0;font-size:.72rem;color:var(--muted);line-height:1.5;}
   .hint{margin:.9rem 0 0;font-size:.76rem;color:var(--muted);}
   kbd{
     font-family:var(--mono);font-size:.7rem;border:1px solid var(--rule);border-bottom-width:2px;
@@ -264,6 +294,17 @@
   <div class="actions">
     <button class="btn primary" id="next" type="button">New word</button>
     <button class="btn" id="dl" type="button">Download card</button>
+    <button class="btn" id="share" type="button" aria-expanded="false" aria-controls="sheet">Share</button>
+  </div>
+
+  <div class="sheet" id="sheet" hidden role="group" aria-labelledby="sheetTitle">
+    <p class="sheet__t" id="sheetTitle">Share this card</p>
+    <div class="sheet__row">
+      <button class="sheet__b" id="copyLink" type="button">Copy link</button>
+      <button class="sheet__b" id="copyImage" type="button">Copy image</button>
+    </div>
+    <div class="sheet__row" id="socials"></div>
+    <p class="sheet__n" id="sheetNote"></p>
   </div>
   <p class="hint" id="hint"><kbd>Space</kbd> new word &nbsp;·&nbsp; <kbd>D</kbd> download card</p>
 
@@ -308,9 +349,12 @@ const L10N = {
     domainLabel: "Domains",
     inPlay: (n) => (n === 1 ? "1 word in play" : `${n} words in play`),
     all: "All", none: "None",
-    next: "New word", download: "Download card",
+    next: "New word", download: "Download card", share: "Share",
+    shareTitle: "Share this card", copyLink: "Copy link", copyImage: "Copy image",
+    copied: "Copied", shareOn: (n) => `Share on ${n}`,
+    shareNote: "Links reopen the word. To post the card itself, download it and attach it.",
     drawing: "Drawing…", saved: "Saved", failed: "Card failed",
-    hint: "<kbd>Space</kbd> new word &nbsp;·&nbsp; <kbd>D</kbd> download card",
+    hint: "<kbd>Space</kbd> new word &nbsp;·&nbsp; <kbd>D</kbd> download &nbsp;·&nbsp; <kbd>S</kbd> share",
     emptyTag: "No pool", emptyWord: "Nothing at this level",
     emptyDef: "Turn on another domain, or move to a different level — this combination is empty.",
     rootLabel: "Root", defLabel: "Definition",
@@ -341,9 +385,12 @@ const L10N = {
     domainLabel: "Domaines",
     inPlay: (n) => (n === 1 ? "1 mot en jeu" : `${n} mots en jeu`),
     all: "Tous", none: "Aucun",
-    next: "Nouveau mot", download: "Télécharger la fiche",
+    next: "Nouveau mot", download: "Télécharger la fiche", share: "Partager",
+    shareTitle: "Partager cette fiche", copyLink: "Copier le lien", copyImage: "Copier l'image",
+    copied: "Copié", shareOn: (n) => `Partager sur ${n}`,
+    shareNote: "Les liens rouvrent le mot. Pour publier la fiche elle-même, téléchargez-la et joignez-la.",
     drawing: "Tirage…", saved: "Enregistrée", failed: "Échec",
-    hint: "<kbd>Espace</kbd> nouveau mot &nbsp;·&nbsp; <kbd>D</kbd> télécharger la fiche",
+    hint: "<kbd>Espace</kbd> nouveau mot &nbsp;·&nbsp; <kbd>D</kbd> télécharger &nbsp;·&nbsp; <kbd>S</kbd> partager",
     emptyTag: "Aucun tirage", emptyWord: "Rien à ce niveau",
     emptyDef: "Activez un autre domaine, ou changez de niveau — cette combinaison est vide.",
     rootLabel: "Racine", defLabel: "Définition",
@@ -806,7 +853,9 @@ const levelOf = (n) => ({ n, roman: ROMAN[n - 1], ...T().levels[n - 1] });
 const posName = (code) => T().pos[code] || code;
 
 const load = () => {
-  const fromUrl = new URLSearchParams(location.search).get("lang");
+  const params = new URLSearchParams(location.search);
+  state.linked = params.get("w");
+  const fromUrl = params.get("lang");
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(STORE) || "{}"); } catch { /* corrupt entry means defaults */ }
   // The URL wins over the remembered choice, so a shared link opens in the
@@ -849,6 +898,11 @@ const paintLanguage = () => {
   $("noDomains").textContent = t.none;
   $("next").textContent = t.next;
   $("dl").textContent = t.download;
+  $("share").textContent = t.share;
+  $("sheetTitle").textContent = t.shareTitle;
+  $("copyLink").textContent = t.copyLink;
+  $("copyImage").textContent = t.copyImage;
+  $("sheetNote").textContent = t.shareNote;
   $("hint").innerHTML = t.hint;
   $("footnote").textContent = t.footnote;
   $("theme").setAttribute("aria-label", t.themeLabel);
@@ -871,6 +925,10 @@ const paintLanguage = () => {
   document.querySelectorAll(".lang").forEach((b) => {
     b.setAttribute("aria-pressed", String(b.dataset.lang === state.lang));
   });
+
+  // Writing an image to the clipboard is not universally supported; offer the
+  // button only where it will actually work.
+  $("copyImage").hidden = typeof ClipboardItem === "undefined" || !(navigator.clipboard && navigator.clipboard.write);
 };
 
 const syncControls = () => {
@@ -897,6 +955,9 @@ const render = (entry) => {
   const stage = $("stage");
   state.current = entry;
   $("dl").disabled = !entry;
+  $("share").disabled = !entry;
+  // The panel is about the word on screen, so a new draw retires it.
+  closeSheet();
 
   if (!entry) {
     const t = T();
@@ -1113,37 +1174,168 @@ const renderCard = (entry) => {
   return canvas;
 };
 
+// Fold accents before slugifying, or "mémoïsation" would come out gutted.
+const slugify = (w) =>
+  w.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase();
+
+// The card is typeset in the same faces as the page, so wait for them.
+const ensureFonts = async () => {
+  if (!document.fonts) return;
+  await Promise.all(["400 62px Newsreader", "italic 400 19px Newsreader", "400 16px Inter", "500 12px Inter"].map((f) => document.fonts.load(f)));
+  await document.fonts.ready;
+};
+
+const cardBlob = async (entry) => {
+  await ensureFonts();
+  return new Promise((resolve) => renderCard(entry).toBlob(resolve, "image/png"));
+};
+
+const cardName = (entry) => `lexicon-${state.lang}-${slugify(entry.word)}.png`;
+
+// A shared link reopens the exact word, in the language it was shared in.
+const shareUrl = (entry) => {
+  const u = new URL(location.href);
+  u.search = "";
+  u.hash = "";
+  u.searchParams.set("lang", state.lang);
+  u.searchParams.set("w", slugify(entry.word));
+  return u.toString();
+};
+
+const shareText = (entry) => {
+  const def = entry.def.length > 160 ? `${entry.def.slice(0, 157)}…` : entry.def;
+  return `${entry.word} ${entry.ipa} — ${def}`;
+};
+
+// Flash a transient label on a button without losing what it said.
+const flash = (btn, msg, ms = 1400) => {
+  if (btn.dataset.was === undefined) btn.dataset.was = btn.textContent;
+  btn.textContent = msg;
+  clearTimeout(Number(btn.dataset.timer));
+  btn.dataset.timer = String(setTimeout(() => {
+    btn.textContent = btn.dataset.was;
+    delete btn.dataset.was;
+  }, ms));
+};
+
 const download = async () => {
   const entry = state.current;
   if (!entry) return;
   const t = T();
   const btn = $("dl");
   btn.disabled = true;
-  const was = btn.textContent;
-  btn.textContent = t.drawing;
+  flash(btn, t.drawing, 6000);
   try {
-    // The card is typeset in the same faces as the page, so wait for them.
-    if (document.fonts) {
-      await Promise.all(["400 62px Newsreader", "italic 400 19px Newsreader", "400 16px Inter", "500 12px Inter"].map((f) => document.fonts.load(f)));
-      await document.fonts.ready;
-    }
-    const canvas = renderCard(entry);
-    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    const blob = await cardBlob(entry);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    // Fold accents before slugifying, or "mémoïsation" would come out gutted.
-    const slug = entry.word.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase();
-    a.download = `lexicon-${state.lang}-${slug}.png`;
+    a.download = cardName(entry);
     a.click();
     URL.revokeObjectURL(url);
-    btn.textContent = t.saved;
-    setTimeout(() => { btn.textContent = was; }, 1400);
+    flash(btn, t.saved);
   } catch {
-    btn.textContent = t.failed;
-    setTimeout(() => { btn.textContent = was; }, 1800);
+    flash(btn, t.failed, 1800);
   } finally {
     btn.disabled = false;
+  }
+};
+
+// ── sharing ─────────────────────────────────────────────────────────────────
+// On a phone the native sheet hands the actual PNG to whatever app the reader
+// picks, which is the only route that shares the card itself. Desktop browsers
+// mostly refuse files, so there the panel opens instead and shares a link that
+// reopens the word.
+const SOCIALS = [
+  { key: "x", name: "X", href: (u, t) => `https://x.com/intent/post?text=${encodeURIComponent(t)}&url=${encodeURIComponent(u)}` },
+  { key: "bluesky", name: "Bluesky", href: (u, t) => `https://bsky.app/intent/compose?text=${encodeURIComponent(`${t}\n${u}`)}` },
+  { key: "linkedin", name: "LinkedIn", href: (u) => `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(u)}` },
+  { key: "whatsapp", name: "WhatsApp", href: (u, t) => `https://wa.me/?text=${encodeURIComponent(`${t} ${u}`)}` },
+  { key: "telegram", name: "Telegram", href: (u, t) => `https://t.me/share/url?url=${encodeURIComponent(u)}&text=${encodeURIComponent(t)}` },
+];
+
+const buildSocials = () => {
+  $("socials").innerHTML = SOCIALS.map(
+    (s) => `<a class="sheet__b" data-social="${s.key}" target="_blank" rel="noopener noreferrer">${s.name}</a>`,
+  ).join("");
+};
+
+const closeSheet = () => {
+  const sheet = $("sheet");
+  if (sheet.hidden) return;
+  sheet.hidden = true;
+  $("share").setAttribute("aria-expanded", "false");
+};
+
+const openSheet = () => {
+  const entry = state.current;
+  if (!entry) return;
+  const url = shareUrl(entry);
+  const text = shareText(entry);
+  document.querySelectorAll("[data-social]").forEach((a) => {
+    const s = SOCIALS.find((x) => x.key === a.dataset.social);
+    a.href = s.href(url, text);
+    a.setAttribute("aria-label", T().shareOn(s.name));
+  });
+  $("sheet").hidden = false;
+  $("share").setAttribute("aria-expanded", "true");
+  $("copyLink").focus();
+};
+
+const share = async () => {
+  const entry = state.current;
+  if (!entry) return;
+  const t = T();
+  const btn = $("share");
+  if (!$("sheet").hidden) return closeSheet();
+
+  // Only build the file when the browser will actually take one.
+  if (navigator.canShare) {
+    btn.disabled = true;
+    flash(btn, t.drawing, 6000);
+    try {
+      const file = new File([await cardBlob(entry)], cardName(entry), { type: "image/png" });
+      if (navigator.canShare({ files: [file] })) {
+        const payload = { files: [file], title: `Lexicon — ${entry.word}`, text: shareText(entry) };
+        try {
+          await navigator.share({ ...payload, url: shareUrl(entry) });
+        } catch (err) {
+          if (err && err.name === "AbortError") return;
+          // Some engines reject files alongside url; the file is the point, so drop the url.
+          await navigator.share(payload);
+        }
+        return;
+      }
+    } catch (err) {
+      if (err && err.name === "AbortError") return;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = btn.dataset.was !== undefined ? btn.dataset.was : t.share;
+      delete btn.dataset.was;
+    }
+  }
+  openSheet();
+};
+
+const copyLink = async () => {
+  if (!state.current) return;
+  try {
+    await navigator.clipboard.writeText(shareUrl(state.current));
+    flash($("copyLink"), T().copied);
+  } catch {
+    flash($("copyLink"), T().failed, 1800);
+  }
+};
+
+const copyImage = async () => {
+  if (!state.current) return;
+  const btn = $("copyImage");
+  try {
+    const blob = await cardBlob(state.current);
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    flash(btn, T().copied);
+  } catch {
+    flash(btn, T().failed, 1800);
   }
 };
 
@@ -1173,9 +1365,27 @@ const setLang = (lang) => {
 };
 
 load();
+buildSocials();
 paintLanguage();
+
+// A shared link opens on its word — and moves the level and domain to match, so
+// the controls describe what is actually on screen rather than contradicting it.
+const openLinked = () => {
+  if (!state.linked) return false;
+  const entry = entries().find((e) => slugify(e.word) === state.linked);
+  state.linked = null;
+  if (!entry) return false;
+  state.level = entry.level;
+  state.domains.add(entry.domain);
+  seen = new Set([entry.id]);
+  syncControls();
+  save();
+  render(entry);
+  return true;
+};
+
 syncControls();
-draw();
+if (!openLinked()) draw();
 
 $("langs").addEventListener("click", (e) => {
   const btn = e.target.closest(".lang");
@@ -1220,6 +1430,17 @@ $("noDomains").addEventListener("click", () => setAll(false));
 
 $("next").addEventListener("click", draw);
 $("dl").addEventListener("click", download);
+$("share").addEventListener("click", share);
+$("copyLink").addEventListener("click", copyLink);
+$("copyImage").addEventListener("click", copyImage);
+
+// The panel describes the word currently on screen, so drawing a new one closes it.
+document.addEventListener("click", (e) => {
+  if (!$("sheet").hidden && !e.target.closest("#sheet, #share")) closeSheet();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$("sheet").hidden) { closeSheet(); $("share").focus(); }
+});
 
 $("theme").addEventListener("click", () => {
   const dark = matchMedia("(prefers-color-scheme: dark)").matches;
@@ -1233,6 +1454,7 @@ document.addEventListener("keydown", (e) => {
   if (e.target.closest("button, input, textarea, select")) return;
   if (e.key === " " || e.key === "Enter") { e.preventDefault(); draw(); }
   if (e.key.toLowerCase() === "d") { e.preventDefault(); download(); }
+  if (e.key.toLowerCase() === "s") { e.preventDefault(); share(); }
   if (e.key.toLowerCase() === "l") { e.preventDefault(); setLang(state.lang === "en" ? "fr" : "en"); }
 });
 </script>
