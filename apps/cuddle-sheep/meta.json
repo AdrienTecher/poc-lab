@@ -1,15 +1,17 @@
 {
   "slug": "cuddle-sheep",
   "title": "Nuage — le mouton à câliner",
-  "description": "Un mouton tout doux : caresse-le et il sourit, heureux cinq minutes durant. Sinon il boude sous son petit nuage de pluie.",
-  "description_en": "A very soft sheep — stroke him and he smiles, happy for five whole minutes. Otherwise he sulks under his own rain cloud.",
+  "description": "Un mouton tout doux : caresse-le et il sourit cinq minutes, tonds la laine qui repousse en quinze, et débloque la traversée du loup, du mouton et du chou.",
+  "description_en": "A very soft sheep: cuddle him and he smiles for five minutes, shear the fleece that regrows in fifteen, and unlock the wolf, sheep and cabbage crossing.",
   "tags": [
     "jouet",
     "animation",
     "svg",
-    "interactif"
+    "puzzle",
+    "isometrique"
   ],
   "created": "2026-07-25",
   "source": "claude-code",
-  "kind": "static"
+  "kind": "static",
+  "updated": "2026-07-25"
 }

@@ -2,6 +2,8 @@
 
 Append-only, newest first: `## [YYYY-MM-DD] <type> | <summary>`.
 
+## [2026-07-25] feat | cuddle-sheep gains a fleece and a puzzle — wool grows on a 15-minute clock and is sheared with shears picked up from the grass; five clovers grow a four-leaf clover that opens "la traversée", an isometric wolf/sheep/cabbage crossing where Nuage himself is the piece
+
 ## [2026-07-25] intake | add cuddle-sheep (Nuage) — hand-rigged SVG sheep on a spring system; stroking him fills a cuddle that buys five minutes of visible happiness, the whole scene keying on one mood variable
 
 ## [2026-07-17] render | redesign gallery landing page — per-app identity hues, masthead spectrum, Space Grotesk/Plex Mono, explicit description_en field
