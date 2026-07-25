@@ -64,6 +64,15 @@
   .kicker{font-family:var(--mono);font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:0 0 .55rem;}
   h1{font-family:var(--serif);font-weight:400;font-size:2.5rem;line-height:1;letter-spacing:-.02em;margin:0 0 .5rem;}
   .lede{margin:0;color:var(--soft);max-width:44ch;font-size:.95rem;}
+  .tools{flex:0 0 auto;display:flex;align-items:center;gap:.5rem;}
+  .langs{display:inline-flex;border:1px solid var(--rule);border-radius:999px;overflow:hidden;}
+  .lang{
+    font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;
+    background:transparent;border:0;color:var(--muted);cursor:pointer;
+    padding:.42rem .6rem;transition:color .18s ease,background .18s ease;
+  }
+  .lang:hover{color:var(--ink);}
+  .lang[aria-pressed=true]{color:var(--accent);background:var(--wash);}
   .theme{
     flex:0 0 auto;width:36px;height:36px;display:grid;place-items:center;
     background:transparent;border:1px solid var(--rule);border-radius:50%;
@@ -200,8 +209,13 @@
   <header class="masthead">
     <div>
       <p class="kicker">Lexicon</p>
-      <h1>A word you probably don't know</h1>
-      <p class="lede">Pick how far past common usage you want to go, keep only the domains you care for, and take the card with you.</p>
+      <h1 id="h1">A word you probably don't know</h1>
+      <p class="lede" id="lede">Pick how far past common usage you want to go, keep only the domains you care for, and take the card with you.</p>
+    </div>
+    <div class="tools">
+    <div class="langs" id="langs" role="group" aria-label="Language">
+      <button class="lang" type="button" data-lang="en" aria-pressed="true" lang="en">EN</button>
+      <button class="lang" type="button" data-lang="fr" aria-pressed="false" lang="fr">FR</button>
     </div>
     <button class="theme" id="theme" type="button" aria-label="Switch colour theme" title="Switch colour theme">
       <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
@@ -211,17 +225,18 @@
         <path d="M20 14.2A8.2 8.2 0 0 1 9.8 4a8.2 8.2 0 1 0 10.2 10.2z"/>
       </svg>
     </button>
+    </div>
   </header>
 
   <section class="controls">
     <div class="field">
-      <p class="label"><span>Level of knowledge</span></p>
+      <p class="label"><span id="levelLabel">Level of knowledge</span></p>
       <div class="levels" id="levels" role="radiogroup" aria-label="Level of knowledge"></div>
       <p class="lvl-desc" id="lvlDesc"></p>
     </div>
 
     <div class="field">
-      <p class="label"><span>Domains</span><span class="count" id="poolCount"></span></p>
+      <p class="label"><span id="domainLabel">Domains</span><span class="count" id="poolCount"></span></p>
       <div class="chips" id="chips" role="group" aria-label="Domains"></div>
       <div class="bulk">
         <button class="link" id="allDomains" type="button">All</button>
@@ -243,18 +258,18 @@
     </p>
     <hr class="rule">
     <p class="def" id="def"></p>
-    <p class="root" id="rootLine"><span class="lbl">Root</span><span id="root"></span></p>
+    <p class="root" id="rootLine"><span class="lbl" id="rootLbl">Root</span><span id="root"></span></p>
   </article>
 
   <div class="actions">
     <button class="btn primary" id="next" type="button">New word</button>
     <button class="btn" id="dl" type="button">Download card</button>
   </div>
-  <p class="hint"><kbd>Space</kbd> new word &nbsp;·&nbsp; <kbd>D</kbd> download card</p>
+  <p class="hint" id="hint"><kbd>Space</kbd> new word &nbsp;·&nbsp; <kbd>D</kbd> download card</p>
 
   <footer>
     <span id="stat"></span>
-    <span>Broad transcriptions · <a href="../">poc-lab</a></span>
+    <span><span id="footnote">Broad transcriptions</span> · <a href="../">poc-lab</a></span>
   </footer>
 </div>
 
@@ -266,28 +281,83 @@
 // is the schema and is zipped into objects once, at load.
 const FIELDS = ["domain", "level", "word", "ipa", "pos", "def", "root"];
 
-const DOMAINS = [
-  { key: "language", name: "Language & Rhetoric" },
-  { key: "mind",     name: "Mind & Philosophy" },
-  { key: "nature",   name: "Nature & Earth" },
-  { key: "matter",   name: "Matter & Cosmos" },
-  { key: "body",     name: "Body & Medicine" },
-  { key: "arts",     name: "Arts & Craft" },
-  { key: "society",  name: "Society & Law" },
-  { key: "systems",  name: "Number & Systems" },
-];
+// Two banks, not one bank translated. English draws rare English words, French
+// draws rare French ones — switching language changes the vocabulary, not the
+// labels on it. The eight domains and five levels are the same shelf in both,
+// so a reader who has learned the map keeps it when they switch.
+const L10N = {
+  en: {
+    htmlLang: "en",
+    name: "English",
+    domains: {
+      language: "Language & Rhetoric", mind: "Mind & Philosophy", nature: "Nature & Earth",
+      matter: "Matter & Cosmos", body: "Body & Medicine", arts: "Arts & Craft",
+      society: "Society & Law", systems: "Number & Systems",
+    },
+    levels: [
+      { name: "Common",     desc: "Words a curious adult has met in print but never said aloud." },
+      { name: "Well-read",  desc: "The working vocabulary of someone who reads widely." },
+      { name: "Erudite",    desc: "Terms of art you only meet inside a discipline." },
+      { name: "Recondite",  desc: "A practitioner's shorthand, opaque from the outside." },
+      { name: "Omniscient", desc: "Words that send specialists back to the reference shelf." },
+    ],
+    pos: { n: "noun", nm: "noun", nf: "noun", adj: "adjective", v: "verb", adv: "adverb", phr: "phrase" },
+    title: "A word you probably don't know",
+    lede: "Pick how far past common usage you want to go, keep only the domains you care for, and take the card with you.",
+    levelLabel: "Level of knowledge",
+    domainLabel: "Domains",
+    inPlay: (n) => (n === 1 ? "1 word in play" : `${n} words in play`),
+    all: "All", none: "None",
+    next: "New word", download: "Download card",
+    drawing: "Drawing…", saved: "Saved", failed: "Card failed",
+    hint: "<kbd>Space</kbd> new word &nbsp;·&nbsp; <kbd>D</kbd> download card",
+    emptyTag: "No pool", emptyWord: "Nothing at this level",
+    emptyDef: "Turn on another domain, or move to a different level — this combination is empty.",
+    rootLabel: "Root", defLabel: "Definition",
+    stat: (w, d, l) => `${w} words · ${d} domains · ${l} levels`,
+    footnote: "Broad transcriptions",
+    themeLabel: "Switch colour theme", langLabel: "Language",
+    levelAria: (n, name) => `Level ${n}, ${name}`,
+  },
+  fr: {
+    htmlLang: "fr",
+    name: "Français",
+    domains: {
+      language: "Langue & Rhétorique", mind: "Esprit & Philosophie", nature: "Nature & Terre",
+      matter: "Matière & Cosmos", body: "Corps & Médecine", arts: "Arts & Métiers",
+      society: "Société & Droit", systems: "Nombre & Systèmes",
+    },
+    levels: [
+      { name: "Courant",    desc: "Des mots qu'un lecteur curieux a croisés sans jamais les dire." },
+      { name: "Lettré",     desc: "Le vocabulaire de qui lit beaucoup." },
+      { name: "Érudit",     desc: "Des termes qu'on ne rencontre qu'au sein d'une discipline." },
+      { name: "Savant",     desc: "La langue d'un métier, opaque vue du dehors." },
+      { name: "Omniscient", desc: "Des mots qui renvoient les spécialistes au dictionnaire." },
+    ],
+    pos: { n: "nom", nm: "n. m.", nf: "n. f.", adj: "adjectif", v: "verbe", adv: "adverbe", phr: "locution" },
+    title: "Un mot que vous ne connaissez sans doute pas",
+    lede: "Choisissez jusqu'où aller au-delà de l'usage courant, ne gardez que les domaines qui vous intéressent, et emportez la fiche.",
+    levelLabel: "Niveau de connaissance",
+    domainLabel: "Domaines",
+    inPlay: (n) => (n === 1 ? "1 mot en jeu" : `${n} mots en jeu`),
+    all: "Tous", none: "Aucun",
+    next: "Nouveau mot", download: "Télécharger la fiche",
+    drawing: "Tirage…", saved: "Enregistrée", failed: "Échec",
+    hint: "<kbd>Espace</kbd> nouveau mot &nbsp;·&nbsp; <kbd>D</kbd> télécharger la fiche",
+    emptyTag: "Aucun tirage", emptyWord: "Rien à ce niveau",
+    emptyDef: "Activez un autre domaine, ou changez de niveau — cette combinaison est vide.",
+    rootLabel: "Racine", defLabel: "Définition",
+    stat: (w, d, l) => `${w} mots · ${d} domaines · ${l} niveaux`,
+    footnote: "Transcriptions larges",
+    themeLabel: "Basculer le thème clair / sombre", langLabel: "Langue",
+    levelAria: (n, name) => `Niveau ${n}, ${name}`,
+  },
+};
 
-const LEVELS = [
-  { n: 1, roman: "I",   name: "Common",     desc: "Words a curious adult has met in print but never said aloud." },
-  { n: 2, roman: "II",  name: "Well-read",  desc: "The working vocabulary of someone who reads widely." },
-  { n: 3, roman: "III", name: "Erudite",    desc: "Terms of art you only meet inside a discipline." },
-  { n: 4, roman: "IV",  name: "Recondite",  desc: "A practitioner's shorthand, opaque from the outside." },
-  { n: 5, roman: "V",   name: "Omniscient", desc: "Words that send specialists back to the reference shelf." },
-];
+const DOMAIN_KEYS = ["language", "mind", "nature", "matter", "body", "arts", "society", "systems"];
+const ROMAN = ["I", "II", "III", "IV", "V"];
 
-const POS = { n: "noun", adj: "adjective", v: "verb", adv: "adverb", phr: "phrase" };
-
-const RAW = [
+const RAW_EN = [
   // ── Language & Rhetoric ──
   ["language",1,"laconic","/ləˈkɒnɪk/","adj","Using very few words; terse to the point of seeming cold.","Greek Lakōnikos, ‘of Laconia’ — the region of Sparta, whose people were famed for answering at length only when they had to."],
   ["language",1,"garrulous","/ˈɡærələs/","adj","Talking too much, and about trifles.","Latin garrire, to chatter."],
@@ -502,51 +572,305 @@ const RAW = [
   ["systems",5,"oracle machine","/ˈɒrəkəl məˌʃiːn/","n","A hypothetical computer granted a black box that settles some problem in a single step, used to measure relative difficulty.","Latin oraculum, a divine pronouncement; the term is Turing’s."],
 ];
 
-// ── model ───────────────────────────────────────────────────────────────────
-const ENTRIES = RAW.map((row, id) => Object.assign({ id }, ...FIELDS.map((f, i) => ({ [f]: row[i] }))));
-const domainName = (key) => DOMAINS.find((d) => d.key === key).name;
-const levelOf = (n) => LEVELS.find((l) => l.n === n);
+const RAW_FR = [
+  // ── Langue & Rhétorique ──
+  ["language",1,"amphigouri","/ɑ̃figuʁi/","nm","Écrit ou discours si embrouillé qu'on n'en tire aucun sens.","Origine obscure ; on y reconnaît peut-être le grec amphi (autour) croisé avec un radical burlesque."],
+  ["language",1,"pléonasme","/pleɔnasm/","nm","Répétition d'une idée déjà contenue dans ce qui précède, comme « monter en haut ».","Du grec pleonasmos, « excès »."],
+  ["language",1,"barbarisme","/baʁbaʁism/","nm","Faute qui consiste à employer un mot déformé ou qui n'existe pas.","Du grec barbaros, « étranger » — celui dont on n'entend que du charabia."],
+  ["language",1,"périphrase","/peʁifʁaz/","nf","Tour qui dit en plusieurs mots ce qu'un seul nommerait.","Du grec periphrasis, « expression par un détour »."],
+  ["language",1,"laconique","/lakɔnik/","adj","Qui s'exprime en très peu de mots, jusqu'à en paraître sec.","Du grec Lakōnikos, « de Laconie » — le pays de Sparte, où l'on ne parlait pas pour rien."],
+  ["language",2,"paronyme","/paʁɔnim/","nm","Mot assez proche d'un autre par la forme pour qu'on les confonde, comme « conjecture » et « conjoncture ».","Du grec para (à côté) + onoma (nom)."],
+  ["language",2,"prétérition","/pʁeteʁisjɔ̃/","nf","Figure par laquelle on annonce qu'on passera sous silence ce qu'on est précisément en train de dire.","Du latin praeteritio, « action d'omettre »."],
+  ["language",2,"hypallage","/ipalaʒ/","nf","Figure qui rapporte à un mot ce qui conviendrait à un autre : « ce marchand accoudé sur son comptoir avide ».","Du grec hypallagē, « échange »."],
+  ["language",2,"syllepse","/silɛps/","nf","Accord commandé par le sens plutôt que par la grammaire.","Du grec syllēpsis, « action de prendre ensemble »."],
+  ["language",2,"zeugme","/zøgm/","nm","Construction où un même mot régit deux termes qui ne s'y rattachent pas de la même façon : « vêtu de probité candide et de lin blanc ».","Du grec zeugma, « joug »."],
+  ["language",3,"anacoluthe","/anakɔlyt/","nf","Phrase qui abandonne en chemin la construction qu'elle avait commencée.","Du grec anakolouthon, « qui ne suit pas »."],
+  ["language",3,"épanorthose","/epanɔʁtoz/","nf","Retour immédiat sur ce qu'on vient de dire, pour le corriger ou le renchérir : « c'est bien, non, c'est admirable ».","Du grec epanorthōsis, « redressement »."],
+  ["language",3,"catachrèse","/katakʁɛz/","nf","Emploi détourné d'un mot faute d'en avoir un propre : les « pieds » d'une table.","Du grec katachrēsis, « usage abusif »."],
+  ["language",3,"diérèse","/djeʁɛz/","nf","Prononciation en deux syllabes d'un groupe de voyelles qu'on unit d'ordinaire : « li-on ».","Du grec diairesis, « division »."],
+  ["language",3,"apocope","/apɔkɔp/","nf","Chute de la fin d'un mot : « ciné » pour cinéma.","Du grec apokopē, « retranchement »."],
+  ["language",4,"épenthèse","/epɑ̃tɛz/","nf","Apparition d'un son à l'intérieur d'un mot : le b de « chambre », absent du latin camera.","Du grec epenthesis, « insertion »."],
+  ["language",4,"aphérèse","/afeʁɛz/","nf","Chute du début d'un mot : « bus » pour autobus.","Du grec aphairesis, « retranchement »."],
+  ["language",4,"antanaclase","/ɑ̃tanaklaz/","nf","Reprise d'un mot dans deux sens différents : « le cœur a ses raisons que la raison ne connaît point ».","Du grec antanaklasis, « réverbération »."],
+  ["language",4,"polyptote","/pɔliptɔt/","nf","Reprise d'un même mot sous des formes fléchies différentes.","Du grec polyptōton, « à plusieurs cas »."],
+  ["language",4,"énallage","/enalaʒ/","nf","Substitution d'une forme grammaticale à une autre : un temps pour un autre, un nombre pour un autre.","Du grec enallagē, « échange »."],
+  ["language",5,"tmèse","/tmɛz/","nf","Insertion d'un mot à l'intérieur d'un autre.","Du grec tmēsis, « coupure »."],
+  ["language",5,"antimétabole","/ɑ̃timetabɔl/","nf","Reprise inversée de deux termes : « il faut manger pour vivre et non vivre pour manger ».","Du grec antimetabolē, « renversement »."],
+  ["language",5,"métalepse","/metalɛps/","nf","Figure qui franchit les plans du récit, ou prend l'antécédent pour le conséquent.","Du grec metalēpsis, « substitution »."],
+  ["language",5,"hapax","/apaks/","nm","Mot dont on ne connaît qu'une seule attestation dans tout un corpus.","Du grec hapax legomenon, « dit une seule fois »."],
+  ["language",5,"épizeuxe","/epizøks/","nf","Répétition immédiate d'un mot, sans rien qui s'interpose.","Du grec epizeuxis, « liaison »."],
 
-const STORE = "lexicon:v1";
-const state = { level: 1, domains: new Set(DOMAINS.map((d) => d.key)), current: null };
+  // ── Esprit & Philosophie ──
+  ["mind",1,"solipsisme","/sɔlipsism/","nm","Doctrine selon laquelle rien n'est assuré d'exister hors de sa propre pensée.","Du latin solus (seul) + ipse (soi-même)."],
+  ["mind",1,"déréliction","/deʁeliksjɔ̃/","nf","Sentiment d'abandon absolu, sans recours ni témoin.","Du latin derelictio, « délaissement »."],
+  ["mind",1,"velléité","/veleite/","nf","Intention trop faible pour jamais passer à l'acte.","Du latin velle, « vouloir »."],
+  ["mind",1,"sophisme","/sɔfism/","nm","Raisonnement faux bâti pour convaincre, et qui a l'apparence de la rigueur.","Du grec sophisma, « artifice habile »."],
+  ["mind",1,"aporie","/apɔʁi/","nf","Impasse où mènent deux raisonnements également recevables.","Du grec aporia, « absence de passage »."],
+  ["mind",2,"eudémonisme","/ødemɔnism/","nm","Morale qui fait du bonheur la fin de toute action.","Du grec eudaimonia, « bonne fortune »."],
+  ["mind",2,"téléologie","/teleɔlɔʒi/","nf","Explication par la fin visée plutôt que par la cause antérieure.","Du grec telos, « but »."],
+  ["mind",2,"réification","/ʁeifikasjɔ̃/","nf","Fait de traiter une abstraction comme une chose douée d'existence propre.","Du latin res (chose) + facere (faire)."],
+  ["mind",2,"herméneutique","/ɛʁmenøtik/","nf","Art et théorie de l'interprétation, d'abord des textes sacrés, puis de tout texte.","Du grec hermēneuein, « interpréter »."],
+  ["mind",2,"acrasie","/akʁazi/","nf","Fait d'agir contre son propre jugement ; faiblesse de la volonté.","Du grec akrasia, « manque d'empire sur soi »."],
+  ["mind",3,"nominalisme","/nɔminalism/","nm","Doctrine pour laquelle les universaux ne sont que des noms : il n'y a pas de rougeur, seulement des choses rouges.","Du latin nomen, « nom »."],
+  ["mind",3,"quiddité","/kɥidite/","nf","Ce qui fait qu'une chose est l'espèce de chose qu'elle est.","Du latin scolastique quidditas, de quid, « quoi »."],
+  ["mind",3,"apodictique","/apɔdiktik/","adj","Se dit d'une proposition nécessaire, qui ne souffre pas d'être contestée.","Du grec apodeiktikos, « démonstratif »."],
+  ["mind",3,"eidétique","/edetik/","adj","Qui touche à l'essence saisie par l'intuition, dans le vocabulaire de Husserl.","Du grec eidos, « forme, essence »."],
+  ["mind",3,"hypostase","/ipɔstaz/","nf","Réalité substantielle sous les apparences ; en théologie, chacune des personnes de la Trinité.","Du grec hypostasis, « ce qui se tient dessous »."],
+  ["mind",4,"hylémorphisme","/ilemɔʁfism/","nm","Doctrine d'Aristote selon laquelle toute substance unit une matière et une forme, dont aucune n'existe seule.","Du grec hylē (matière) + morphē (forme)."],
+  ["mind",4,"entéléchie","/ɑ̃teleʃi/","nf","Chez Aristote, l'acte achevé par lequel une chose devient pleinement ce pour quoi elle était faite.","Du grec entelecheia, « qui a sa fin en soi »."],
+  ["mind",4,"apophatique","/apɔfatik/","adj","Qui ne parle du divin que par négation, en disant ce qu'il n'est pas.","Du grec apophasis, « négation »."],
+  ["mind",4,"anamnèse","/anamnɛz/","nf","Chez Platon, réminiscence par laquelle l'âme retrouve ce qu'elle savait avant de naître.","Du grec anamnēsis, « rappel »."],
+  ["mind",4,"survenance","/syʁvənɑ̃s/","nf","Dépendance telle que rien ne peut changer à un niveau sans changer à l'autre.","Du latin supervenire, « survenir »."],
+  ["mind",5,"heccéité","/ɛkseite/","nf","Ce qui fait d'un individu cet individu-ci et nul autre, au-delà de tout ce qu'il partage.","Du latin scolastique haecceitas, de haec (celle-ci), forgé par Duns Scot."],
+  ["mind",5,"apocatastase","/apɔkatastaz/","nf","Rétablissement final de toutes choses dans leur état premier ; chez Origène, la réconciliation de toute créature.","Du grec apokatastasis, « restauration »."],
+  ["mind",5,"épochè","/epɔke/","nf","Suspension du jugement : d'abord celle des sceptiques, puis la mise entre parenthèses de Husserl.","Du grec epochē, « arrêt »."],
+  ["mind",5,"adiaphore","/adjafɔʁ/","adj","Se dit de ce qui est moralement indifférent, ni bien ni mal.","Du grec adiaphoros, « qui ne fait pas de différence »."],
+  ["mind",5,"ipséité","/ipseite/","nf","Le fait d'être soi, distinct de la simple identité d'une chose avec elle-même.","Du latin ipse, « soi-même »."],
+
+  // ── Nature & Terre ──
+  ["nature",1,"pétrichor","/petʁikɔʁ/","nm","Odeur de terre que libère la pluie tombant sur un sol longtemps sec.","Du grec petra (pierre) + ichōr, le fluide qui coulait dans les veines des dieux ; mot forgé en 1964."],
+  ["nature",1,"crépusculaire","/kʁepyskylɛʁ/","adj","Qui vit et chasse à la tombée du jour, plutôt qu'en plein jour ou en pleine nuit.","Du latin crepusculum, « demi-jour »."],
+  ["nature",1,"estivation","/ɛstivasjɔ̃/","nf","Engourdissement par lequel certains animaux traversent l'été, comme d'autres traversent l'hiver.","Du latin aestas, « été »."],
+  ["nature",1,"frimas","/fʁima/","nm","Brouillard froid qui se dépose en givre sur tout ce qu'il touche.","De l'ancien français frim, « gelée blanche »."],
+  ["nature",1,"résurgence","/ʁezyʁʒɑ̃s/","nf","Réapparition à l'air libre d'une rivière qui s'était perdue sous la roche.","Du latin resurgere, « se relever »."],
+  ["nature",2,"mycorhize","/mikɔʁiz/","nf","Association d'un champignon et d'une racine, par laquelle les deux échangent eau et nourriture.","Du grec mykēs (champignon) + rhiza (racine)."],
+  ["nature",2,"karst","/kaʁst/","nm","Relief de gouffres et de rivières souterraines, creusé par l'eau dans le calcaire.","De l'allemand Karst, le plateau calcaire de l'arrière-pays de Trieste."],
+  ["nature",2,"endémisme","/ɑ̃demism/","nm","Fait pour une espèce de n'exister naturellement que sur un seul territoire.","Du grec en (dans) + dēmos (peuple, contrée)."],
+  ["nature",2,"alluvion","/alyvjɔ̃/","nf","Dépôt de sable et de limon laissé par un cours d'eau là où il ralentit.","Du latin alluvio, « débordement »."],
+  ["nature",2,"anadrome","/anadʁɔm/","adj","Se dit d'un poisson qui remonte les fleuves depuis la mer pour frayer.","Du grec ana (en remontant) + dromos (course)."],
+  ["nature",3,"allélopathie","/alelɔpati/","nf","Guerre chimique entre plantes : les substances que l'une libère empêchent les voisines de germer.","Du grec allēlōn (les uns les autres) + pathos (souffrance)."],
+  ["nature",3,"sclérophylle","/sklerɔfil/","adj","Se dit d'une plante aux feuilles petites, dures et coriaces, taillées pour la sécheresse et le feu.","Du grec sklēros (dur) + phyllon (feuille)."],
+  ["nature",3,"nunatak","/nynatak/","nm","Sommet rocheux qui perce la surface d'une calotte glaciaire.","De l'inuit du Groenland nunataq."],
+  ["nature",3,"halophyte","/alɔfit/","nf","Plante qui vit, et souvent ne prospère que, dans les sols saturés de sel.","Du grec hals (sel) + phyton (plante)."],
+  ["nature",3,"écotone","/ekɔtɔn/","nm","Bande de transition où deux milieux se rencontrent sans que l'un l'emporte tout à fait.","Du grec oikos (maison) + tonos (tension)."],
+  ["nature",4,"thermokarst","/tɛʁmokaʁst/","nm","Terrain bosselé qui s'affaisse là où le pergélisol dégèle et où le sol se referme sur le vide.","Du grec thermē (chaleur) + karst."],
+  ["nature",4,"éolien","/eɔljɛ̃/","adj","Façonné, transporté ou déposé par le vent.","D'Éole, gardien des vents."],
+  ["nature",4,"inquilin","/ɛ̃kilɛ̃/","nm","Animal qui loge dans le nid ou la galle d'une autre espèce sans la dévorer.","Du latin inquilinus, « locataire »."],
+  ["nature",4,"cryoturbation","/kʁijotyʁbasjɔ̃/","nf","Brassage du sol par les gels et dégels répétés, qui finit par trier les pierres en cercles et en bandes.","Du grec kryos (froid) + latin turbare (agiter)."],
+  ["nature",4,"vivipare","/vivipaʁ/","adj","Qui met au monde des petits déjà formés ; chez les plantes, dont la graine germe encore attachée au pied.","Du latin vivus (vivant) + parere (enfanter)."],
+  ["nature",5,"myrmécochorie","/miʁmekɔkɔʁi/","nf","Dissémination des graines par les fourmis, payée d'un appendice gras que la graine fabrique pour cela.","Du grec myrmēx (fourmi) + chōrein (se répandre)."],
+  ["nature",5,"thigmotropisme","/tigmɔtʁɔpism/","nm","Croissance orientée par le toucher : la vrille qui rencontre un appui et s'y enroule.","Du grec thigma (contact) + tropos (tour)."],
+  ["nature",5,"pédogenèse","/pedɔʒənɛz/","nf","Formation du sol à partir de la roche mère, du climat, du vivant et du temps.","Du grec pedon (sol) + genesis ; à ne pas confondre avec la reproduction par des larves, qui porte le même nom."],
+  ["nature",5,"saprophage","/sapʁɔfaʒ/","adj","Qui se nourrit de matière organique en décomposition.","Du grec sapros (pourri) + phagein (manger)."],
+  ["nature",5,"lithophyte","/litɔfit/","nf","Plante qui pousse à même la roche nue, sans sol pour la porter.","Du grec lithos (pierre) + phyton (plante)."],
+
+  // ── Matière & Cosmos ──
+  ["matter",1,"sublimation","/syblimasjɔ̃/","nf","Passage direct d'un solide à l'état de vapeur, sans étape liquide — la neige carbonique, le givre par un matin clair.","Du latin sublimare, « élever »."],
+  ["matter",1,"pénombre","/penɔ̃bʁ/","nf","Zone de demi-ombre, là où la source de lumière n'est masquée qu'en partie.","Du latin paene (presque) + umbra (ombre)."],
+  ["matter",1,"albédo","/albedo/","nm","Part de la lumière qu'une surface renvoie : proche de un pour la neige fraîche, de zéro pour l'asphalte.","Du latin albus, « blanc »."],
+  ["matter",1,"parallaxe","/paʁalaks/","nf","Déplacement apparent d'un objet proche sur le fond du ciel quand l'observateur se déplace — le premier barreau de l'échelle des distances.","Du grec parallaxis, « changement »."],
+  ["matter",1,"effervescence","/efɛʁvesɑ̃s/","nf","Échappement en bulles d'un gaz dissous dans un liquide.","Du latin effervescere, « entrer en ébullition »."],
+  ["matter",2,"déliquescence","/delikesɑ̃s/","nf","Propriété d'un solide qui prend tant d'eau à l'air ambiant qu'il finit par s'y dissoudre.","Du latin deliquescere, « fondre »."],
+  ["matter",2,"chiralité","/kiʁalite/","nf","Propriété d'une structure qu'on ne peut superposer à son image dans un miroir, comme la main gauche au gant droit.","Du grec cheir, « main »."],
+  ["matter",2,"syzygie","/siziʒi/","nf","Alignement de trois corps célestes sur une même droite, comme à chaque éclipse.","Du grec syzygia, « attelage »."],
+  ["matter",2,"allotropie","/alɔtʁɔpi/","nf","Faculté d'un même élément de prendre plusieurs formes : le graphite et le diamant sont tous deux du carbone.","Du grec allos (autre) + tropos (manière)."],
+  ["matter",2,"hystérésis","/isteʁezis/","nf","Retard d'un effet sur sa cause, qui fait dépendre l'état d'un système du chemin qu'il a parcouru.","Du grec hysterēsis, « retard »."],
+  ["matter",3,"enthalpie","/ɑ̃talpi/","nf","Contenu de chaleur d'un système à pression constante — la grandeur qui dit si une réaction donne de la chaleur ou en prend.","Du grec enthalpein, « échauffer »."],
+  ["matter",3,"eutectique","/øtɛktik/","adj","Se dit du mélange dont le point de fusion est le plus bas que ces composants puissent atteindre — d'où la soudure qui fond sous ses deux métaux.","Du grec eutēktos, « qui fond aisément »."],
+  ["matter",3,"biréfringence","/biʁefʁɛ̃ʒɑ̃s/","nf","Dédoublement d'un rayon lumineux par un milieu dont l'indice dépend de la direction : la calcite double le texte posé dessous.","Du latin bis (deux fois) + refringere (briser)."],
+  ["matter",3,"azéotrope","/azeɔtʁɔp/","nm","Mélange dont la vapeur a exactement la composition du liquide, si bien que la distillation n'y peut plus rien.","Du grec a- (sans) + zein (bouillir) + tropos (changement)."],
+  ["matter",3,"libration","/libʁasjɔ̃/","nf","Balancement lent de la Lune sur son orbite, qui laisse voir un peu plus que sa moitié.","Du latin librare, « balancer »."],
+  ["matter",4,"thixotropie","/tiksɔtʁɔpi/","nf","Propriété d'un gel qui se liquéfie tant qu'on l'agite et reprend dès qu'on le laisse : le ketchup, la boue de forage, la peinture sans coulure.","Du grec thixis (contact) + tropē (tour)."],
+  ["matter",4,"énantiomère","/enɑ̃tjɔmɛʁ/","nm","Chacune de deux molécules images l'une de l'autre dans un miroir et non superposables.","Du grec enantios (opposé) + meros (partie)."],
+  ["matter",4,"fugacité","/fygasite/","nf","Pression corrigée d'un gaz réel, pour qu'il entre dans les équations écrites pour le gaz parfait.","Du latin fugere, « fuir »."],
+  ["matter",4,"sonoluminescence","/sonolyminesɑ̃s/","nf","Éclair de lumière émis par une bulle qu'une onde sonore fait s'effondrer dans un liquide.","Du latin sonus (son) + lumen (lumière)."],
+  ["matter",4,"clathrate","/klatʁat/","nm","Composé où une molécule se trouve emprisonnée dans la cage cristalline d'une autre : le méthane pris dans la glace des fonds marins.","Du latin clathratus, « grillagé »."],
+  ["matter",5,"spallation","/spalasjɔ̃/","nf","Arrachement d'éclats à un matériau frappé par une particule très énergétique.","De l'anglais spall, « éclat de pierre »."],
+  ["matter",5,"antiferromagnétisme","/ɑ̃tifeʁomaɲetism/","nm","Ordre où les moments magnétiques voisins pointent en sens contraire et s'annulent, ne laissant aucune aimantation.","De anti + latin ferrum (fer) + magnétisme."],
+  ["matter",5,"phonon","/fɔnɔ̃/","nm","Quantum de vibration d'un réseau cristallin, traité comme une particule parce qu'il en transporte l'énergie.","Du grec phōnē (son), sur le modèle de photon."],
+  ["matter",5,"mésophase","/mezofaz/","nf","État de la matière entre le cristal et le liquide : ordonné dans certaines directions, fluide dans les autres, comme les cristaux liquides.","Du grec mesos (milieu) + phase."],
+  ["matter",5,"baryogenèse","/baʁjoʒənɛz/","nf","Processus mal élucidé qui, dans l'univers primitif, laissa un peu plus de matière que d'antimatière — et donc quelque chose plutôt que rien.","Du grec barys (lourd) + genesis."],
+
+  // ── Corps & Médecine ──
+  ["body",1,"anhédonie","/anedɔni/","nf","Perte de la capacité d'éprouver du plaisir à ce qui en donnait.","Du grec an- (sans) + hēdonē (plaisir)."],
+  ["body",1,"proprioception","/pʁɔpʁijɔsɛpsjɔ̃/","nf","Sens qui renseigne sur la position des membres sans qu'on ait à les regarder.","Du latin proprius (propre) + capere (prendre)."],
+  ["body",1,"borborygme","/bɔʁbɔʁigm/","nm","Gargouillement des gaz et des liquides qui circulent dans l'intestin.","Du grec borborygmos, mot qui imite le bruit lui-même."],
+  ["body",1,"presbytie","/pʁɛsbisi/","nf","Durcissement du cristallin avec l'âge, qui éloigne peu à peu le journal du visage.","Du grec presbys, « vieillard »."],
+  ["body",1,"épistaxis","/epistaksis/","nf","Saignement de nez.","Du grec epistazein, « couler goutte à goutte »."],
+  ["body",2,"nociception","/nɔsisɛpsjɔ̃/","nf","Détection par le système nerveux des stimulus qui abîment les tissus — le signal, qui n'est pas encore la douleur ressentie.","Du latin nocere (nuire) + capere (prendre)."],
+  ["body",2,"intéroception","/ɛ̃teʁɔsɛpsjɔ̃/","nf","Sens de l'état intérieur du corps : la faim, le souffle, le battement du cœur, le besoin de bouger.","Du latin interus, « au-dedans »."],
+  ["body",2,"péristaltisme","/peʁistaltism/","nm","Onde de contraction musculaire qui pousse le contenu le long du tube digestif.","Du grec peri (autour) + stalsis (resserrement)."],
+  ["body",2,"pétéchie","/petesi/","nf","Petite tache de sang sous la peau, qui ne s'efface pas quand on appuie dessus.","De l'italien petecchia, « petite tache »."],
+  ["body",2,"apnée","/apne/","nf","Arrêt momentané de la respiration, le plus souvent remarqué pendant le sommeil.","Du grec a- (sans) + pnoiē (souffle)."],
+  ["body",3,"akathisie","/akatizi/","nf","Impatience intérieure qui rend insupportable de rester en place, souvent provoquée par un médicament.","Du grec a- (ne pas) + kathizein (s'asseoir)."],
+  ["body",3,"anosognosie","/anɔzɔɡnɔzi/","nf","Méconnaissance par le malade de son propre trouble : nier qu'un membre soit paralysé.","Du grec a- (sans) + nosos (maladie) + gnōsis (connaissance)."],
+  ["body",3,"allodynie","/alɔdini/","nf","Douleur déclenchée par ce qui ne devrait pas faire mal, comme le poids d'un drap.","Du grec allos (autre) + odynē (douleur)."],
+  ["body",3,"dysgueusie","/disɡøzi/","nf","Altération durable du goût, souvent métallique, qui recouvre tout ce qu'on mange.","Du grec dys- (mauvais) + geusis (goût)."],
+  ["body",3,"hémianopsie","/emjanɔpsi/","nf","Perte de la moitié du champ visuel de chaque œil, par lésion située en arrière des yeux.","Du grec hēmi (demi) + an- (sans) + ōps (vue)."],
+  ["body",4,"prosopagnosie","/pʁɔzɔpaɡnɔzi/","nf","Incapacité de reconnaître les visages, même familiers, la vue étant par ailleurs intacte.","Du grec prosōpon (visage) + agnōsia (non-connaissance)."],
+  ["body",4,"apraxie","/apʁaksi/","nf","Perte de la capacité d'exécuter sur commande un geste appris, sans déficit de force ni de compréhension.","Du grec a- (sans) + praxis (action)."],
+  ["body",4,"syncinésie","/sɛ̃sinezi/","nf","Mouvement involontaire d'une partie du corps accompagnant le mouvement voulu d'une autre : l'œil qui se ferme quand la bouche sourit.","Du grec syn (avec) + kinēsis (mouvement)."],
+  ["body",4,"formication","/fɔʁmikasjɔ̃/","nf","Sensation de fourmis courant sur la peau ou dessous, sans que rien n'y soit.","Du latin formica, « fourmi »."],
+  ["body",4,"hypnagogie","/ipnaɡɔʒi/","nf","État de seuil entre la veille et le sommeil, avec ses images flottantes et ses sursauts.","Du grec hypnos (sommeil) + agōgos (qui conduit)."],
+  ["body",5,"astérixis","/asteʁiksis/","nm","Chute brusque du tonus qui fait battre la main tendue — signe d'encéphalopathie métabolique.","Du grec a- (sans) + stērixis (position fixe)."],
+  ["body",5,"palinopsie","/palinɔpsi/","nf","Persistance ou retour d'une image après que l'objet a disparu du champ.","Du grec palin (de nouveau) + opsis (vue)."],
+  ["body",5,"micropsie","/mikʁɔpsi/","nf","Trouble de la perception où les objets paraissent plus petits et plus lointains qu'ils ne sont.","Du grec mikros (petit) + opsis (vue)."],
+  ["body",5,"anosodiaphorie","/anozodjafɔʁi/","nf","Indifférence à un trouble grave qu'on reconnaît pourtant — un pas au-delà de l'anosognosie.","Du grec a- (sans) + nosos (maladie) + diaphora (souci)."],
+  ["body",5,"dysdiadococinésie","/disdjadɔkosinezi/","nf","Impossibilité d'enchaîner des mouvements alternés rapides, signe classique d'une atteinte du cervelet.","Du grec dys- (mal) + diadochos (qui succède) + kinēsis (mouvement)."],
+
+  // ── Arts & Métiers ──
+  ["arts",1,"clair-obscur","/klɛʁɔpskyʁ/","nm","Modelé obtenu par le heurt de la lumière et de l'ombre.","Calque de l'italien chiaroscuro, de chiaro (clair) et oscuro (sombre)."],
+  ["arts",1,"leitmotiv","/lɛtmɔtiv/","nm","Courte phrase musicale attachée à un personnage ou à une idée, et qui revient avec lui.","De l'allemand Leitmotiv, « motif conducteur »."],
+  ["arts",1,"repentir","/ʁəpɑ̃tiʁ/","nm","Trace d'une première version qui reparaît sous la peinture à mesure que les couches s'amincissent.","Du sens ordinaire du mot : le changement d'avis du peintre, rendu visible par le temps."],
+  ["arts",1,"empâtement","/ɑ̃pɑtmɑ̃/","nm","Pâte posée assez épaisse pour garder le relief de la brosse.","De pâte — le mot nomme la matière autant que le geste qui la dépose."],
+  ["arts",1,"patine","/patin/","nf","Pellicule que l'âge et la main déposent sur le bronze, le bois ou le cuir, et qu'on se garde de nettoyer.","De l'italien patina, « enduit »."],
+  ["arts",2,"sfumato","/sfumato/","nm","Fondu si progressif des valeurs qu'aucun contour ne se laisse trouver.","De l'italien sfumare, « s'évanouir en fumée »."],
+  ["arts",2,"ostinato","/ɔstinato/","nm","Bref motif répété sans relâche sous ce qui change au-dessus.","De l'italien ostinato, « obstiné »."],
+  ["arts",2,"grisaille","/ɡʁizaj/","nf","Peinture exécutée dans les seuls tons de gris, pour préparer une couleur ou pour imiter la sculpture.","De gris ; le mot a d'abord nommé la couleur, puis la manière tout entière."],
+  ["arts",2,"tessiture","/tesityʁ/","nf","Portion de l'étendue où une voix se tient le plus aisément, distincte des extrêmes qu'elle peut atteindre.","De l'italien tessitura, « texture »."],
+  ["arts",2,"repoussé","/ʁəpuse/","nm","Métal mis en relief à coups de marteau donnés depuis l'envers.","De repousser."],
+  ["arts",3,"contrapposto","/kɔ̃tʁaposto/","nm","Attitude où le poids porte sur une seule jambe, opposant l'inclinaison des hanches à celle des épaules.","De l'italien contrapposto, « mis en opposition »."],
+  ["arts",3,"mélisme","/melism/","nm","Groupe de notes chantées sur une seule syllabe.","Du grec melisma, « chant »."],
+  ["arts",3,"craquelure","/kʁaklyʁ/","nf","Fin réseau de fentes qui gagne une surface peinte en vieillissant, et dont le dessin aide à la dater.","De craqueler."],
+  ["arts",3,"ekphrasis","/ɛkfʁazis/","nf","Description d'une œuvre plastique assez vive pour valoir œuvre à son tour — le bouclier d'Achille.","Du grec ekphrasis, « exposition »."],
+  ["arts",3,"entasis","/ɑ̃tazis/","nf","Léger renflement donné au fût d'une colonne pour corriger l'œil, qui verrait creux un profil parfaitement droit.","Du grec entasis, « tension »."],
+  ["arts",4,"ténébrisme","/tenebʁism/","nm","Manière où l'ombre occupe le tableau et la lumière ne tombe violemment que sur quelques passages.","Du latin tenebrae, « ténèbres »."],
+  ["arts",4,"hémiole","/emjɔl/","nf","Déplacement rythmique qui loge trois temps dans la durée de deux, ou l'inverse.","Du grec hēmiolios, « un et demi »."],
+  ["arts",4,"mordant","/mɔʁdɑ̃/","nm","Ornement où la note est mordue par une alternance rapide avec sa voisine.","De mordre, d'après l'italien mordente."],
+  ["arts",4,"sprezzatura","/spʁɛdzatuʁa/","nf","Négligence étudiée qui fait paraître aisé ce qui a coûté.","Forgé par Castiglione dans Le Livre du courtisan, 1528."],
+  ["arts",4,"anastylose","/anastiloz/","nf","Relèvement d'une ruine avec ses propres éléments tombés, tout ajout restant reconnaissable.","Du grec ana (de nouveau) + stylos (colonne)."],
+  ["arts",5,"isocéphalie","/izosefali/","nf","Convention qui aligne toutes les têtes à la même hauteur, quelle que soit la posture des figures.","Du grec isos (égal) + kephalē (tête)."],
+  ["arts",5,"cangiante","/kandʒɑ̃te/","nm","Mode de peinture où une couleur change de teinte, et non seulement de valeur, en passant dans l'ombre.","De l'italien cangiante, « changeant »."],
+  ["arts",5,"repoussoir","/ʁəpuswaʁ/","nm","Figure ou masse placée au premier plan sur un côté, pour renvoyer le regard vers le fond.","De repousser."],
+  ["arts",5,"prolation","/pʁɔlasjɔ̃/","nf","Dans la notation mesurée, division de la semi-brève en deux ou en trois minimes.","Du latin prolatio, « extension »."],
+  ["arts",5,"glacis","/ɡlasi/","nm","Couche de couleur transparente passée sur une couche sèche pour en modifier le ton sans le couvrir.","De glacer."],
+
+  // ── Société & Droit ──
+  ["society",1,"usufruit","/yzyfʁɥi/","nm","Droit d'user d'un bien d'autrui et d'en percevoir les fruits, à charge de le rendre intact.","Du latin usus (usage) + fructus (jouissance)."],
+  ["society",1,"interrègne","/ɛ̃tɛʁʁɛɲ/","nm","Intervalle entre deux règnes ou deux gouvernements, où l'autorité reste suspendue.","Du latin inter (entre) + regnum (règne)."],
+  ["society",1,"sinécure","/sinekyʁ/","nf","Charge qui rapporte sans presque rien exiger.","Du latin sine cura, « sans souci » — d'abord un bénéfice sans charge d'âmes."],
+  ["society",1,"hégémonie","/eʒemɔni/","nf","Domination qui s'exerce autant par le consentement que par la force.","Du grec hēgemonia, « commandement »."],
+  ["society",1,"plébiscite","/plebisit/","nm","Vote direct de tout le corps électoral sur une seule question, souvent sur la souveraineté elle-même.","Du latin plebs (peuple) + scitum (décret)."],
+  ["society",2,"corvée","/kɔʁve/","nf","Travail non payé dû par le tenancier à son seigneur ou à l'État : des journées de route au lieu d'argent.","Du latin corrogare, « requérir »."],
+  ["society",2,"affranchissement","/afʁɑ̃ʃismɑ̃/","nm","Acte par lequel un maître rendait la liberté à son esclave.","De franc, « libre »."],
+  ["society",2,"irrédentisme","/iʁedɑ̃tism/","nm","Revendication par un État de terres tenues par un autre, au nom de la langue, de l'histoire ou du sang.","De l'italien Italia irredenta, « Italie non rachetée »."],
+  ["society",2,"subsidiarité","/sybsidjaʁite/","nf","Principe voulant que la décision revienne au plus petit échelon capable de la prendre.","Du latin subsidium, « réserve, secours »."],
+  ["society",2,"alleu","/alø/","nm","Terre possédée en pleine propriété, sans redevance ni service dus à aucun seigneur.","Du francique al-ôd, « bien complet »."],
+  ["society",3,"autochtone","/otɔktɔn/","adj","Issu du sol même où on le trouve, sans récit d'arrivée.","Du grec autos (soi-même) + chthōn (terre)."],
+  ["society",3,"prébende","/pʁebɑ̃d/","nf","Revenu attaché à une stalle de chanoine et tiré d'un domaine réservé à cet office.","Du latin praebenda, « ce qui doit être fourni »."],
+  ["society",3,"amphictyonie","/ɑ̃fiktjɔni/","nf","Ligue de cités voisines unies par la garde commune d'un sanctuaire.","Du grec amphiktyones, « ceux qui habitent alentour »."],
+  ["society",3,"mainmorte","/mɛ̃mɔʁt/","nf","Condition des biens détenus par une communauté qui ne meurt pas, et qui échappent donc aux successions.","De main et morte."],
+  ["society",3,"tontine","/tɔ̃tin/","nf","Association où les parts des membres qui meurent viennent grossir celles des survivants.","De Lorenzo Tonti, banquier napolitain qui l'imagina au XVIIe siècle."],
+  ["society",4,"apanage","/apanaʒ/","nm","Terres ou revenus assignés aux cadets d'un souverain pour qu'ils vivent sans régner.","De l'ancien français apaner, du latin ad panem, « pour le pain »."],
+  ["society",4,"wergeld","/vɛʁɡɛld/","nm","Prix mis sur la vie d'un homme dans les droits germaniques, versé à sa parenté pour éteindre la vengeance.","Du vieux haut allemand wer (homme) + geld (paiement)."],
+  ["society",4,"synœcisme","/sinesism/","nm","Réunion de plusieurs villages en une seule cité, en droit sinon toujours en fait.","Du grec synoikismos, « habitation commune »."],
+  ["society",4,"ultra vires","/yltʁa viʁɛs/","phr","Au-delà des pouvoirs de l'organe qui a agi, et nul pour ce seul motif.","Du latin, « au-delà des forces »."],
+  ["society",4,"latifundium","/latifɔ̃djɔm/","nm","Très grand domaine exploité par une main-d'œuvre dépendante, dont l'extension vida la petite paysannerie romaine.","Du latin latus (large) + fundus (domaine)."],
+  ["society",5,"anacyclose","/anasikloz/","nf","Cycle des constitutions selon Polybe : la monarchie tourne en tyrannie, l'aristocratie en oligarchie, la démocratie en règne de la foule, et l'on recommence.","Du grec anakyklōsis, « retour périodique »."],
+  ["society",5,"proskynèse","/pʁɔskinɛz/","nf","Prosternation rituelle devant un supérieur — usage perse dont Alexandre scandalisa ses Macédoniens en l'exigeant.","Du grec proskynēsis, « baiser vers »."],
+  ["society",5,"déshérence","/dezeʁɑ̃s/","nf","État d'une succession que nul héritier ne réclame et qui revient à l'État.","De l'ancien français deseriter, « déshériter »."],
+  ["society",5,"champart","/ʃɑ̃paʁ/","nm","Redevance seigneuriale prélevée en nature sur une part de la récolte, dans le champ même.","De champ et part."],
+  ["society",5,"vidamé","/vidame/","nm","Dignité du vidame, laïc qui tenait le temporel d'un évêché et en portait les armes.","Du latin vice dominus, « à la place du seigneur »."],
+
+  // ── Nombre & Systèmes ──
+  ["systems",1,"heuristique","/øʁistik/","nf","Règle empirique qui donne vite une réponse acceptable, sans garantir la meilleure.","Du grec heuriskein, « trouver »."],
+  ["systems",1,"asymptote","/asɛ̃ptɔt/","nf","Droite dont une courbe s'approche indéfiniment sans jamais l'atteindre.","Du grec asymptōtos, « qui ne coïncide pas »."],
+  ["systems",1,"tautologie","/totɔlɔʒi/","nf","Proposition vraie par sa seule forme, et qui n'apprend donc rien du monde.","Du grec tauto (le même) + logos (discours)."],
+  ["systems",1,"idempotent","/idɑ̃pɔtɑ̃/","adj","Qui donne le même résultat qu'on l'applique une fois ou cent — la propriété qui rend une reprise sans danger.","Du latin idem (même) + potens (puissant)."],
+  ["systems",1,"récursivité","/ʁekyʁsivite/","nf","Définition ou procédure qui s'appelle elle-même sur un cas plus petit, jusqu'à un cas qu'on sait résoudre d'emblée.","Du latin recurrere, « revenir en courant »."],
+  ["systems",2,"monotone","/mɔnɔtɔn/","adj","Qui varie dans un seul sens et ne revient jamais en arrière.","Du grec monos (seul) + tonos (ton, tension)."],
+  ["systems",2,"orthogonal","/ɔʁtɔɡɔnal/","adj","À angle droit ; par extension, qui varie tout à fait indépendamment.","Du grec orthos (droit) + gōnia (angle)."],
+  ["systems",2,"cardinalité","/kaʁdinalite/","nf","Taille d'un ensemble, définie par appariement plutôt que par comptage, ce qui permet de comparer des infinis.","Du latin cardinalis, « principal », de cardo (gond)."],
+  ["systems",2,"isomorphisme","/izɔmɔʁfism/","nm","Correspondance qui conserve toute la structure et rend deux objets identiques à leur nom près.","Du grec isos (égal) + morphē (forme)."],
+  ["systems",2,"stochastique","/stɔkastik/","adj","Régi par le hasard plutôt que par une règle fixe, et décrit par des lois de probabilité.","Du grec stochastikos, « habile à conjecturer », de stochos (la cible)."],
+  ["systems",3,"vecteur propre","/vɛktœʁ pʁɔpʁ/","nm","Direction qu'une transformation ne fait qu'étirer ou contracter, sans la faire tourner.","De propre au sens de « caractéristique », calque de l'allemand eigen."],
+  ["systems",3,"convolution","/kɔ̃vɔlysjɔ̃/","nf","Opération qui fait glisser une fonction sur une autre et cumule leur recouvrement à chaque décalage.","Du latin convolvere, « rouler ensemble »."],
+  ["systems",3,"surjectif","/syʁʒɛktif/","adj","Se dit d'une application qui atteint tout élément de l'ensemble d'arrivée, sans en laisser un seul de côté.","De sur (vers) + latin jacere (jeter)."],
+  ["systems",3,"mémoïsation","/memɔizasjɔ̃/","nf","Mise en cache des résultats d'une fonction, pour répondre de mémoire à un appel déjà fait.","De l'anglais memoization, forgé sans le r de memorization."],
+  ["systems",3,"monoïde","/mɔnɔid/","nm","Ensemble muni d'une opération associative et d'un élément neutre qui ne change rien.","Du grec monos (seul) et du suffixe -oïde."],
+  ["systems",4,"homotopie","/ɔmɔtɔpi/","nf","Déformation continue d'une application en une autre, et relation que cette déformabilité définit.","Du grec homos (même) + topos (lieu)."],
+  ["systems",4,"catamorphisme","/katamɔʁfism/","nm","Schéma de récursion qui replie toute une structure en une seule valeur — la somme en est l'archétype.","Du grec kata (vers le bas) + morphē (forme)."],
+  ["systems",4,"quine","/kwin/","nm","Programme sans entrée qui imprime exactement son propre texte.","Du logicien W. V. O. Quine, dont le paradoxe repose sur l'autoréférence."],
+  ["systems",4,"linéarisabilité","/lineaʁizabilite/","nf","Garantie qu'une opération concurrente paraît prendre effet en un instant, quelque part entre son appel et son retour.","Du latin linea, « ligne »."],
+  ["systems",4,"faisceau","/fɛso/","nm","Structure qui attache des données à chaque ouvert d'un espace et dit comment recoller le local en global.","Du sens ordinaire : une gerbe de tiges liées en un même point."],
+  ["systems",5,"ultrafiltre","/yltʁafiltʁ/","nm","Choix maximal et cohérent des parties tenues pour « grandes », qui tranche pour tout ensemble entre lui et son complémentaire.","Du latin ultra (au-delà) et de filtre."],
+  ["systems",5,"anamorphisme","/anamɔʁfism/","nm","Miroir du catamorphisme : schéma qui déplie une graine unique en une structure entière.","Du grec ana (vers le haut) + morphē (forme)."],
+  ["systems",5,"paracohérence","/paʁakɔeʁɑ̃s/","nf","Propriété d'une logique où une contradiction n'entraîne pas n'importe quelle conclusion.","Du grec para (à côté) et de cohérence."],
+  ["systems",5,"machine à oracle","/maʃin a ɔʁakl/","nf","Ordinateur théorique doté d'une boîte noire qui résout un problème en une seule étape, pour mesurer des difficultés relatives.","Du latin oraculum ; la notion est de Turing."],
+  ["systems",5,"topos","/tɔpɔs/","nm","Catégorie qui se comporte comme un univers d'ensembles et sert de cadre à une géométrie et à une logique propres.","Du grec topos, « lieu »."],
+];
+
+// ── model ───────────────────────────────────────────────────────────────────
+const toEntries = (raw) => raw.map((row, id) => Object.assign({ id }, ...FIELDS.map((f, i) => ({ [f]: row[i] }))));
+const BANKS = { en: toEntries(RAW_EN), fr: toEntries(RAW_FR) };
+
+const STORE = "lexicon:v2";
+const state = { lang: "en", level: 1, domains: new Set(DOMAIN_KEYS), current: null };
 // Draw without replacement so a session tours the pool instead of repeating.
 let seen = new Set();
 
+const T = () => L10N[state.lang];
+const entries = () => BANKS[state.lang];
+const domainName = (key) => T().domains[key];
+const levelOf = (n) => ({ n, roman: ROMAN[n - 1], ...T().levels[n - 1] });
+const posName = (code) => T().pos[code] || code;
+
 const load = () => {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORE) || "{}");
-    if (LEVELS.some((l) => l.n === saved.level)) state.level = saved.level;
-    if (Array.isArray(saved.domains) && saved.domains.length) {
-      const known = saved.domains.filter((k) => DOMAINS.some((d) => d.key === k));
-      if (known.length) state.domains = new Set(known);
-    }
-    if (saved.theme) document.documentElement.dataset.theme = saved.theme;
-  } catch { /* a corrupt entry just means defaults */ }
+  const fromUrl = new URLSearchParams(location.search).get("lang");
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(STORE) || "{}"); } catch { /* corrupt entry means defaults */ }
+  // The URL wins over the remembered choice, so a shared link opens in the
+  // language it was shared in.
+  const lang = L10N[fromUrl] ? fromUrl : L10N[saved.lang] ? saved.lang : null;
+  if (lang) state.lang = lang;
+  else if (typeof navigator !== "undefined" && /^fr\b/i.test(navigator.language || "")) state.lang = "fr";
+  if (saved.level >= 1 && saved.level <= 5) state.level = saved.level;
+  if (Array.isArray(saved.domains) && saved.domains.length) {
+    const known = saved.domains.filter((k) => DOMAIN_KEYS.includes(k));
+    if (known.length) state.domains = new Set(known);
+  }
+  if (saved.theme) document.documentElement.dataset.theme = saved.theme;
 };
 
 const save = () => {
   const theme = document.documentElement.dataset.theme;
   try {
-    localStorage.setItem(STORE, JSON.stringify({ level: state.level, domains: [...state.domains], theme }));
+    localStorage.setItem(STORE, JSON.stringify({ lang: state.lang, level: state.level, domains: [...state.domains], theme }));
   } catch { /* private mode — settings simply don't persist */ }
 };
 
-const pool = () => ENTRIES.filter((e) => e.level === state.level && state.domains.has(e.domain));
+const pool = () => entries().filter((e) => e.level === state.level && state.domains.has(e.domain));
 
 // ── view ────────────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-const buildLevels = () => {
-  $("levels").innerHTML = LEVELS.map((l) => `
-    <button class="lvl" type="button" role="radio" data-level="${l.n}" aria-checked="false" aria-label="Level ${l.n}, ${l.name}">
-      <span class="num" aria-hidden="true">${l.roman}</span><span class="nm">${l.name}</span>
-    </button>`).join("");
-};
+// Everything the language owns is rebuilt from L10N rather than translated in
+// place, so adding a third language stays a data change.
+const paintLanguage = () => {
+  const t = T();
+  document.documentElement.lang = t.htmlLang;
+  document.title = `Lexicon — ${t.title}`;
+  $("h1").textContent = t.title;
+  $("lede").textContent = t.lede;
+  $("levelLabel").textContent = t.levelLabel;
+  $("domainLabel").textContent = t.domainLabel;
+  $("allDomains").textContent = t.all;
+  $("noDomains").textContent = t.none;
+  $("next").textContent = t.next;
+  $("dl").textContent = t.download;
+  $("hint").innerHTML = t.hint;
+  $("footnote").textContent = t.footnote;
+  $("theme").setAttribute("aria-label", t.themeLabel);
+  $("theme").setAttribute("title", t.themeLabel);
+  $("langs").setAttribute("aria-label", t.langLabel);
+  $("rootLbl").textContent = t.rootLabel;
+  $("stat").textContent = t.stat(entries().length, DOMAIN_KEYS.length, ROMAN.length);
 
-const buildChips = () => {
-  $("chips").innerHTML = DOMAINS.map((d) => `
-    <button class="chip" type="button" data-domain="${d.key}" aria-pressed="false">${d.name}</button>`).join("");
+  $("levels").innerHTML = ROMAN.map((roman, i) => {
+    const l = t.levels[i];
+    return `
+    <button class="lvl" type="button" role="radio" data-level="${i + 1}" aria-checked="false" aria-label="${t.levelAria(i + 1, l.name)}">
+      <span class="num" aria-hidden="true">${roman}</span><span class="nm">${l.name}</span>
+    </button>`;
+  }).join("");
+
+  $("chips").innerHTML = DOMAIN_KEYS.map((key) => `
+    <button class="chip" type="button" data-domain="${key}" aria-pressed="false">${t.domains[key]}</button>`).join("");
+
+  document.querySelectorAll(".lang").forEach((b) => {
+    b.setAttribute("aria-pressed", String(b.dataset.lang === state.lang));
+  });
 };
 
 const syncControls = () => {
@@ -558,8 +882,7 @@ const syncControls = () => {
     b.setAttribute("aria-pressed", String(state.domains.has(b.dataset.domain)));
   });
   $("lvlDesc").textContent = levelOf(state.level).desc;
-  const n = pool().length;
-  $("poolCount").textContent = n === 1 ? "1 word in play" : `${n} words in play`;
+  $("poolCount").textContent = T().inPlay(pool().length);
 };
 
 const stagger = (nodes) => {
@@ -576,12 +899,13 @@ const render = (entry) => {
   $("dl").disabled = !entry;
 
   if (!entry) {
+    const t = T();
     stage.classList.add("empty");
-    $("tagDomain").textContent = "No pool";
+    $("tagDomain").textContent = t.emptyTag;
     $("tagLevel").textContent = levelOf(state.level).name;
-    $("word").textContent = "Nothing at this level";
+    $("word").textContent = t.emptyWord;
     $("phon").hidden = true;
-    $("def").textContent = "Turn on another domain, or move to a different level — this combination is empty.";
+    $("def").textContent = t.emptyDef;
     $("rootLine").hidden = true;
     return;
   }
@@ -593,7 +917,7 @@ const render = (entry) => {
   $("tagLevel").textContent = `${levelOf(entry.level).roman} · ${levelOf(entry.level).name}`;
   $("word").textContent = entry.word;
   $("ipa").textContent = entry.ipa;
-  $("pos").textContent = POS[entry.pos] || entry.pos;
+  $("pos").textContent = posName(entry.pos);
   $("def").textContent = entry.def;
   $("root").textContent = entry.root;
   stagger([$("word"), $("phon"), $("def"), $("rootLine")]);
@@ -728,7 +1052,7 @@ const renderCard = (entry) => {
   // Two runs, centred as one line: the transcription in the sans that actually
   // has IPA glyphs, the part of speech in the italic serif.
   const ipaY = wordY + (word.lines.length - 1) * word.size * 1.1 + IPA_GAP;
-  const posText = POS[entry.pos] || entry.pos;
+  const posText = posName(entry.pos);
   const ipaFont = sans(16, "400");
   const posFont = serif(19, "400", "italic");
   ctx.font = ipaFont;
@@ -752,7 +1076,7 @@ const renderCard = (entry) => {
   // ── back: the answer ──
   panel(ctx, right, CARD.margin);
   const bx = right + CARD.pad;
-  kicker(ctx, "Definition", bx, fTop + 4, "left", INK.muted);
+  kicker(ctx, T().defLabel, bx, fTop + 4, "left", INK.muted);
   kicker(ctx, `${lvl.roman} · ${lvl.name}`, right + CARD.w - CARD.pad, fTop + 4, "right", INK.accent);
   ctx.strokeStyle = INK.edge;
   ctx.beginPath();
@@ -774,7 +1098,7 @@ const renderCard = (entry) => {
   def.lines.forEach((line) => { ctx.fillText(line, bx, y); y += def.size * 1.42; });
 
   y += ROOT_GAP;
-  kicker(ctx, "Root", bx, y, "left", INK.accent);
+  kicker(ctx, T().rootLabel, bx, y, "left", INK.accent);
   y += 20;
   ctx.font = sans(root.size, "400");
   ctx.fillStyle = INK.soft;
@@ -792,10 +1116,11 @@ const renderCard = (entry) => {
 const download = async () => {
   const entry = state.current;
   if (!entry) return;
+  const t = T();
   const btn = $("dl");
   btn.disabled = true;
   const was = btn.textContent;
-  btn.textContent = "Drawing…";
+  btn.textContent = t.drawing;
   try {
     // The card is typeset in the same faces as the page, so wait for them.
     if (document.fonts) {
@@ -807,13 +1132,15 @@ const download = async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `lexicon-${entry.word.replace(/[^a-z]+/gi, "-").toLowerCase()}.png`;
+    // Fold accents before slugifying, or "mémoïsation" would come out gutted.
+    const slug = entry.word.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase();
+    a.download = `lexicon-${state.lang}-${slug}.png`;
     a.click();
     URL.revokeObjectURL(url);
-    btn.textContent = "Saved";
+    btn.textContent = t.saved;
     setTimeout(() => { btn.textContent = was; }, 1400);
   } catch {
-    btn.textContent = "Card failed";
+    btn.textContent = t.failed;
     setTimeout(() => { btn.textContent = was; }, 1800);
   } finally {
     btn.disabled = false;
@@ -829,11 +1156,31 @@ const setLevel = (n) => {
   draw();
 };
 
-buildLevels();
-buildChips();
+// Switching language swaps the bank outright, so the drawn word and the
+// no-repeat memory both belong to the language you are now in.
+const setLang = (lang) => {
+  if (!L10N[lang] || lang === state.lang) return;
+  state.lang = lang;
+  seen = new Set();
+  state.current = null;
+  paintLanguage();
+  syncControls();
+  save();
+  const p = new URLSearchParams(location.search);
+  p.set("lang", lang);
+  history.replaceState(null, "", `?${p}`);
+  draw();
+};
+
 load();
+paintLanguage();
 syncControls();
 draw();
+
+$("langs").addEventListener("click", (e) => {
+  const btn = e.target.closest(".lang");
+  if (btn) setLang(btn.dataset.lang);
+});
 
 $("levels").addEventListener("click", (e) => {
   const btn = e.target.closest(".lvl");
@@ -844,7 +1191,7 @@ $("levels").addEventListener("keydown", (e) => {
   const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
   if (!step) return;
   e.preventDefault();
-  const next = Math.min(LEVELS.length, Math.max(1, state.level + step));
+  const next = Math.min(ROMAN.length, Math.max(1, state.level + step));
   setLevel(next);
   document.querySelector(`.lvl[data-level="${next}"]`).focus();
 });
@@ -862,7 +1209,7 @@ $("chips").addEventListener("click", (e) => {
 });
 
 const setAll = (on) => {
-  state.domains = new Set(on ? DOMAINS.map((d) => d.key) : []);
+  state.domains = new Set(on ? DOMAIN_KEYS : []);
   seen = new Set();
   syncControls();
   save();
@@ -886,9 +1233,8 @@ document.addEventListener("keydown", (e) => {
   if (e.target.closest("button, input, textarea, select")) return;
   if (e.key === " " || e.key === "Enter") { e.preventDefault(); draw(); }
   if (e.key.toLowerCase() === "d") { e.preventDefault(); download(); }
+  if (e.key.toLowerCase() === "l") { e.preventDefault(); setLang(state.lang === "en" ? "fr" : "en"); }
 });
-
-$("stat").textContent = `${ENTRIES.length} words · ${DOMAINS.length} domains · ${LEVELS.length} levels`;
 </script>
 </body>
 </html>
