@@ -2,11 +2,15 @@
 
 Append-only, newest first: `## [YYYY-MM-DD] <type> | <summary>`.
 
+## [2026-07-25] render | rebuild the landing page for scale — search, tag facets, sort, cards/index density, URL state, self-hosted fonts; 100 apps go from 12.4 to 5.3 screens
+
 ## [2026-07-25] intake | add el-nino-2026 — the ENSO explainer made bilingual FR/EN (markup is the French source, English is an override map), one teleconnection thread drawn from the Pacific source to the selected region, and the missing "not El Niño" share restored in the probability bars
 
 ## [2026-07-25] intake | add canicule-appartement — heat-wave planner rebuilt around a single threshold, the indoor temperature: dark mode, persisted location/settings, night bands and a keyboard-walkable chart, cross-ventilation as an explicit setting, opt-in newborn and frail-person profiles
 
 ## [2026-07-25] intake | add cuddle-sheep (Nuage) — hand-rigged SVG sheep on a spring system; stroking him fills a cuddle that buys five minutes of visible happiness, the whole scene keying on one mood variable
+
+## [2026-07-25] intake | add lexicon — rare-word draw over 200 curated entries (8 domains × 5 levels), toggleable domains and a canvas-rendered front/back memory card as PNG
 
 ## [2026-07-17] render | redesign gallery landing page — per-app identity hues, masthead spectrum, Space Grotesk/Plex Mono, explicit description_en field
 

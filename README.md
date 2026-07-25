@@ -17,6 +17,7 @@ apps/<slug>/                 one app = one folder
 scripts/                     build.mjs · gallery.mjs · validate.mjs · new-app.mjs
 schema/app.schema.json       JSON Schema for meta.json (validated in CI)
 templates/vite-react/        scaffold copied when adding a buildable app
+assets/fonts/                self-hosted webfonts for the landing page
 site.json                    gallery title / taglines
 .github/workflows/deploy.yml validate → build → deploy on push to main
 ```
@@ -27,6 +28,17 @@ Two app kinds, distinguished by one signal:
 | --- | --- | --- |
 | just `index.html` (+ assets) | **static** | copies the folder to `dist/<slug>/` |
 | a `package.json` | **buildable** | runs `vite build --base /poc-lab/<slug>/` → `dist/<slug>/` |
+
+## The landing page
+
+Every app is rendered into the page at build time, so the index works with
+JavaScript disabled. On top of that list sit a search box (accent-insensitive,
+matching title, both descriptions, slug and tags), tag facets with counts, a
+sort, and a density switch — all held in the URL, so any filtered view is a
+link you can send. The page shows cards while the collection is small and
+switches to a one-line index past 24 apps; the reader can override that, and
+the choice is remembered. Nothing is fetched at runtime: the typefaces are
+self-hosted from `assets/fonts/`.
 
 ## Local development
 
