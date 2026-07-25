@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Canicule — rafraîchir l'appartement</title>
+<meta name="description" content="Prévisions en direct converties en gestes : le niveau de chaleur du jour, les heures où aérer, celles où tout fermer, et la stratégie de rafraîchissement qui marche vraiment selon l'humidité." />
+<meta name="color-scheme" content="light dark" />
+<meta name="theme-color" content="#f5f7fb" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#12161d" media="(prefers-color-scheme: dark)" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f6ea8'/%3E%3Ccircle cx='16' cy='13' r='6.5' fill='%23ffc25c'/%3E%3Crect x='5' y='21' width='22' height='7' rx='2' fill='%23e8f3fb' fill-opacity='.9'/%3E%3Cpath d='M16 2v26M2 16h28' stroke='%23fff' stroke-opacity='.3' stroke-width='1.6'/%3E%3C/svg%3E" />
+<style>
+/* ---------------------------------------------------------------------------
+   One palette, two schemes. Every colour is a token, so the SVG chart — which
+   paints with var() — follows the scheme without a single branch in JS.
+   --------------------------------------------------------------------------- */
+:root{
+  color-scheme: light dark;
+
+  --bg:        oklch(0.982 0.006 250);
+  --card:      oklch(1 0 0);
+  --sunk:      oklch(0.968 0.008 250);
+  --ink:       oklch(0.30 0.024 258);
+  --muted:     oklch(0.535 0.022 258);
+  --faint:     oklch(0.68 0.018 258);
+  --line:      oklch(0.905 0.012 258);
+  --line-soft: oklch(0.945 0.008 258);
+
+  --ice:       oklch(0.62 0.13 245);
+  --ice-ink:   oklch(0.48 0.14 250);
+  --ice-soft:  oklch(0.955 0.028 245);
+  --warm:      oklch(0.68 0.16 42);
+  --warm-ink:  oklch(0.50 0.18 35);
+  --warm-soft: oklch(0.962 0.036 50);
+  --good:      oklch(0.60 0.12 152);
+  --good-soft: oklch(0.955 0.035 152);
+  --evap:      oklch(0.60 0.11 200);
+  --hum:       oklch(0.56 0.12 278);
+  --night:     oklch(0.55 0.06 268);
+
+  --sev0: oklch(0.62 0.12 152);
+  --sev1: oklch(0.76 0.14 92);
+  --sev2: oklch(0.70 0.17 55);
+  --sev3: oklch(0.56 0.21 28);
+
+  --shadow: 0 1px 2px oklch(0.30 0.02 258 / 0.05), 0 8px 24px oklch(0.30 0.02 258 / 0.06);
+  --radius: 16px;
+  --band-vent:  0.10;
+  --band-heat:  0.13;
+  --band-night: 0.055;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:        oklch(0.185 0.014 258);
+    --card:      oklch(0.232 0.016 258);
+    --sunk:      oklch(0.205 0.015 258);
+    --ink:       oklch(0.945 0.010 258);
+    --muted:     oklch(0.735 0.020 258);
+    --faint:     oklch(0.60 0.020 258);
+    --line:      oklch(0.325 0.018 258);
+    --line-soft: oklch(0.275 0.016 258);
+
+    --ice:       oklch(0.72 0.13 245);
+    --ice-ink:   oklch(0.85 0.09 240);
+    --ice-soft:  oklch(0.31 0.055 245);
+    --warm:      oklch(0.74 0.16 45);
+    --warm-ink:  oklch(0.86 0.11 55);
+    --warm-soft: oklch(0.32 0.065 40);
+    --good:      oklch(0.70 0.13 152);
+    --good-soft: oklch(0.29 0.05 152);
+    --evap:      oklch(0.72 0.11 200);
+    --hum:       oklch(0.72 0.12 278);
+    --night:     oklch(0.72 0.07 268);
+
+    --sev0: oklch(0.68 0.13 152);
+    --sev1: oklch(0.80 0.14 92);
+    --sev2: oklch(0.74 0.17 55);
+    --sev3: oklch(0.64 0.20 28);
+
+    --shadow: 0 1px 2px oklch(0 0 0 / 0.28), 0 10px 28px oklch(0 0 0 / 0.30);
+    --band-vent:  0.16;
+    --band-heat:  0.18;
+    --band-night: 0.09;
+  }
+}
+
+*{ box-sizing:border-box; }
+html,body{ margin:0; }
+body{
+  font-family:'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color:var(--ink); background:var(--bg); line-height:1.5;
+  padding:clamp(14px,3vw,32px) clamp(12px,3vw,32px) clamp(28px,5vw,48px);
+  -webkit-font-smoothing:antialiased;
+}
+.num{ font-family:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace; font-variant-numeric:tabular-nums; letter-spacing:-0.015em; }
+.wrap{ max-width:1000px; margin:0 auto; }
+:focus-visible{ outline:2px solid var(--ice); outline-offset:2px; border-radius:6px; }
+.sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+/* header ------------------------------------------------------------------ */
+.head{ display:flex; gap:14px; align-items:flex-start; margin-bottom:18px; }
+.mark{ flex:none; width:46px; height:46px; border-radius:13px; overflow:hidden;
+  background:linear-gradient(150deg, var(--warm), var(--ice)); box-shadow:0 6px 18px oklch(0.62 0.13 245 / 0.26); }
+.mark svg{ display:block; width:100%; height:100%; }
+h1{ font-size:clamp(20px,3.2vw,27px); margin:0 0 4px; letter-spacing:-0.02em; line-height:1.15; }
+.sub{ color:var(--muted); margin:0; font-size:14.5px; max-width:66ch; }
+
+/* controls ---------------------------------------------------------------- */
+.controls{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; }
+.search{ position:relative; flex:1 1 250px; min-width:190px; }
+.search input{ width:100%; font-family:inherit; font-size:15px; padding:10px 12px; border:1px solid var(--line);
+  border-radius:11px; background:var(--card); color:var(--ink); outline:none; }
+.search input::placeholder{ color:var(--faint); }
+.search input:focus{ border-color:var(--ice); box-shadow:0 0 0 3px var(--ice-soft); }
+.results{ position:absolute; top:calc(100% + 5px); left:0; right:0; background:var(--card); border:1px solid var(--line);
+  border-radius:11px; box-shadow:var(--shadow); z-index:20; overflow:hidden; display:none; margin:0; padding:0; list-style:none; }
+.results.show{ display:block; }
+.results button{ display:block; width:100%; text-align:left; font-family:inherit; font-size:14px; padding:9px 12px;
+  border:0; background:none; color:var(--ink); cursor:pointer; }
+.results button:hover, .results button[aria-selected="true"]{ background:var(--ice-soft); color:var(--ice-ink); }
+.results .rsub{ color:var(--muted); font-size:12px; }
+.btn{ font-family:inherit; font-size:14px; padding:10px 14px; cursor:pointer; border:1px solid var(--line);
+  background:var(--card); color:var(--ink); border-radius:11px; white-space:nowrap; transition:border-color .15s, color .15s; }
+.btn:hover:not(:disabled){ border-color:var(--ice); color:var(--ice-ink); }
+.btn:disabled{ opacity:0.45; cursor:default; }
+.btn.primary{ background:var(--ice-soft); border-color:var(--ice); color:var(--ice-ink); font-weight:700; }
+.place{ font-size:14px; color:var(--muted); margin:0 0 14px; min-height:20px; }
+.place b{ color:var(--ink); font-size:15px; }
+.status{ padding:18px; border:1px dashed var(--line); border-radius:var(--radius); color:var(--muted); font-size:14px; text-align:center; }
+.status.err{ border-color:var(--warm); color:var(--warm-ink); border-style:solid; background:var(--warm-soft); }
+.status.err .btn{ margin-left:10px; padding:5px 10px; font-size:13px; }
+.shimmer{ display:inline-block; width:14px; height:14px; border:2px solid var(--line); border-top-color:var(--ice);
+  border-radius:50%; animation:spin .8s linear infinite; vertical-align:-2px; margin-right:8px; }
+@keyframes spin{ to{ transform:rotate(360deg); } }
+
+/* panels ------------------------------------------------------------------ */
+.panel{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px 16px 17px;
+  margin-bottom:14px; box-shadow:var(--shadow); }
+.ptitle{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+.ptitle h2{ font-size:15px; margin:0; letter-spacing:-0.005em; }
+.hint{ font-size:12px; color:var(--muted); }
+
+/* severity ---------------------------------------------------------------- */
+.sev{ display:flex; gap:14px; align-items:stretch; flex-wrap:wrap; }
+.sev-badge{ flex:none; min-width:158px; border-radius:13px; padding:14px 16px; color:#fff;
+  display:flex; flex-direction:column; justify-content:center; }
+.sev-badge .lvl{ font-size:21px; font-weight:700; line-height:1.1; letter-spacing:-0.02em; }
+.sev-badge .lvlsub{ font-size:12.5px; opacity:.94; margin-top:3px; }
+.sev-stats{ flex:1 1 280px; display:grid; grid-template-columns:repeat(2,1fr); gap:12px 10px; align-content:center; }
+@media(min-width:560px){ .sev-stats{ grid-template-columns:repeat(4,1fr); } }
+.stat .v{ font-size:20px; font-weight:700; line-height:1; }
+.stat .v.sm{ font-size:15px; }
+.stat .v .u{ font-size:11px; color:var(--muted); font-weight:400; margin-left:2px; }
+.stat .l{ font-size:11.5px; color:var(--muted); margin-top:5px; }
+.tropic{ display:inline-block; margin-top:10px; font-size:12px; font-weight:700; color:var(--warm-ink);
+  background:var(--warm-soft); border:1px solid var(--warm); border-radius:8px; padding:4px 9px; }
+.sev-note{ font-size:12px; color:var(--muted); margin:12px 0 0; width:100%; }
+
+/* aeration ---------------------------------------------------------------- */
+.aer{ display:grid; gap:14px 18px; grid-template-columns:1fr; }
+@media(min-width:680px){ .aer{ grid-template-columns:1fr 1fr; } }
+.aer-ctrl .top{ display:flex; justify-content:space-between; align-items:baseline; font-size:13px; color:var(--muted); margin-bottom:6px; }
+.aer-ctrl .top b{ color:var(--ink); font-size:14px; }
+.aer-ctrl input[type=range]{ width:100%; accent-color:var(--ice); }
+.aer-ctrl .hint{ margin-top:4px; }
+.aer-now{ border-radius:13px; padding:13px 15px; border:1px solid var(--line); background:var(--sunk); align-self:start; }
+.aer-now.open{ background:var(--ice-soft); border-color:var(--ice); }
+.aer-now.shut{ background:var(--warm-soft); border-color:var(--warm); }
+.aer-now .big{ font-size:17px; font-weight:700; letter-spacing:-0.01em; }
+.aer-now.open .big{ color:var(--ice-ink); } .aer-now.shut .big{ color:var(--warm-ink); }
+.aer-now .small{ font-size:12.5px; color:var(--muted); margin-top:4px; }
+.aer-foot{ grid-column:1/-1; display:flex; gap:24px; flex-wrap:wrap; padding-top:13px; border-top:1px solid var(--line-soft); }
+.aer-foot .v{ font-size:17px; font-weight:700; }
+.aer-foot .l{ font-size:11.5px; color:var(--muted); margin-top:3px; }
+.toggle-row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.toggle-row > .lbl{ font-size:11.5px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
+.chip{ font-family:inherit; font-size:12.5px; padding:6px 12px; cursor:pointer; border:1px solid var(--line);
+  background:var(--sunk); color:var(--muted); border-radius:999px; transition:border-color .15s, color .15s, background .15s; }
+.chip:hover{ border-color:var(--ice); color:var(--ice-ink); }
+.chip[aria-pressed="true"]{ background:var(--ice-soft); border-color:var(--ice); color:var(--ice-ink); font-weight:700; }
+
+/* chart ------------------------------------------------------------------- */
+.rng{ display:flex; gap:14px; flex-wrap:wrap; }
+.rng .grp{ display:flex; align-items:center; gap:6px; }
+.rng .grp > span{ font-size:11px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
+.seg{ display:flex; gap:4px; }
+.seg button{ font-family:inherit; font-size:12px; font-weight:700; padding:5px 9px; cursor:pointer;
+  border:1px solid var(--line); background:var(--sunk); color:var(--muted); border-radius:8px; }
+.seg button:hover{ border-color:var(--ice); color:var(--ice-ink); }
+.seg button.on{ background:var(--ice-soft); border-color:var(--ice); color:var(--ice-ink); }
+.chartholder{ position:relative; margin:6px -6px 0; touch-action:pan-y; }
+.chart svg{ display:block; width:100%; }
+.chart svg text{ fill:var(--muted); }
+.tip{ position:absolute; pointer-events:none; background:var(--card); border:1px solid var(--line); border-radius:10px;
+  padding:8px 10px; font-size:12px; box-shadow:var(--shadow); display:none; min-width:140px; z-index:10; }
+.tip .tt{ color:var(--muted); margin-bottom:4px; }
+.tip .tr{ display:flex; justify-content:space-between; gap:12px; }
+.key{ list-style:none; padding:0; margin:12px 0 0; display:flex; flex-wrap:wrap; gap:9px 16px; font-size:12px; color:var(--muted); }
+.key li{ display:flex; align-items:center; gap:6px; }
+.key .ln{ width:16px; height:3px; border-radius:2px; }
+.key .ln.dash{ height:0; border-top:2px dashed var(--faint); }
+.key .ln.dot{ height:0; border-top:2px dotted var(--hum); }
+.key .sw{ width:13px; height:13px; border-radius:4px; opacity:.55; }
+
+/* schedule ---------------------------------------------------------------- */
+.sched{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; }
+.sched li{ display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-top:1px solid var(--line-soft); }
+.sched li:first-child{ border-top:0; padding-top:0; }
+.sched .dot{ width:11px; height:11px; border-radius:4px; flex:none; margin-top:5px; }
+.sched .when{ margin-left:auto; font-weight:700; text-align:right; white-space:nowrap; font-size:14px; }
+.sched .act{ font-size:14.5px; }
+.sched .act small{ display:block; color:var(--muted); font-size:12.5px; margin-top:2px; }
+/* Narrow screens: the time gets its own line instead of squeezing the action. */
+@media(max-width:560px){
+  .sched li{ flex-wrap:wrap; }
+  .sched .when{ width:100%; margin:5px 0 0 23px; text-align:left; }
+}
+
+/* prose ------------------------------------------------------------------- */
+.prose{ font-size:14.5px; } .prose p{ margin:0 0 10px; } .prose p:last-child{ margin-bottom:0; }
+.prose b{ color:var(--ink); }
+.care{ border-left:4px solid var(--good); background:var(--good-soft); border-radius:0 12px 12px 0; padding:13px 15px; margin-bottom:12px; }
+.care:last-child{ margin-bottom:0; }
+.care.warmside{ border-left-color:var(--warm); background:var(--warm-soft); }
+.emerg{ font-weight:700; color:var(--warm-ink); }
+.disc{ font-size:12px; color:var(--muted); background:var(--card); border:1px solid var(--line); border-radius:12px;
+  padding:12px 14px; margin-bottom:12px; }
+.disc b{ color:var(--ink); }
+.foot{ font-size:12px; color:var(--muted); text-align:center; margin-top:8px; }
+
+@media (prefers-reduced-motion: reduce){ *{ animation-duration:.01ms !important; transition-duration:.01ms !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="head">
+    <div class="mark" aria-hidden="true">
+      <svg viewBox="0 0 48 48"><circle cx="24" cy="19" r="10" fill="#fff" fill-opacity=".92"/><rect x="8" y="31" width="32" height="10" rx="3" fill="#fff" fill-opacity=".5"/><path d="M24 2v44M2 24h44" stroke="#fff" stroke-opacity=".28" stroke-width="2"/></svg>
+    </div>
+    <div>
+      <h1>Canicule — rafraîchir l'appartement</h1>
+      <p class="sub">Les prévisions horaires converties en gestes : le niveau de chaleur du jour, les heures où ouvrir, celles où tout fermer, et la stratégie de rafraîchissement qui marche réellement selon l'humidité de l'air.</p>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="search">
+      <label class="sr-only" for="q">Rechercher une ville</label>
+      <input id="q" type="text" autocomplete="off" role="combobox" aria-expanded="false"
+             aria-controls="results" aria-autocomplete="list" placeholder="Rechercher une ville…" />
+      <ul class="results" id="results" role="listbox" aria-label="Villes proposées"></ul>
+    </div>
+    <button class="btn primary" id="btn-loc" type="button">Ma position</button>
+    <button class="btn" id="btn-refresh" type="button">Actualiser</button>
+  </div>
+
+  <p class="place" id="place" aria-live="polite"></p>
+  <div id="status" class="status" role="status" style="display:none"></div>
+  <div id="content"></div>
+  <p class="foot" id="foot"></p>
+</div>
+
+<script>
+/* ============================================================================
+   Canicule appartement · Open-Meteo (no key, no build step)
+
+   The whole app hangs on ONE user-supplied number: the indoor temperature.
+   Every "open the windows / shut everything" verdict is that number compared
+   against the hourly outdoor forecast — which is why the slider, not the
+   weather, is the primary control.
+
+   Times: Open-Meteo is queried with timezone=auto and returns naive local
+   stamps ("2026-07-25T14:00"). Parsing them as UTC and formatting them back in
+   UTC round-trips the local wall clock without shipping a timezone library.
+   ========================================================================== */
+
+const STORE_KEY = "canicule.v1";
+const STALE_MS = 20 * 60 * 1000;   // refetch on refocus past this age
+const DEADBAND = 0.5;              // °C — keeps the open/shut verdict from flapping
+const RANGES = [1, 2, 3, 7, 14];
+
+/* Stull (2011) wet-bulb approximation, good to a few tenths over the range that
+   matters here. The gap T − Tw is the evaporative headroom: how much cooling a
+   damp cloth in front of a fan can actually buy. */
+const wetBulb = (T, RH) =>
+  T * Math.atan(0.151977 * Math.sqrt(RH + 8.313659)) +
+  Math.atan(T + RH) - Math.atan(RH - 1.676331) +
+  0.00391838 * Math.pow(RH, 1.5) * Math.atan(0.023101 * RH) - 4.686035;
+
+const PARIS = { lat: 48.8566, lon: 2.3522, name: "Paris", sub: "France" };
+
+const S = {
+  place: null, lat: null, lon: null, data: null,
+  past: 2, fwd: 3, indoor: 28,
+  crossVent: true,                              // windows on opposite façades
+  profiles: { bebe: false, fragile: false },
+  loading: false, locating: false, error: null, fetchedAt: 0,
+};
+
+let geoTimer = null, resizeTimer = null, activeResult = -1, lastResults = [];
+
+const $ = (id) => document.getElementById(id);
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const num = (n, d = 0) =>
+  Number.isFinite(n) ? n.toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d }) : "—";
+const tStr = (c, d = 0) => (c == null || Number.isNaN(c) ? "—" : num(c, d) + "°");
+const fmtTime = (iso, opts) =>
+  new Date(iso + "Z").toLocaleString("fr-FR", Object.assign({ timeZone: "UTC", hour12: false }, opts));
+const hhmm = (iso) => fmtTime(iso, { hour: "2-digit", minute: "2-digit" });
+const esc = (s) => String(s).replace(/[&<>"']/g,
+  (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+/** Contiguous index ranges where pred holds, as [start, end] pairs. */
+function runs(arr, pred) {
+  const out = [];
+  let i = 0;
+  while (i < arr.length) {
+    if (pred(arr[i])) {
+      let j = i;
+      while (j + 1 < arr.length && pred(arr[j + 1])) j++;
+      out.push([i, j]);
+      i = j + 1;
+    } else i++;
+  }
+  return out;
+}
+
+/* ---------- persistence ---------------------------------------------------- */
+function save() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({
+      lat: S.lat, lon: S.lon, place: S.place, indoor: S.indoor,
+      crossVent: S.crossVent, profiles: S.profiles, past: S.past, fwd: S.fwd,
+    }));
+  } catch { /* private mode: the app simply forgets, which is acceptable */ }
+}
+function restore() {
+  try {
+    const v = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+    if (!v) return false;
+    if (Number.isFinite(v.indoor)) S.indoor = clamp(v.indoor, 22, 34);
+    if (typeof v.crossVent === "boolean") S.crossVent = v.crossVent;
+    if (v.profiles) S.profiles = { bebe: !!v.profiles.bebe, fragile: !!v.profiles.fragile };
+    if (RANGES.includes(v.past)) S.past = v.past;
+    if (RANGES.includes(v.fwd)) S.fwd = v.fwd;
+    if (Number.isFinite(v.lat) && Number.isFinite(v.lon) && v.place && v.place.name) {
+      S.lat = v.lat; S.lon = v.lon; S.place = v.place;
+      return true;
+    }
+  } catch { /* corrupted payload → fall back to the default city */ }
+  return false;
+}
+
+/* ---------- data ----------------------------------------------------------- */
+async function geocode(q) {
+  try {
+    const r = await fetch("https://geocoding-api.open-meteo.com/v1/search?name=" +
+      encodeURIComponent(q) + "&count=6&language=fr");
+    const j = await r.json();
+    return j.results || [];
+  } catch { return []; }
+}
+
+async function loadWeather() {
+  if (S.lat == null) return;
+  S.loading = true; S.error = null; render();
+  const url = "https://api.open-meteo.com/v1/forecast?latitude=" + S.lat + "&longitude=" + S.lon +
+    "&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day" +
+    "&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,is_day" +
+    "&timezone=auto&past_days=14&forecast_days=14";
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error("http " + r.status);
+    const j = await r.json();
+    if (j.error) throw new Error(j.reason || "api");
+    S.data = parse(j);
+    S.fetchedAt = Date.now();
+  } catch {
+    S.data = null;
+    S.error = "Impossible de charger les prévisions. Vérifiez votre connexion, puis réessayez.";
+  }
+  S.loading = false;
+  save();
+  render();
+}
+
+function parse(j) {
+  const h = j.hourly;
+  const pts = h.time.map((iso, i) => ({
+    iso, ms: Date.parse(iso + "Z"),
+    t: h.temperature_2m[i],
+    feels: h.apparent_temperature[i],
+    rh: h.relative_humidity_2m[i],
+    day: h.is_day[i],
+  })).filter((p) => Number.isFinite(p.t));
+  if (!pts.length) throw new Error("empty series");
+
+  const cur = j.current || null;
+  const nowIso = cur ? cur.time : h.time[0];
+  const nowMs = Date.parse(nowIso + "Z");
+  const today = nowIso.slice(0, 10);
+
+  const byDate = {};
+  pts.forEach((p) => { const d = p.iso.slice(0, 10); (byDate[d] = byDate[d] || []).push(p); });
+
+  const days = Object.keys(byDate).sort().map((date) => {
+    const ps = byDate[date];
+    let tMax = -Infinity, tMin = Infinity, aMax = -Infinity, peak = ps[0];
+    ps.forEach((p) => {
+      if (p.t > tMax) { tMax = p.t; peak = p; }
+      if (p.t < tMin) tMin = p.t;
+      const a = p.feels != null ? p.feels : p.t;
+      if (a > aMax) aMax = a;
+    });
+    return { date, ps, tMax, tMin, aMax, peak, tropicalNight: tMin >= 20 };
+  });
+
+  const todayObj = days.find((d) => d.date === today) || days[0];
+
+  // Severity mixes the felt peak with the night floor: a 34° day you can flush
+  // out at night is not the same load as a 34° day that never drops below 23.
+  const a = todayObj.aMax;
+  let sev = 0;
+  if (a >= 38 || (a >= 35 && todayObj.tMin >= 23)) sev = 3;
+  else if (a >= 32 || todayObj.tropicalNight) sev = 2;
+  else if (a >= 27) sev = 1;
+
+  let relief = null;
+  for (const d of days) {
+    if (d.date > today && d.tMax <= todayObj.tMax - 3) { relief = d.date; break; }
+  }
+
+  return { pts, days, todayObj, today, nowIso, nowMs, cur, sev, relief,
+           tz: j.timezone || "—", tzAbbr: j.timezone_abbreviation || "" };
+}
+
+/* ---------- timing --------------------------------------------------------- */
+function computeTiming() {
+  const d = S.data;
+  if (!d) return null;
+  const indoor = S.indoor, now = d.nowMs;
+  const fromNow = d.pts.filter((p) => p.ms >= now - 1800000);
+  if (!fromNow.length) return null;
+
+  const cool = (p) => p.t <= indoor - DEADBAND;
+
+  // Next usable ventilation window: prefer a 3 h+ stretch, settle for 2 h.
+  const vr = runs(fromNow, cool);
+  const vrun = vr.find((r) => r[1] - r[0] >= 2) || vr.find((r) => r[1] - r[0] >= 1) || vr[0] || null;
+  const ventStart = vrun ? fromNow[vrun[0]].iso : null;
+  const ventEnd = vrun ? fromNow[vrun[1]].iso : null;
+  const ventOpenNow = !!vrun && vrun[0] === 0 && cool(fromNow[0]);
+
+  // When to shut: the hour the current cool stretch ends.
+  let closeBy = null;
+  for (let i = 0; i < fromNow.length - 1; i++) {
+    if (cool(fromNow[i]) && !cool(fromNow[i + 1])) { closeBy = fromNow[i + 1].iso; break; }
+  }
+
+  // Longest hot stretch left today, by apparent temperature.
+  const todayFwd = fromNow.filter((p) => p.iso.slice(0, 10) === d.today);
+  let dangerStart = null, dangerEnd = null;
+  const dr = runs(todayFwd, (p) => (p.feels != null ? p.feels : p.t) >= 32);
+  if (dr.length) {
+    const best = dr.reduce((acc, r) => (r[1] - r[0] > acc[1] - acc[0] ? r : acc), dr[0]);
+    dangerStart = todayFwd[best[0]].iso;
+    dangerEnd = todayFwd[best[1]].iso;
+  }
+
+  const next24 = fromNow.filter((p) => p.ms <= now + 24 * 3600000);
+  const coolest = next24.length ? next24.reduce((acc, p) => (p.t < acc.t ? p : acc), next24[0]) : null;
+  // Counted over 24 h rather than the calendar day: at 3 p.m. the useful answer
+  // is "four hours, from 1 a.m.", not "zero left today".
+  const coolHours = next24.filter(cool).length;
+
+  const outNow = d.pts.reduce((acc, p) => (Math.abs(p.ms - now) < Math.abs(acc.ms - now) ? p : acc), d.pts[0]);
+
+  return { ventStart, ventEnd, ventOpenNow, coolNow: cool(fromNow[0]), closeBy, dangerStart, dangerEnd,
+           coolestIso: coolest ? coolest.iso : null, coolHours,
+           outNow: outNow ? outNow.t : null, indoor };
+}
+
+/** Evaporative headroom at today's peak: how much a fan plus water can still do. */
+function evapInfo() {
+  const peak = S.data.todayObj.peak;
+  const rh = clamp(peak.rh == null ? 50 : peak.rh, 1, 99);
+  const dep = Math.max(0, peak.t - wetBulb(peak.t, rh));
+  return { dep, cls: dep >= 5 ? "sec" : dep < 3 ? "lourd" : "intermédiaire" };
+}
+
+/* ---------- city search ---------------------------------------------------- */
+function showResults(list) {
+  const box = $("results"), input = $("q");
+  lastResults = list; activeResult = -1;
+  if (!list.length) { closeResults(); return; }
+  box.innerHTML = list.map((r, i) =>
+    '<li role="presentation"><button type="button" role="option" id="opt-' + i + '" aria-selected="false">' +
+    esc(r.name) + ' <span class="rsub">' + esc([r.admin1, r.country].filter(Boolean).join(", ")) +
+    "</span></button></li>").join("");
+  Array.from(box.querySelectorAll("button")).forEach((b, i) => { b.onclick = () => pickPlace(list[i]); });
+  box.classList.add("show");
+  input.setAttribute("aria-expanded", "true");
+}
+function closeResults() {
+  const box = $("results"), input = $("q");
+  box.classList.remove("show"); box.innerHTML = "";
+  input.setAttribute("aria-expanded", "false");
+  input.removeAttribute("aria-activedescendant");
+  activeResult = -1; lastResults = [];
+}
+function moveResult(delta) {
+  if (!lastResults.length) return;
+  activeResult = (activeResult + delta + lastResults.length) % lastResults.length;
+  Array.from($("results").querySelectorAll("button")).forEach((b, i) =>
+    b.setAttribute("aria-selected", String(i === activeResult)));
+  $("q").setAttribute("aria-activedescendant", "opt-" + activeResult);
+}
+function pickPlace(r) {
+  S.place = { name: r.name, sub: [r.admin1, r.country_code].filter(Boolean).join(", ") };
+  S.lat = r.latitude; S.lon = r.longitude;
+  closeResults();
+  $("q").value = r.name;
+  loadWeather();
+}
+function useMyLocation() {
+  if (!navigator.geolocation) {
+    S.error = "Position indisponible sur cet appareil — cherchez une ville.";
+    render(); return;
+  }
+  S.loading = true; S.locating = true; S.error = null; render();
+  navigator.geolocation.getCurrentPosition(
+    (p) => {
+      S.lat = p.coords.latitude; S.lon = p.coords.longitude;
+      S.place = { name: "Ma position", sub: p.coords.latitude.toFixed(2) + ", " + p.coords.longitude.toFixed(2) };
+      S.locating = false;
+      loadWeather();
+    },
+    () => {
+      S.loading = false; S.locating = false;
+      S.error = "Position refusée ou introuvable — cherchez une ville.";
+      render();
+    },
+    { timeout: 10000, maximumAge: 600000 });
+}
+
+/* ---------- render --------------------------------------------------------- */
+const SEV_NAMES = ["Faible", "Modérée", "Élevée", "Extrême"];
+const SEV_SUBS = ["confortable", "prudence", "protégez-vous", "risque sérieux"];
+
+function render() {
+  $("btn-refresh").disabled = S.lat == null || S.loading;
+  $("btn-loc").disabled = S.loading;
+
+  $("place").innerHTML = S.place
+    ? "<b>" + esc(S.place.name) + "</b>" + (S.place.sub ? " · " + esc(S.place.sub) : "") +
+      (S.data ? " · mis à jour " + hhmm(S.data.nowIso) : "")
+    : "";
+
+  const st = $("status");
+  if (S.error) {
+    st.style.display = "block"; st.className = "status err";
+    st.innerHTML = esc(S.error) + '<button class="btn" type="button" id="btn-retry">Réessayer</button>';
+    $("btn-retry").addEventListener("click", loadWeather);
+  } else if (S.loading) {
+    st.style.display = "block"; st.className = "status";
+    st.innerHTML = '<span class="shimmer"></span>' + (S.locating ? "Localisation en cours…" : "Chargement des prévisions…");
+  } else st.style.display = "none";
+
+  if (S.data && !S.loading) renderContent(); else $("content").innerHTML = "";
+
+  $("foot").textContent = S.data
+    ? "Prévisions Open-Meteo · heures en " + S.data.tz + (S.data.tzAbbr ? " (" + S.data.tzAbbr + ")" : "")
+    : "";
+}
+
+const stat = (value, label, small) =>
+  '<div class="stat"><div class="v ' + (small ? "sm" : "num") + '">' + value +
+  '</div><div class="l">' + label + "</div></div>";
+
+function renderContent() {
+  const d = S.data, o = d.todayObj, ev = evapInfo();
+  const reliefStr = d.relief ? fmtTime(d.relief + "T12:00", { weekday: "long" }) : (d.days.length > 1 ? "persiste" : "—");
+
+  const sevCard =
+    '<section class="panel"><div class="ptitle"><h2>Chaleur du jour</h2></div><div class="sev">' +
+      '<div class="sev-badge" style="background:var(--sev' + d.sev + ')">' +
+        '<div class="lvl">' + SEV_NAMES[d.sev] + '</div><div class="lvlsub">' + SEV_SUBS[d.sev] + "</div></div>" +
+      '<div class="sev-stats">' +
+        stat(tStr(o.tMax) + '<span class="u">C</span>', "Pic") +
+        stat(tStr(o.aMax) + '<span class="u">C</span>', "Ressenti") +
+        stat(tStr(o.tMin) + '<span class="u">C</span>', "Mini nocturne") +
+        stat(esc(reliefStr), "Plus frais dès", true) +
+      "</div>" +
+      (o.tropicalNight
+        ? '<div style="width:100%"><span class="tropic">Nuit tropicale — reste au-dessus de 20 °C, peu de répit</span></div>'
+        : "") +
+      '<p class="sev-note">Indicateur général, pas une alerte officielle : suivez la vigilance Météo-France.</p>' +
+    "</div></section>";
+
+  const aerCard =
+    '<section class="panel"><div class="ptitle"><h2>Aération &amp; rafraîchissement</h2>' +
+      '<span class="hint">tout se décide par rapport à votre intérieur</span></div>' +
+    '<div class="aer">' +
+      '<div class="aer-ctrl">' +
+        '<div class="top"><label for="indoor">Température intérieure</label>' +
+          '<b class="num" id="indoor-val">' + num(S.indoor, 1) + " °C</b></div>" +
+        '<input type="range" id="indoor" min="22" max="34" step="0.5" value="' + S.indoor +
+          '" aria-describedby="indoor-hint" />' +
+        '<div class="hint" id="indoor-hint">Réglez sur votre mesure réelle — c\'est le seuil ouvrir / fermer.</div>' +
+        '<div class="toggle-row" style="margin-top:15px"><span class="lbl">Logement</span>' +
+          '<button class="chip" type="button" id="chip-cross" aria-pressed="' + S.crossVent + '">Traversant</button></div>' +
+        '<div class="hint" style="margin-top:6px">' + (S.crossVent
+          ? "Fenêtres sur deux façades opposées : le courant d'air balaie tout le volume."
+          : "Une seule façade : sans traversée, aidez le flux avec un ventilateur en extraction.") + "</div>" +
+      "</div>" +
+      '<div class="aer-now" id="aer-now"></div>' +
+      '<div class="aer-foot">' +
+        '<div><div class="v num" id="aer-hours">—</div><div class="l">Heures fraîches d\'ici 24 h</div></div>' +
+        '<div><div class="v num">' + tStr(ev.dep, 1) + '</div><div class="l">Potentiel évaporatif (' + ev.cls + ")</div></div>" +
+      "</div>" +
+    "</div></section>";
+
+  const seg = (key, cur) =>
+    '<div class="grp"><span>' + (key === "past" ? "Passé" : "À venir") + '</span><div class="seg">' +
+    RANGES.map((r) => '<button type="button" data-' + key + '="' + r + '" class="' + (cur === r ? "on" : "") +
+      '" aria-pressed="' + (cur === r) + '">' + r + "j</button>").join("") + "</div></div>";
+
+  const graphCard =
+    '<section class="panel"><div class="ptitle"><h2>Température, humidité &amp; fenêtres d\'action</h2>' +
+      '<div class="rng">' + seg("past", S.past) + seg("fwd", S.fwd) + "</div></div>" +
+    '<p class="hint" style="margin:0">Aérez quand la courbe passe sous votre intérieur (zone bleue) ; ' +
+      "gardez fermé et rafraîchissez dans la zone rouge.</p>" +
+    '<div class="chartholder"><div class="chart" id="hChart"></div><div class="tip" id="tip"></div></div>' +
+    '<ul class="key">' +
+      '<li><span class="ln" style="background:var(--warm)"></span>Température</li>' +
+      '<li><span class="ln dash" style="border-color:var(--warm-ink)"></span>Ressenti</li>' +
+      '<li><span class="ln dot"></span>Humidité (échelle droite)</li>' +
+      '<li><span class="sw" style="background:var(--ice)"></span>Zone d\'aération</li>' +
+      '<li><span class="sw" style="background:var(--warm)"></span>Forte chaleur</li>' +
+      '<li><span class="sw" style="background:var(--night)"></span>Nuit</li>' +
+      '<li><span class="ln dash" style="border-color:var(--ink)"></span>Votre intérieur</li>' +
+    "</ul></section>";
+
+  const schedCard = '<section class="panel"><div class="ptitle"><h2>Meilleurs horaires aujourd\'hui</h2></div>' +
+    '<ul class="sched" id="sched-list"></ul></section>';
+
+  const stratCard = '<section class="panel"><div class="ptitle"><h2>Stratégies de rafraîchissement</h2></div>' +
+    '<div class="prose" id="strat-body"></div></section>';
+
+  const careCard =
+    '<section class="panel"><div class="ptitle"><h2>Personnes à surveiller</h2>' +
+      '<span class="hint">affichez ce qui vous concerne</span></div>' +
+    '<div class="toggle-row" style="margin-bottom:13px">' +
+      '<button class="chip" type="button" data-profile="bebe" aria-pressed="' + S.profiles.bebe + '">Nouveau-né</button>' +
+      '<button class="chip" type="button" data-profile="fragile" aria-pressed="' + S.profiles.fragile +
+        '">Personne âgée ou fragile</button>' +
+    '</div><div id="care-body"></div></section>';
+
+  const disc = '<div class="disc"><b>Conseils généraux, ni avis médical ni bulletin officiel.</b> ' +
+    "Suivez la vigilance Météo-France et les alertes locales. Pour un nourrisson ou toute personne fragile, " +
+    "demandez conseil à un professionnel de santé ; en urgence, 15 (SAMU) ou 112.</div>";
+
+  $("content").innerHTML = sevCard + aerCard + graphCard + schedCard + stratCard + careCard + disc;
+  wireContent();
+  renderAeration(); renderSchedule(); renderStrategies(); renderCare();
+  drawChart();
+  requestAnimationFrame(drawChart);   // re-measure once web fonts have settled
+}
+
+function wireContent() {
+  ["past", "fwd"].forEach((key) => {
+    document.querySelectorAll("[data-" + key + "]").forEach((b) => b.addEventListener("click", () => {
+      S[key] = +b.dataset[key];
+      document.querySelectorAll("[data-" + key + "]").forEach((x) => {
+        x.classList.toggle("on", x === b);
+        x.setAttribute("aria-pressed", String(x === b));
+      });
+      drawChart(); save();
+    }));
+  });
+  $("indoor").addEventListener("input", (e) => {
+    S.indoor = parseFloat(e.target.value);
+    $("indoor-val").textContent = num(S.indoor, 1) + " °C";
+    renderAeration(); renderSchedule(); renderStrategies(); drawChart(); save();
+  });
+  $("chip-cross").addEventListener("click", () => {
+    S.crossVent = !S.crossVent;
+    save();
+    renderContent();          // the housing choice rewrites prose in three panels
+  });
+  document.querySelectorAll("[data-profile]").forEach((b) => b.addEventListener("click", () => {
+    const k = b.dataset.profile;
+    S.profiles[k] = !S.profiles[k];
+    b.setAttribute("aria-pressed", String(S.profiles[k]));
+    renderCare(); save();
+  }));
+}
+
+function renderAeration() {
+  const ti = computeTiming();
+  if (!ti) return;
+  const el = $("aer-now");
+  const gap = ti.outNow != null ? ti.indoor - ti.outNow : null;
+  const nextWindow = ti.ventStart && !ti.ventOpenNow ? " · prochaine fenêtre vers " + hhmm(ti.ventStart) : "";
+
+  if (gap != null && gap >= DEADBAND) {
+    el.className = "aer-now open";
+    el.innerHTML = '<div class="big">Ouvrez maintenant</div><div class="small">' + num(gap, 1) + "° de moins dehors — " +
+      (S.crossVent ? "ouvrez deux façades opposées" : "ouvrez en grand et poussez l'air avec un ventilateur") +
+      (ti.closeBy ? ", refermez avant " + hhmm(ti.closeBy) : "") + "</div>";
+  } else if (gap != null && gap <= -DEADBAND) {
+    el.className = "aer-now shut";
+    el.innerHTML = '<div class="big">Gardez fermé</div><div class="small">' + num(-gap, 1) +
+      "° de plus dehors — volets baissés, stores tirés côté soleil" + nextWindow + "</div>";
+  } else {
+    el.className = "aer-now";
+    el.innerHTML = '<div class="big">Équilibre</div><div class="small">dehors ≈ votre intérieur' + nextWindow + "</div>";
+  }
+  $("aer-hours").textContent = num(ti.coolHours) + " h";
+}
+
+function renderSchedule() {
+  const list = $("sched-list"), ti = computeTiming(), d = S.data;
+  if (!list || !ti) return;
+  const lt = (iso) => !iso ? "—"
+    : iso.slice(0, 10) === d.today ? hhmm(iso)
+    : fmtTime(iso, { weekday: "short", hour: "2-digit", minute: "2-digit" });
+
+  const rows = [];
+  if (ti.ventStart) {
+    rows.push(["var(--ice)",
+      "Aérer" + (S.crossVent ? " (courant d'air)" : " (ventilateur en extraction)"),
+      S.crossVent ? "ouvrez deux côtés opposés, puis refermez avant que ça chauffe"
+                  : "ouvrez en grand, ventilateur soufflant vers l'extérieur pour tirer l'air frais",
+      lt(ti.ventStart) + (ti.ventEnd && ti.ventEnd !== ti.ventStart ? " → " + lt(ti.ventEnd) : "")]);
+  }
+  rows.push(["var(--sev2)", "Fermer volets &amp; stores", "côtés exposés au soleil",
+    ti.coolNow && ti.closeBy ? "avant " + lt(ti.closeBy) : "maintenant"]);
+  if (ti.dangerStart) {
+    rows.push(["var(--sev3)", "Forte chaleur — rester au frais", "évitez l'effort, tenez la pièce la plus ombragée",
+      lt(ti.dangerStart) + " – " + lt(ti.dangerEnd)]);
+  } else {
+    rows.push(["var(--sev1)", "Forte chaleur", "pas de pic extrême aujourd'hui — restez vigilant", "—"]);
+  }
+  rows.push(["var(--evap)", "Heure la plus fraîche — sortir", "courses, courte balade, grande aération", lt(ti.coolestIso)]);
+  rows.push(["var(--good)", "S'hydrater toute la journée", "avant la soif ; douche fraîche, repas froids", ""]);
+
+  list.innerHTML = rows.map((r) =>
+    '<li><span class="dot" style="background:' + r[0] + '"></span><span class="act">' + r[1] +
+    (r[2] ? "<small>" + r[2] + "</small>" : "") + "</span>" +
+    (r[3] ? '<span class="when num">' + r[3] + "</span>" : "") + "</li>").join("");
+}
+
+function renderStrategies() {
+  const body = $("strat-body");
+  if (!body) return;
+  const ev = evapInfo();
+
+  const flush = S.crossVent
+    ? "<p>Votre meilleur atout est le <b>balayage d'air nocturne</b> : dès que l'extérieur repasse sous votre intérieur, " +
+      "ouvrez <b>deux façades opposées</b> pour créer un vrai courant d'air et évacuer la chaleur stockée dans les murs, " +
+      "puis refermez tout et baissez volets et stores avant le retour du soleil. En journée, vivez du côté le plus frais et le plus ombragé.</p>"
+    : "<p>Sans traversée, l'air stagne : pendant la fenêtre fraîche, ouvrez en grand et posez un <b>ventilateur face à la fenêtre, " +
+      "soufflant vers l'extérieur</b> — il chasse l'air chaud et aspire l'air frais par le reste du logement. " +
+      "Puis refermez tout et baissez volets et stores avant le retour du soleil.</p>";
+
+  const evap = ev.cls === "sec"
+    ? "<p>L'air est plutôt <b>sec</b> : un <b>ventilateur</b> fait beaucoup, surtout avec un <b>linge humide</b> tendu devant ou " +
+      "un <b>bol de glaçons</b> — l'évaporation refroidit réellement l'air qui vous arrive. Une serviette mouillée devant une fenêtre " +
+      "ouverte la nuit rafraîchit l'air entrant. Au-delà de ~35 °C, le ventilateur seul brasse de l'air chaud : gardez l'eau ou la glace dans la boucle.</p>"
+    : ev.cls === "lourd"
+    ? "<p>L'air est <b>lourd</b> : l'évaporation (eau, glace, linge humide) aide peu et alourdit encore l'ambiance. " +
+      "Un <b>déshumidificateur</b> sera plus efficace — en asséchant l'air, il rend la chaleur supportable, relance l'évaporation " +
+      "de la transpiration et adoucit les nuits tropicales. Une <b>climatisation</b>, si vous en avez, reste le moyen le plus sûr (visez ~26 °C).</p>"
+    : "<p>Humidité <b>intermédiaire</b> : un <b>ventilateur</b> avec un <b>linge humide</b> ou un <b>bol de glaçons</b> reste utile, " +
+      "mais surveillez la lourdeur — si l'air devient moite, un <b>déshumidificateur</b> (ou la clim) prend le relais. " +
+      "Au-delà de ~35 °C, n'utilisez pas le ventilateur seul.</p>";
+
+  const internal = "<p>Coupez aussi les <b>sources de chaleur internes</b> : four et plaques, sèche-linge, halogènes, " +
+    "ordinateurs et appareils laissés en charge. Un équipement branché toute la journée, c'est un radiateur discret.</p>";
+
+  const body3 = "<p>Côté corps : buvez <b>avant d'avoir soif</b>, douche <b>fraîche</b> (pas glacée — le froid brutal " +
+    "provoque une vasoconstriction qui retient la chaleur), linge humide sur la nuque et les poignets, " +
+    "repas froids pour ne pas chauffer la cuisine.</p>";
+
+  body.innerHTML = flush + evap + internal + body3;
+}
+
+function renderCare() {
+  const body = $("care-body");
+  if (!body) return;
+  const parts = [];
+
+  if (S.profiles.bebe) {
+    parts.push('<div class="prose care"><p><b>Nouveau-né.</b> Gardez sa chambre <b>fraîche et à l\'ombre</b>, et ne le laissez ' +
+      "jamais dormir en poussette ni en voiture, même quelques minutes. Habillez-le léger — une couche suffit au-dessus " +
+      "de ~24 °C — sans emmaillotage ni alèse imperméable.</p>" +
+      "<p><b>Avant 6 mois, pas d'eau :</b> proposez le sein plus souvent (les tétées deviennent courtes et rapprochées par la " +
+      "chaleur, c'est normal) ; au biberon, un peu d'eau bouillie refroidie seulement si besoin. Vérifiez sa température sur le " +
+      "<b>torse ou la nuque</b>, pas les mains.</p>" +
+      "<p>Pour le rafraîchir : un bain ou une éponge <b>tiède — jamais froid</b>. Un ventilateur dans la pièce aide, " +
+      "dirigé à côté de lui plutôt que sur lui.</p>" +
+      '<p><span class="emerg">Surveillez :</span> s\'il devient mou ou apathique, refuse de boire, mouille moins ses couches, ' +
+      "a la bouche sèche, la fontanelle creuse, la peau chaude, une respiration rapide ou une somnolence inhabituelle — " +
+      "rafraîchissez-le et consultez sans tarder. En urgence, <b>15</b> (SAMU) ou <b>112</b>.</p></div>");
+  }
+
+  if (S.profiles.fragile) {
+    parts.push('<div class="prose care warmside"><p><b>Personne âgée, isolée ou malade.</b> La soif s\'émousse avec l\'âge : ' +
+      "proposez à boire <b>à heure fixe</b> plutôt qu'à la demande, et comptez les verres. Certains traitements (diurétiques, " +
+      "psychotropes, anticholinergiques) réduisent la transpiration ou la vigilance — demandez un avis médical avant d'adapter " +
+      "quoi que ce soit, ne modifiez jamais une dose de vous-même.</p>" +
+      "<p>Un <b>passage ou un appel par jour</b> pendant l'épisode. En France, les personnes vulnérables peuvent s'inscrire sur le " +
+      "<b>registre canicule</b> de leur mairie pour être contactées. Brumisation et linge humide sur nuque et avant-bras font " +
+      "baisser la température sans agresser.</p>" +
+      '<p><span class="emerg">Surveillez :</span> confusion, maux de tête, nausées, crampes, peau chaude et sèche, absence de sueur ' +
+      "malgré la chaleur, malaise — installez au frais, rafraîchissez, faites boire si la personne est consciente, et appelez le " +
+      "<b>15</b>. Un coup de chaleur est une urgence vitale.</p></div>");
+  }
+
+  if (!parts.length) {
+    parts.push('<p class="hint" style="margin:0">Sélectionnez un profil pour afficher les gestes et les signes d\'alerte ' +
+      "correspondants. Nourrissons, personnes âgées, femmes enceintes et personnes traitées au long cours encaissent " +
+      "la chaleur beaucoup moins bien.</p>");
+  }
+  body.innerHTML = parts.join("");
+}
+
+/* ---------- chart ---------------------------------------------------------- */
+function drawChart() {
+  const d = S.data, holder = $("hChart");
+  if (!d || !holder) return;
+  const width = holder.clientWidth || 680;
+  const H = width < 480 ? 258 : 300;
+  const padL = 42, padR = 34, padT = 20, padB = 30;
+  const plotW = width - padL - padR, plotH = H - padT - padB, bottom = padT + plotH;
+
+  const dataStart = d.pts[0].ms, dataEnd = d.pts[d.pts.length - 1].ms, now = d.nowMs;
+  const domStart = Math.max(dataStart, now - S.past * 86400000);
+  const domEnd = Math.min(dataEnd, now + S.fwd * 86400000);
+  const dpts = d.pts.filter((p) => p.ms >= domStart - 3600000 && p.ms <= domEnd + 3600000);
+  if (dpts.length < 2 || domEnd <= domStart) { holder.innerHTML = ""; return; }
+
+  const x = (ms) => padL + (clamp(ms, domStart, domEnd) - domStart) / (domEnd - domStart) * plotW;
+  const indoor = S.indoor;
+  const temps = dpts.flatMap((p) => [p.t, p.feels != null ? p.feels : p.t]).filter(Number.isFinite).concat([indoor]);
+  const yMin = Math.floor(Math.min(...temps) - 1), yMax = Math.ceil(Math.max(...temps) + 1);
+  const y = (tv) => padT + (yMax - tv) / (yMax - yMin) * plotH;
+  const ry = (v) => padT + (100 - v) / 100 * plotH;
+
+  const stepPx = Math.max(0.4, x(dpts[0].ms + 3600000) - x(dpts[0].ms));
+  const spanDays = (domEnd - domStart) / 86400000;
+  const gridHourStep = spanDays <= 2 ? 6 : spanDays <= 4 ? 12 : 24;
+  const hourLabels = spanDays <= 3;
+  const dayEvery = spanDays <= 4 ? 1 : spanDays <= 10 ? 2 : spanDays <= 20 ? 3 : 4;
+
+  const band = (r, col, op) => {
+    const x1 = Math.max(padL, x(dpts[r[0]].ms) - stepPx / 2);
+    const x2 = Math.min(width - padR, x(dpts[r[1]].ms) + stepPx / 2);
+    return '<rect x="' + x1 + '" y="' + padT + '" width="' + Math.max(0, x2 - x1) + '" height="' + plotH +
+      '" fill="' + col + '" opacity="' + op + '"/>';
+  };
+  const nightBands = runs(dpts, (p) => p.day === 0).map((r) => band(r, "var(--night)", "var(--band-night)")).join("");
+  const ventBands = runs(dpts, (p) => p.t <= indoor - DEADBAND).map((r) => band(r, "var(--ice)", "var(--band-vent)")).join("");
+  const heatBands = runs(dpts, (p) => (p.feels != null ? p.feels : p.t) >= 32).map((r) => band(r, "var(--warm)", "var(--band-heat)")).join("");
+
+  let grid = "";
+  for (let k = 0; k <= 4; k++) {
+    const tv = yMin + (yMax - yMin) * k / 4, yy = y(tv);
+    grid += '<line x1="' + padL + '" y1="' + yy + '" x2="' + (width - padR) + '" y2="' + yy +
+      '" stroke="var(--line)" stroke-dasharray="2 4"/><text x="' + (padL - 6) + '" y="' + (yy + 3.5) +
+      '" text-anchor="end" font-size="11">' + Math.round(tv) + "°</text>";
+  }
+  let rhAxis = "";
+  [0, 25, 50, 75, 100].forEach((v) => {
+    rhAxis += '<text x="' + (width - padR + 5) + '" y="' + (ry(v) + 3.5) +
+      '" text-anchor="start" font-size="10" fill="var(--hum)">' + v + "</text>";
+  });
+  rhAxis += '<text x="' + (width - padR + 5) + '" y="' + (padT - 7) +
+    '" text-anchor="start" font-size="10" fill="var(--hum)">%</text>';
+
+  let xlab = "", dayIdx = 0;
+  const startMid = Math.floor(domStart / 86400000) * 86400000;
+  for (let ms = startMid; ms <= domEnd + 1; ms += gridHourStep * 3600000) {
+    if (ms < domStart) continue;
+    const xx = x(ms), iso = new Date(ms).toISOString().slice(0, 16), hr = +iso.slice(11, 13);
+    grid += '<line x1="' + xx + '" y1="' + padT + '" x2="' + xx + '" y2="' + bottom +
+      '" stroke="var(--line)" stroke-dasharray="2 4" opacity="0.45"/>';
+    if (hourLabels) {
+      xlab += '<text x="' + xx + '" y="' + (bottom + 14) + '" text-anchor="middle" font-size="10">' +
+        String(hr).padStart(2, "0") + "h</text>";
+    }
+    if (hr === 0) {
+      if (dayIdx % dayEvery === 0) {
+        xlab += '<text x="' + xx + '" y="' + (hourLabels ? bottom + 26 : bottom + 14) +
+          '" text-anchor="middle" font-size="10" font-weight="700" fill="var(--faint)">' +
+          fmtTime(iso, { weekday: "short", day: "numeric" }) + "</text>";
+      }
+      dayIdx++;
+    }
+  }
+
+  const yIndoor = y(indoor);
+  const indoorLine = '<line x1="' + padL + '" y1="' + yIndoor + '" x2="' + (width - padR) + '" y2="' + yIndoor +
+    '" stroke="var(--ink)" stroke-dasharray="6 4" stroke-width="1.3" opacity="0.8"/>' +
+    '<text x="' + (padL + 4) + '" y="' + (yIndoor - 5) + '" font-size="10" font-weight="700" fill="var(--ink)">intérieur ' +
+    num(indoor, 1) + "°</text>";
+
+  const pt = (p, v) => x(p.ms).toFixed(1) + " " + v.toFixed(1);
+  const tempPath = dpts.map((p, k) => (k ? "L" : "M") + pt(p, y(p.t))).join(" ");
+  const feelsPath = dpts.map((p, k) => (k ? "L" : "M") + pt(p, y(p.feels != null ? p.feels : p.t))).join(" ");
+  const rhPath = dpts.map((p, k) => (k ? "L" : "M") + pt(p, ry(p.rh))).join(" ");
+  const areaPath = tempPath + " L" + x(dpts[dpts.length - 1].ms).toFixed(1) + " " + bottom +
+    " L" + x(dpts[0].ms).toFixed(1) + " " + bottom + " Z";
+
+  const nowX = x(now), inView = now >= domStart && now <= domEnd;
+  const nowLine = inView
+    ? '<line x1="' + nowX + '" y1="' + padT + '" x2="' + nowX + '" y2="' + bottom +
+      '" stroke="var(--ink)" stroke-width="1.2" opacity="0.5"/><text x="' + nowX + '" y="' + (padT - 6) +
+      '" text-anchor="middle" font-size="10" font-weight="700" fill="var(--ink)">maintenant</text>'
+    : "";
+  const curT = d.cur ? d.cur.temperature_2m : null;
+  const curDot = curT != null && inView
+    ? '<circle cx="' + nowX + '" cy="' + y(curT) + '" r="4" fill="var(--warm)" stroke="var(--card)" stroke-width="1.6"/>'
+    : "";
+
+  const defs =
+    '<linearGradient id="hg" gradientUnits="userSpaceOnUse" x1="0" y1="' + padT + '" x2="0" y2="' + bottom + '">' +
+      '<stop offset="0" stop-color="oklch(0.62 0.20 28)"/><stop offset="0.5" stop-color="oklch(0.70 0.16 50)"/>' +
+      '<stop offset="1" stop-color="oklch(0.62 0.13 245)"/></linearGradient>' +
+    '<linearGradient id="ha" gradientUnits="userSpaceOnUse" x1="0" y1="' + padT + '" x2="0" y2="' + bottom + '">' +
+      '<stop offset="0" stop-color="var(--warm)" stop-opacity="0.16"/>' +
+      '<stop offset="1" stop-color="var(--warm)" stop-opacity="0"/></linearGradient>';
+
+  holder.innerHTML =
+    '<svg viewBox="0 0 ' + width + " " + H + '" width="' + width + '" height="' + H +
+      '" role="img" tabindex="0" aria-label="Courbe horaire de température, ressenti et humidité, avec les fenêtres d\'aération">' +
+    "<defs>" + defs + "</defs>" +
+    nightBands + ventBands + heatBands + grid + rhAxis +
+    '<path d="' + areaPath + '" fill="url(#ha)"/>' + indoorLine +
+    '<path d="' + rhPath + '" fill="none" stroke="var(--hum)" stroke-width="1.3" stroke-dasharray="1 3" opacity="0.75"/>' +
+    '<path d="' + feelsPath + '" fill="none" stroke="var(--warm-ink)" stroke-width="1.4" stroke-dasharray="4 3" opacity="0.55"/>' +
+    '<path d="' + tempPath + '" fill="none" stroke="url(#hg)" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>' +
+    nowLine + curDot + xlab +
+    '<g id="guide" style="display:none"><line stroke="var(--ink)" stroke-width="1" opacity="0.4"/>' +
+      '<circle r="4" fill="var(--card)" stroke="var(--warm)" stroke-width="2"/></g>' +
+    '<rect id="hit" x="' + padL + '" y="' + padT + '" width="' + plotW + '" height="' + plotH + '" fill="transparent"/>' +
+    "</svg>";
+
+  const svg = holder.querySelector("svg");
+  const hit = svg.querySelector("#hit"), guide = svg.querySelector("#guide");
+  const gLine = guide.querySelector("line"), gDot = guide.querySelector("circle"), tip = $("tip");
+
+  const showAt = (p) => {
+    const cx = x(p.ms), cy = y(p.t);
+    guide.style.display = "block";
+    gLine.setAttribute("x1", cx); gLine.setAttribute("x2", cx);
+    gLine.setAttribute("y1", padT); gLine.setAttribute("y2", bottom);
+    gDot.setAttribute("cx", cx); gDot.setAttribute("cy", cy);
+    tip.style.display = "block";
+    tip.innerHTML =
+      '<div class="tt">' + fmtTime(p.iso, { weekday: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) + "</div>" +
+      '<div class="tr"><span>Temp.</span><b class="num">' + tStr(p.t, 1) + "</b></div>" +
+      '<div class="tr"><span>Ressenti</span><b class="num">' + tStr(p.feels != null ? p.feels : p.t, 1) + "</b></div>" +
+      '<div class="tr"><span>Humidité</span><b class="num">' + num(p.rh, 0) + "%</b></div>";
+    const rect = svg.getBoundingClientRect();
+    const sx = rect.width / width, sy = rect.height / H;
+    let left = cx * sx + 12;
+    if (left + tip.offsetWidth > holder.clientWidth) left = cx * sx - tip.offsetWidth - 12;
+    tip.style.left = Math.max(0, left) + "px";
+    tip.style.top = Math.max(0, cy * sy - 10) + "px";
+  };
+  const hide = () => { guide.style.display = "none"; tip.style.display = "none"; };
+  const nearest = (ms) => dpts.reduce((acc, p) => (Math.abs(p.ms - ms) < Math.abs(acc.ms - ms) ? p : acc), dpts[0]);
+
+  function move(ev) {
+    const rect = svg.getBoundingClientRect();
+    const cx = ((ev.touches ? ev.touches[0].clientX : ev.clientX) - rect.left) * (width / rect.width);
+    showAt(nearest(domStart + (cx - padL) / plotW * (domEnd - domStart)));
+  }
+  hit.addEventListener("mousemove", move);
+  hit.addEventListener("touchmove", (e) => { move(e); e.preventDefault(); }, { passive: false });
+  hit.addEventListener("mouseleave", hide);
+  hit.addEventListener("touchend", hide);
+
+  // The chart is a real control, not decoration: arrow keys walk the series.
+  let cursor = dpts.indexOf(nearest(now));
+  svg.addEventListener("focus", () => showAt(dpts[clamp(cursor, 0, dpts.length - 1)]));
+  svg.addEventListener("blur", hide);
+  svg.addEventListener("keydown", (e) => {
+    const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+    if (!step) return;
+    e.preventDefault();
+    cursor = clamp(cursor + step * (e.shiftKey ? 6 : 1), 0, dpts.length - 1);
+    showAt(dpts[cursor]);
+  });
+}
+
+/* ---------- boot ----------------------------------------------------------- */
+document.addEventListener("DOMContentLoaded", () => {
+  const q = $("q");
+
+  q.addEventListener("input", () => {
+    clearTimeout(geoTimer);
+    const v = q.value.trim();
+    if (v.length < 2) { closeResults(); return; }
+    geoTimer = setTimeout(async () => { showResults(await geocode(v)); }, 320);
+  });
+  q.addEventListener("keydown", async (e) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); moveResult(e.key === "ArrowDown" ? 1 : -1); return; }
+    if (e.key === "Escape") { closeResults(); return; }
+    if (e.key !== "Enter") return;
+    if (activeResult >= 0 && lastResults[activeResult]) { pickPlace(lastResults[activeResult]); return; }
+    const list = lastResults.length ? lastResults : await geocode(q.value.trim());
+    if (list.length) pickPlace(list[0]);
+  });
+  document.addEventListener("click", (e) => { if (!e.target.closest(".search")) closeResults(); });
+
+  $("btn-loc").addEventListener("click", useMyLocation);
+  $("btn-refresh").addEventListener("click", loadWeather);
+
+  window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(drawChart, 150); });
+  // A tab left open all afternoon must not keep advising on this morning's air.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && S.lat != null && Date.now() - S.fetchedAt > STALE_MS) loadWeather();
+  });
+
+  if (!restore()) {
+    S.lat = PARIS.lat; S.lon = PARIS.lon;
+    S.place = { name: PARIS.name, sub: PARIS.sub };
+  }
+  if (S.place && S.place.name !== "Ma position") q.value = S.place.name;
+  render();
+  loadWeather();
+});
+</script>
+</body>
+</html>

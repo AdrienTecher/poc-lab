@@ -1,0 +1,15 @@
+{
+  "slug": "canicule-appartement",
+  "title": "Canicule — rafraîchir l'appartement",
+  "description": "Les prévisions horaires converties en gestes : quand ouvrir, quand tout fermer, et ce qui rafraîchit vraiment selon l'humidité de l'air.",
+  "description_en": "Live hourly forecasts turned into moves — when to open up, when to shut everything, and what actually cools a flat given the humidity.",
+  "tags": [
+    "meteo",
+    "canicule",
+    "sante",
+    "outil"
+  ],
+  "created": "2026-07-25",
+  "source": "claude.ai",
+  "kind": "static"
+}
