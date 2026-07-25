@@ -2,6 +2,8 @@
 
 Append-only, newest first: `## [YYYY-MM-DD] <type> | <summary>`.
 
+## [2026-07-25] intake | make lexicon bilingual — a second bank of 200 rare French words beside the English one, language switch remembered and linkable; folio numbering in the gallery made stable by creation order instead of display position
+
 ## [2026-07-25] render | rebuild the landing page for scale — search, tag facets, sort, cards/index density, URL state, self-hosted fonts; 100 apps go from 12.4 to 5.3 screens
 
 ## [2026-07-25] intake | add el-nino-2026 — the ENSO explainer made bilingual FR/EN (markup is the French source, English is an override map), one teleconnection thread drawn from the Pacific source to the selected region, and the missing "not El Niño" share restored in the probability bars
