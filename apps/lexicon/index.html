@@ -1207,15 +1207,21 @@ const shareText = (entry) => {
   return `${entry.word} ${entry.ipa} — ${def}`;
 };
 
-// Flash a transient label on a button without losing what it said.
+// Flash a transient label on a button without losing what it said. Restoring
+// early must also cancel the pending timer, or it fires later against an
+// already-cleared `was` and writes "undefined" into the button.
+const unflash = (btn) => {
+  clearTimeout(Number(btn.dataset.timer));
+  if (btn.dataset.was !== undefined) btn.textContent = btn.dataset.was;
+  delete btn.dataset.was;
+  delete btn.dataset.timer;
+};
+
 const flash = (btn, msg, ms = 1400) => {
+  clearTimeout(Number(btn.dataset.timer));
   if (btn.dataset.was === undefined) btn.dataset.was = btn.textContent;
   btn.textContent = msg;
-  clearTimeout(Number(btn.dataset.timer));
-  btn.dataset.timer = String(setTimeout(() => {
-    btn.textContent = btn.dataset.was;
-    delete btn.dataset.was;
-  }, ms));
+  btn.dataset.timer = String(setTimeout(() => unflash(btn), ms));
 };
 
 const download = async () => {
@@ -1310,8 +1316,7 @@ const share = async () => {
       if (err && err.name === "AbortError") return;
     } finally {
       btn.disabled = false;
-      btn.textContent = btn.dataset.was !== undefined ? btn.dataset.was : t.share;
-      delete btn.dataset.was;
+      unflash(btn);
     }
   }
   openSheet();
