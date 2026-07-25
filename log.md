@@ -2,6 +2,8 @@
 
 Append-only, newest first: `## [YYYY-MM-DD] <type> | <summary>`.
 
+## [2026-07-25] intake | add lexicon — rare-word draw over 200 curated entries (8 domains × 5 levels), toggleable domains and a canvas-rendered front/back memory card as PNG
+
 ## [2026-07-17] render | redesign gallery landing page — per-app identity hues, masthead spectrum, Space Grotesk/Plex Mono, explicit description_en field
 
 ## [2026-07-17] intake | add five apps from claude.ai artifacts — quiz-tnd (buildable React) plus s1-improv-setups, ukulele-c-minor-blues, slice-the-beat, brawl-combo-lab (static)

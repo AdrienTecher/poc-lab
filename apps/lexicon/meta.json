@@ -1,0 +1,15 @@
+{
+  "slug": "lexicon",
+  "title": "Lexicon",
+  "description": "Un mot que vous ne connaissez sans doute pas : cinq niveaux d'érudition, domaines activables, et une fiche mémo à imprimer.",
+  "description_en": "A word you probably don't know — five levels of erudition, toggleable domains, and a printable memory card.",
+  "tags": [
+    "vocabulaire",
+    "langue",
+    "apprentissage",
+    "interactif"
+  ],
+  "created": "2026-07-25",
+  "source": "claude-code",
+  "kind": "static"
+}

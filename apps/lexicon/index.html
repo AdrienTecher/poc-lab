@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lexicon — a word you probably don't know</title>
+<meta name="description" content="Draws a word you probably don't know: five levels of erudition, toggleable domains, and a printable memory card.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,200..600;1,6..72,200..500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    color-scheme:light dark;
+    --paper:#f5f2eb; --panel:#fffdf8; --ink:#1a1917; --soft:#4c4840; --muted:#8b8375;
+    --rule:#e3ddcf; --hair:#eee9dd; --accent:#9c3b26; --wash:rgba(156,59,38,.08);
+    --shadow:0 1px 2px rgba(38,30,20,.05), 0 12px 32px -18px rgba(38,30,20,.28);
+    --sans:"Inter",ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+    --serif:"Newsreader",ui-serif,Georgia,"Times New Roman",serif;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme=light]){
+      --paper:#131210; --panel:#1c1a16; --ink:#f1ece1; --soft:#c6bfb0; --muted:#8e8676;
+      --rule:#2e2b24; --hair:#26241e; --accent:#dd7a56; --wash:rgba(221,122,86,.12);
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 14px 36px -20px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme=dark]{
+    --paper:#131210; --panel:#1c1a16; --ink:#f1ece1; --soft:#c6bfb0; --muted:#8e8676;
+    --rule:#2e2b24; --hair:#26241e; --accent:#dd7a56; --wash:rgba(221,122,86,.12);
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 14px 36px -20px rgba(0,0,0,.8);
+  }
+
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:var(--sans);font-size:16px;line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(120% 80% at 50% -10%, var(--wash), transparent 60%);
+    background-repeat:no-repeat;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:2.6rem 1.15rem 4rem;}
+
+  /* ── masthead ─────────────────────────────────────────────── */
+  .masthead{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:2.2rem;}
+  .kicker{font-family:var(--mono);font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:0 0 .55rem;}
+  h1{font-family:var(--serif);font-weight:400;font-size:2.5rem;line-height:1;letter-spacing:-.02em;margin:0 0 .5rem;}
+  .lede{margin:0;color:var(--soft);max-width:44ch;font-size:.95rem;}
+  .theme{
+    flex:0 0 auto;width:36px;height:36px;display:grid;place-items:center;
+    background:transparent;border:1px solid var(--rule);border-radius:50%;
+    color:var(--muted);cursor:pointer;transition:color .2s,border-color .2s,transform .2s;
+  }
+  .theme:hover{color:var(--ink);border-color:var(--muted);transform:rotate(-18deg);}
+  .theme svg{width:16px;height:16px;}
+  .theme .moon{display:none;}
+  :root[data-theme=dark] .theme .moon{display:block;}
+  :root[data-theme=dark] .theme .sun{display:none;}
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme=light]) .theme .moon{display:block;}
+    :root:not([data-theme=light]) .theme .sun{display:none;}
+  }
+
+  /* ── controls ─────────────────────────────────────────────── */
+  .controls{margin-bottom:1.6rem;}
+  .field + .field{margin-top:1.5rem;}
+  .label{
+    font-family:var(--mono);font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 .7rem;display:flex;align-items:baseline;justify-content:space-between;gap:1rem;
+  }
+  .label .count{letter-spacing:.08em;text-transform:none;font-size:.7rem;}
+
+  .levels{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border-top:1px solid var(--rule);}
+  .lvl{
+    position:relative;background:none;border:0;border-top:2px solid transparent;margin-top:-1px;
+    padding:.75rem .2rem .55rem;cursor:pointer;color:var(--muted);
+    display:flex;flex-direction:column;align-items:center;gap:.15rem;
+    transition:color .22s ease,border-color .22s ease;
+  }
+  .lvl .num{font-family:var(--serif);font-size:1.28rem;line-height:1;letter-spacing:.04em;}
+  .lvl .nm{font-size:.7rem;letter-spacing:.02em;}
+  .lvl:hover{color:var(--soft);}
+  .lvl[aria-checked=true]{color:var(--accent);border-top-color:var(--accent);}
+  .lvl[aria-checked=true] .nm{color:var(--soft);}
+  .lvl-desc{margin:.7rem 0 0;font-size:.86rem;color:var(--muted);min-height:1.3em;}
+
+  .chips{display:flex;flex-wrap:wrap;gap:.4rem;}
+  /* The lit dot carries the state, so eight active chips stay quiet rather than
+     turning the panel into a wall of accent. */
+  .chip{
+    display:inline-flex;align-items:center;gap:.5rem;
+    font-family:var(--sans);font-size:.82rem;color:var(--muted);
+    background:transparent;border:1px solid var(--rule);border-radius:999px;
+    padding:.35rem .85rem .35rem .7rem;cursor:pointer;transition:all .18s ease;
+  }
+  .chip::before{
+    content:"";width:6px;height:6px;border-radius:50%;flex:0 0 auto;
+    border:1px solid var(--muted);background:transparent;transition:all .18s ease;
+  }
+  .chip:hover{color:var(--ink);border-color:var(--muted);}
+  .chip[aria-pressed=true]{color:var(--ink);background:var(--wash);}
+  .chip[aria-pressed=true]::before{background:var(--accent);border-color:var(--accent);}
+  .chip[aria-pressed=false]{opacity:.7;}
+  .bulk{display:flex;gap:.9rem;margin-top:.7rem;}
+  .link{
+    background:none;border:0;padding:0;cursor:pointer;color:var(--muted);
+    font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;
+    border-bottom:1px solid transparent;transition:color .18s,border-color .18s;
+  }
+  .link:hover{color:var(--ink);border-bottom-color:var(--rule);}
+
+  /* ── the stage ────────────────────────────────────────────── */
+  .stage{
+    margin-top:2rem;background:var(--panel);border:1px solid var(--rule);border-radius:16px;
+    padding:1.6rem 1.7rem 1.8rem;box-shadow:var(--shadow);position:relative;overflow:hidden;
+  }
+  .stage::before{content:"";position:absolute;inset:0 0 auto;height:2px;background:var(--accent);opacity:.85;}
+  .stage-head{
+    display:flex;justify-content:space-between;align-items:baseline;gap:1rem;
+    font-family:var(--mono);font-size:.65rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+  }
+  .word{
+    font-family:var(--serif);font-weight:400;font-optical-sizing:auto;
+    font-size:clamp(2.3rem,8.5vw,3.9rem);line-height:1.04;letter-spacing:-.022em;
+    margin:1.1rem 0 .5rem;overflow-wrap:break-word;hyphens:auto;
+  }
+  .phon{margin:0;color:var(--muted);font-size:.92rem;display:flex;flex-wrap:wrap;align-items:baseline;gap:.55rem;}
+  .phon .ipa{font-family:var(--serif);font-size:1rem;}
+  .phon .sep{opacity:.5;}
+  .phon .pos{font-style:italic;font-family:var(--serif);font-size:1rem;}
+  .rule{border:0;border-top:1px solid var(--hair);margin:1.25rem 0 1.15rem;}
+  .def{font-family:var(--serif);font-size:1.28rem;line-height:1.52;margin:0;max-width:48ch;text-wrap:pretty;}
+  .root{margin:1.15rem 0 0;font-size:.86rem;color:var(--muted);max-width:52ch;line-height:1.55;}
+  .root .lbl{
+    font-family:var(--mono);font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);margin-right:.6rem;
+  }
+  .stage.empty .word{font-size:1.5rem;color:var(--muted);font-style:italic;}
+
+  /* ── actions ──────────────────────────────────────────────── */
+  .actions{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1.5rem;}
+  .btn{
+    font-family:var(--sans);font-size:.9rem;font-weight:500;
+    padding:.62rem 1.15rem;border-radius:999px;cursor:pointer;
+    border:1px solid var(--rule);background:transparent;color:var(--ink);
+    transition:all .18s ease;
+  }
+  .btn:hover:not(:disabled){border-color:var(--muted);transform:translateY(-1px);}
+  .btn:active:not(:disabled){transform:translateY(0);}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fffdf8;}
+  .btn.primary:hover{filter:brightness(1.08);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .hint{margin:.9rem 0 0;font-size:.76rem;color:var(--muted);}
+  kbd{
+    font-family:var(--mono);font-size:.7rem;border:1px solid var(--rule);border-bottom-width:2px;
+    border-radius:5px;padding:.1rem .34rem;color:var(--soft);
+  }
+
+  footer{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--hair);
+    font-size:.76rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:.4rem 1.2rem;justify-content:space-between;}
+  footer a{color:var(--muted);text-underline-offset:3px;}
+  footer a:hover{color:var(--ink);}
+
+  :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px;}
+
+  @media (max-width:560px){
+    .wrap{padding-top:2rem;}
+    h1{font-size:2.1rem;}
+    .stage{padding:1.3rem 1.25rem 1.5rem;}
+    .lvl .nm{font-size:.62rem;}
+    .def{font-size:1.18rem;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.01ms !important;transition-duration:.01ms !important;}
+    .theme:hover{transform:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div>
+      <p class="kicker">Lexicon</p>
+      <h1>A word you probably don't know</h1>
+      <p class="lede">Pick how far past common usage you want to go, keep only the domains you care for, and take the card with you.</p>
+    </div>
+    <button class="theme" id="theme" type="button" aria-label="Switch colour theme" title="Switch colour theme">
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4.2"/><path d="M12 2.4v2.2M12 19.4v2.2M2.4 12h2.2M19.4 12h2.2M5.2 5.2l1.6 1.6M17.2 17.2l1.6 1.6M18.8 5.2l-1.6 1.6M6.8 17.2l-1.6 1.6"/>
+      </svg>
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M20 14.2A8.2 8.2 0 0 1 9.8 4a8.2 8.2 0 1 0 10.2 10.2z"/>
+      </svg>
+    </button>
+  </header>
+
+  <section class="controls">
+    <div class="field">
+      <p class="label"><span>Level of knowledge</span></p>
+      <div class="levels" id="levels" role="radiogroup" aria-label="Level of knowledge"></div>
+      <p class="lvl-desc" id="lvlDesc"></p>
+    </div>
+
+    <div class="field">
+      <p class="label"><span>Domains</span><span class="count" id="poolCount"></span></p>
+      <div class="chips" id="chips" role="group" aria-label="Domains"></div>
+      <div class="bulk">
+        <button class="link" id="allDomains" type="button">All</button>
+        <button class="link" id="noDomains" type="button">None</button>
+      </div>
+    </div>
+  </section>
+
+  <article class="stage" id="stage" aria-live="polite">
+    <div class="stage-head">
+      <span id="tagDomain"></span>
+      <span id="tagLevel"></span>
+    </div>
+    <h2 class="word" id="word"></h2>
+    <p class="phon" id="phon">
+      <span class="ipa" id="ipa"></span>
+      <span class="sep" aria-hidden="true">·</span>
+      <span class="pos" id="pos"></span>
+    </p>
+    <hr class="rule">
+    <p class="def" id="def"></p>
+    <p class="root" id="rootLine"><span class="lbl">Root</span><span id="root"></span></p>
+  </article>
+
+  <div class="actions">
+    <button class="btn primary" id="next" type="button">New word</button>
+    <button class="btn" id="dl" type="button">Download card</button>
+  </div>
+  <p class="hint"><kbd>Space</kbd> new word &nbsp;·&nbsp; <kbd>D</kbd> download card</p>
+
+  <footer>
+    <span id="stat"></span>
+    <span>Broad transcriptions · <a href="../">poc-lab</a></span>
+  </footer>
+</div>
+
+<noscript><p style="text-align:center;font-family:sans-serif">This page needs JavaScript to draw words.</p></noscript>
+
+<script>
+// ── data ────────────────────────────────────────────────────────────────────
+// Rows are positional to keep 200 entries readable in bulk; the field list below
+// is the schema and is zipped into objects once, at load.
+const FIELDS = ["domain", "level", "word", "ipa", "pos", "def", "root"];
+
+const DOMAINS = [
+  { key: "language", name: "Language & Rhetoric" },
+  { key: "mind",     name: "Mind & Philosophy" },
+  { key: "nature",   name: "Nature & Earth" },
+  { key: "matter",   name: "Matter & Cosmos" },
+  { key: "body",     name: "Body & Medicine" },
+  { key: "arts",     name: "Arts & Craft" },
+  { key: "society",  name: "Society & Law" },
+  { key: "systems",  name: "Number & Systems" },
+];
+
+const LEVELS = [
+  { n: 1, roman: "I",   name: "Common",     desc: "Words a curious adult has met in print but never said aloud." },
+  { n: 2, roman: "II",  name: "Well-read",  desc: "The working vocabulary of someone who reads widely." },
+  { n: 3, roman: "III", name: "Erudite",    desc: "Terms of art you only meet inside a discipline." },
+  { n: 4, roman: "IV",  name: "Recondite",  desc: "A practitioner's shorthand, opaque from the outside." },
+  { n: 5, roman: "V",   name: "Omniscient", desc: "Words that send specialists back to the reference shelf." },
+];
+
+const POS = { n: "noun", adj: "adjective", v: "verb", adv: "adverb", phr: "phrase" };
+
+const RAW = [
+  // ── Language & Rhetoric ──
+  ["language",1,"laconic","/ləˈkɒnɪk/","adj","Using very few words; terse to the point of seeming cold.","Greek Lakōnikos, ‘of Laconia’ — the region of Sparta, whose people were famed for answering at length only when they had to."],
+  ["language",1,"garrulous","/ˈɡærələs/","adj","Talking too much, and about trifles.","Latin garrire, to chatter."],
+  ["language",1,"malapropism","/ˈmæləprɒpɪzəm/","n","The use of a word in place of a similar-sounding one, to unintended comic effect.","After Mrs Malaprop in Sheridan’s The Rivals (1775), from French mal à propos, ‘inappropriate’."],
+  ["language",1,"circumlocution","/ˌsɜːkəmləˈkjuːʃən/","n","Saying in many words what could be said in few, often to avoid saying it plainly.","Latin circum (around) + loqui (to speak)."],
+  ["language",1,"epithet","/ˈɛpɪθɛt/","n","A descriptive phrase fixed to a name — ‘swift-footed Achilles’; also, an abusive term.","Greek epitheton, ‘something added’."],
+  ["language",2,"polysemy","/pəˈlɪsɪmi/","n","The capacity of a single word to carry several related meanings at once.","Greek poly (many) + sēma (sign)."],
+  ["language",2,"solecism","/ˈsɒlɪsɪzəm/","n","A blunder in grammar or usage; by extension, a breach of good manners.","Greek soloikismos, after Soloi, a colony whose Greek was thought to have gone to seed."],
+  ["language",2,"anaphora","/əˈnæfərə/","n","The repetition of the same word at the start of successive clauses.","Greek anaphora, ‘a carrying back’."],
+  ["language",2,"zeugma","/ˈzjuːɡmə/","n","A figure in which one word governs two others in different senses — ‘she took her coat and her leave’.","Greek zeugma, ‘a yoking’."],
+  ["language",2,"litotes","/laɪˈtəʊtiːz/","n","Understatement by denying the opposite — ‘not bad’ for excellent.","Greek litos, plain or simple."],
+  ["language",3,"apophasis","/əˈpɒfəsɪs/","n","Raising a subject by declaring you will not raise it — ‘I won’t mention his debts’.","Greek apophasis, denial."],
+  ["language",3,"catachresis","/ˌkætəˈkriːsɪs/","n","The strained or improper use of a word, sometimes deliberate — Milton’s ‘blind mouths’.","Greek katachrēsis, misuse."],
+  ["language",3,"hapax legomenon","/ˌhæpæks lɪˈɡɒmɪnɒn/","n","A word attested only once in the whole of a corpus, leaving its meaning a matter of inference.","Greek, ‘said once’."],
+  ["language",3,"paronomasia","/ˌpærənəˈmeɪziə/","n","Wordplay that turns on similarity of sound; punning treated as a rhetorical figure.","Greek para (beside) + onomazein (to name)."],
+  ["language",3,"syncope","/ˈsɪŋkəpi/","n","The loss of a sound or syllable from the middle of a word — ‘ne’er’, ‘fo’c’sle’.","Greek synkopē, ‘a cutting up’."],
+  ["language",4,"aposiopesis","/ˌæpəsaɪəˈpiːsɪs/","n","Breaking off in mid-sentence as though unable or unwilling to go on.","Greek aposiōpēsis, ‘becoming silent’."],
+  ["language",4,"epizeuxis","/ˌɛpɪˈzjuːksɪs/","n","The immediate repetition of a word for emphasis — ‘alone, alone, all all alone’.","Greek epizeuxis, ‘a fastening together’."],
+  ["language",4,"anacoluthon","/ˌænəkəˈluːθɒn/","n","A sentence that abandons the grammar it started with and finishes in another.","Greek anakolouthon, ‘lacking sequence’."],
+  ["language",4,"metathesis","/mɪˈtæθɪsɪs/","n","The swapping of sounds within a word — Old English brid becoming bird.","Greek metathesis, transposition."],
+  ["language",4,"antanaclasis","/ˌæntənəˈklæsɪs/","n","Repeating a word in two different senses — ‘your argument is sound, nothing but sound’.","Greek antanaklasis, ‘a bending back’."],
+  ["language",5,"tmesis","/təˈmiːsɪs/","n","The insertion of one word inside another — ‘abso-blooming-lutely’.","Greek tmēsis, ‘a cutting’."],
+  ["language",5,"polyptoton","/pəˈlɪptətɒn/","n","Repetition of words sharing a root but differing in form — ‘the Greeks are strong, and skilful to their strength’.","Greek polyptōton, ‘in many cases’."],
+  ["language",5,"paraprosdokian","/ˌpærəprɒsˈdəʊkiən/","n","A sentence whose ending forces you to reinterpret its beginning.","Coined from Greek para (beyond) + prosdokia (expectation)."],
+  ["language",5,"epanalepsis","/ˌɛpənəˈlɛpsɪs/","n","A clause that ends with the same word it began with — ‘nothing is worse than doing nothing’.","Greek epanalēpsis, ‘a taking up again’."],
+  ["language",5,"hendiadys","/hɛnˈdaɪədɪs/","n","Expressing one idea through two nouns joined by ‘and’ — ‘sound and fury’ for furious sound.","Greek hen dia dyoin, ‘one through two’."],
+
+  // ── Mind & Philosophy ──
+  ["mind",1,"solipsism","/ˈsɒlɪpsɪzəm/","n","The view that nothing can be known to exist beyond one’s own mind.","Latin solus (alone) + ipse (self)."],
+  ["mind",1,"ennui","/ɒnˈwiː/","n","A weary dissatisfaction that comes of having nothing that seems worth doing.","French, from Latin in odio, ‘it is hateful to me’."],
+  ["mind",1,"schadenfreude","/ˈʃɑːdənˌfrɔɪdə/","n","The small pleasure taken in another’s misfortune.","German Schaden (harm) + Freude (joy)."],
+  ["mind",1,"sophistry","/ˈsɒfɪstri/","n","Reasoning built to persuade rather than to hold — plausible in form, false in substance.","Greek sophistēs, a teacher of wisdom, turned pejorative by Plato."],
+  ["mind",1,"volition","/vəˈlɪʃən/","n","The faculty of choosing and setting oneself in motion; the act of willing.","Latin volo, ‘I wish’."],
+  ["mind",2,"epistemology","/ɪˌpɪstɪˈmɒlədʒi/","n","The study of knowledge itself — what it is, where it comes from, how far it reaches.","Greek epistēmē (knowledge) + logos (account)."],
+  ["mind",2,"teleology","/ˌtɛliˈɒlədʒi/","n","Explanation by reference to purpose or end rather than to prior cause.","Greek telos, end or goal."],
+  ["mind",2,"qualia","/ˈkwɑːliə/","n","The raw felt quality of an experience — the particular redness of red.","Latin qualis, ‘of what kind’."],
+  ["mind",2,"akrasia","/əˈkreɪziə/","n","Acting against one’s own better judgement; weakness of will.","Greek akrasia, ‘lacking command’ over oneself."],
+  ["mind",2,"reification","/ˌriːɪfɪˈkeɪʃən/","n","Treating an abstraction as though it were a concrete thing with a life of its own.","Latin res (thing) + facere (to make)."],
+  ["mind",3,"apperception","/ˌæpəˈsɛpʃən/","n","The mind’s absorption of a new perception into the body of what it already holds.","Latin ad (to) + percipere (to perceive); given technical weight by Leibniz and Kant."],
+  ["mind",3,"hermeneutics","/ˌhɜːməˈnjuːtɪks/","n","The theory and practice of interpretation, first of scripture, later of any text or act.","Greek hermēneuein, to interpret."],
+  ["mind",3,"phenomenology","/fɪˌnɒmɪˈnɒlədʒi/","n","The study of experience strictly as it presents itself to consciousness, bracketing the question of what lies behind.","Greek phainomenon, ‘that which appears’."],
+  ["mind",3,"nominalism","/ˈnɒmɪnəlɪzəm/","n","The doctrine that universals are only names — there is no redness, only red things.","Latin nomen, name."],
+  ["mind",3,"aporia","/əˈpɔːriə/","n","The impasse reached when equally good arguments point in opposite directions.","Greek aporia, ‘without passage’."],
+  ["mind",4,"hylomorphism","/ˌhaɪləˈmɔːfɪzəm/","n","Aristotle’s doctrine that every substance is matter and form together, neither existing bare.","Greek hylē (matter) + morphē (form)."],
+  ["mind",4,"supervenience","/ˌsuːpəˈviːniəns/","n","A dependence in which nothing can differ at the higher level without differing at the lower.","Latin supervenire, to come upon."],
+  ["mind",4,"apophatic","/ˌæpəˈfætɪk/","adj","Describing the divine only by negation — saying what it is not, since what it is exceeds speech.","Greek apophasis, denial."],
+  ["mind",4,"quiddity","/ˈkwɪdɪti/","n","The essential nature that makes a thing the kind of thing it is — its whatness.","Medieval Latin quidditas, from quid (what)."],
+  ["mind",4,"eudaimonia","/ˌjuːdaɪˈməʊniə/","n","Flourishing across a whole life — the highest human good in Aristotle, badly served by ‘happiness’.","Greek eu (well) + daimōn (guiding spirit)."],
+  ["mind",5,"haecceity","/hɛkˈsiːɪti/","n","The thisness that makes an individual this one and no other, beyond any property it shares.","Duns Scotus’s Latin haecceitas, from haec (this)."],
+  ["mind",5,"anamnesis","/ˌænæmˈniːsɪs/","n","Plato’s doctrine that learning is recollection — the soul recovering what it knew before birth.","Greek anamnēsis, ‘a calling to mind’."],
+  ["mind",5,"hypostasis","/haɪˈpɒstəsɪs/","n","The underlying reality standing beneath appearances; in Trinitarian theology, one of the three Persons.","Greek hypostasis, ‘that which stands under’."],
+  ["mind",5,"entelechy","/ɛnˈtɛlɪki/","n","In Aristotle, the completed actuality a thing reaches in becoming fully what it was for.","Greek entelecheia, ‘having its end within itself’."],
+  ["mind",5,"apocatastasis","/ˌæpəkəˈtæstəsɪs/","n","The restoration of all things to their original state; in Origen, the final reconciliation of every creature.","Greek apokatastasis, re-establishment."],
+  // ── Nature & Earth ──
+  ["nature",1,"petrichor","/ˈpɛtrɪkɔː/","n","The earthy smell released when rain falls on ground that has been dry a long time.","Greek petra (stone) + ichōr, the fluid said to run in the veins of the gods; coined by two Australian scientists in 1964."],
+  ["nature",1,"crepuscular","/krɪˈpʌskjʊlə/","adj","Active at dusk and dawn rather than by day or night.","Latin crepusculum, twilight."],
+  ["nature",1,"aestivation","/ˌiːstɪˈveɪʃən/","n","Dormancy through the heat of summer — hibernation’s opposite number.","Latin aestas, summer."],
+  ["nature",1,"murmuration","/ˌmɜːmjʊˈreɪʃən/","n","A great wheeling flock of starlings, turning as though it were one body.","Latin murmurare, to murmur — first the sound, then the flock."],
+  ["nature",1,"rime","/raɪm/","n","The white ice that grows on cold surfaces when fog freezes as it touches them.","Old English hrīm, frost."],
+  ["nature",2,"mycorrhiza","/ˌmaɪkəˈraɪzə/","n","The partnership of fungus and plant root through which water and nutrients are traded underground.","Greek mykēs (fungus) + rhiza (root)."],
+  ["nature",2,"karst","/kɑːst/","n","Country of sinkholes, caves and vanishing rivers, formed where water dissolves limestone from within.","German Karst, after the limestone plateau inland of Trieste."],
+  ["nature",2,"endemism","/ˈɛndəmɪzəm/","n","The condition of a species occurring naturally in one region and nowhere else on earth.","Greek en (in) + dēmos (people, district)."],
+  ["nature",2,"brumation","/bruːˈmeɪʃən/","n","The winter torpor of reptiles — metabolically unlike the hibernation of mammals.","Latin bruma, the winter solstice."],
+  ["nature",2,"alluvium","/əˈluːviəm/","n","The silt and gravel a river lays down where its water slows.","Latin alluere, to wash against."],
+  ["nature",3,"allelopathy","/əˌliːˈlɒpəθi/","n","Chemical warfare between plants: compounds released to suppress the germination of neighbours.","Greek allēlōn (of one another) + pathos (suffering)."],
+  ["nature",3,"anadromous","/əˈnædrəməs/","adj","Migrating up out of the sea into rivers to spawn, as salmon do.","Greek ana (up) + dromos (running)."],
+  ["nature",3,"nunatak","/ˈnuːnətæk/","n","A peak of rock standing clear above the surface of an ice sheet.","Greenlandic nunataq."],
+  ["nature",3,"sclerophyll","/ˈsklɪərəfɪl/","n","A plant with small, hard, leathery leaves — the standard build for drought and fire country.","Greek sklēros (hard) + phyllon (leaf)."],
+  ["nature",3,"thermokarst","/ˈθɜːməʊkɑːst/","n","Pitted, collapsing terrain left where permafrost thaws and the ground settles into the void.","Greek thermē (heat) + karst."],
+  ["nature",4,"ecotone","/ˈiːkətəʊn/","n","The tense transitional band where two ecological communities meet and neither quite rules.","Greek oikos (house) + tonos (tension)."],
+  ["nature",4,"halophyte","/ˈhæləfaɪt/","n","A plant that lives, and often only thrives, in salt-saturated ground.","Greek hals (salt) + phyton (plant)."],
+  ["nature",4,"lek","/lɛk/","n","A patch of ground where males gather season after season to display competitively for mates.","Swedish lek, play."],
+  ["nature",4,"aeolian","/iːˈəʊliən/","adj","Shaped, carried or laid down by the wind.","Greek Aiolos, the keeper of the winds."],
+  ["nature",4,"vivipary","/vɪˈvɪpəri/","n","Bearing live young; in plants, the germination of a seed while still attached to the parent, as in mangroves.","Latin vivus (alive) + parere (to bring forth)."],
+  ["nature",5,"thigmotropism","/θɪɡˈmɒtrəpɪzəm/","n","Growth directed by touch — the tendril that finds a support and coils around it.","Greek thigma (touch) + tropos (a turning)."],
+  ["nature",5,"inquiline","/ˈɪŋkwɪlaɪn/","n","An animal that lives inside the nest or gall of another species without preying on it.","Latin inquilinus, a lodger."],
+  ["nature",5,"cryoturbation","/ˌkraɪəʊtɜːˈbeɪʃən/","n","The slow churning of soil by repeated freezing and thawing, which sorts stones into rings and stripes.","Greek kryos (frost) + Latin turbare (to disturb)."],
+  ["nature",5,"myrmecochory","/ˌmɜːmɪkəˈkɔːri/","n","Seed dispersal by ants, bought with a fatty appendage the seed grows for the purpose.","Greek myrmēx (ant) + chōrein (to spread)."],
+  ["nature",5,"pedogenesis","/ˌpiːdəʊˈdʒɛnɪsɪs/","n","The making of soil out of parent rock, climate, organisms and time.","Greek pedon (ground) + genesis; not to be confused with paedogenesis, reproduction by juveniles."],
+
+  // ── Matter & Cosmos ──
+  ["matter",1,"sublimation","/ˌsʌblɪˈmeɪʃən/","n","The passage of a solid straight into vapour, skipping the liquid state entirely — dry ice, frost on a cold clear morning.","Latin sublimare, to raise up."],
+  ["matter",1,"penumbra","/pɪˈnʌmbrə/","n","The half-shadow at the edge of a shadow, where the light source is only partly hidden.","Latin paene (almost) + umbra (shadow)."],
+  ["matter",1,"albedo","/ælˈbiːdəʊ/","n","The fraction of incoming light a surface throws back — fresh snow near one, fresh asphalt near zero.","Latin albus, white."],
+  ["matter",1,"effervescence","/ˌɛfəˈvɛsəns/","n","The escape of dissolved gas from a liquid as a stream of bubbles.","Latin effervescere, to boil up."],
+  ["matter",1,"parallax","/ˈpærəlæks/","n","The apparent shift of a near object against a far background when the observer moves — the first rung of the distance ladder to the stars.","Greek parallaxis, alteration."],
+  ["matter",2,"deliquescence","/ˌdɛlɪˈkwɛsəns/","n","The habit of certain solids of drawing so much water out of the air that they dissolve in it.","Latin deliquescere, to melt away."],
+  ["matter",2,"chirality","/kaɪˈrælɪti/","n","The property of a structure that cannot be laid over its own mirror image, as a left hand cannot fit a right glove.","Greek cheir, hand."],
+  ["matter",2,"syzygy","/ˈsɪzɪdʒi/","n","The alignment of three bodies in one line — sun, earth and moon at every eclipse.","Greek syzygia, a yoking together."],
+  ["matter",2,"allotrope","/ˈælətrəʊp/","n","One of several forms a single element can take by rearranging its atoms — graphite and diamond are both carbon.","Greek allos (other) + tropos (manner)."],
+  ["matter",2,"hysteresis","/ˌhɪstəˈriːsɪs/","n","The lag of an effect behind its cause, so that a system’s present state depends on the path it took to get there.","Greek hysterēsis, a shortcoming or coming late."],
+  ["matter",3,"enthalpy","/ɛnˈθælpi/","n","The heat content of a system at constant pressure — the bookkeeping quantity for whether a reaction gives out warmth or takes it in.","Greek enthalpein, to warm within."],
+  ["matter",3,"eutectic","/juːˈtɛktɪk/","adj","Of the mixture whose melting point is the lowest any proportion of those components can reach — the reason solder melts below either metal.","Greek eutēktos, easily melted."],
+  ["matter",3,"birefringence","/ˌbaɪrɪˈfrɪndʒəns/","n","The splitting of a light ray into two by a material whose refractive index depends on direction — why calcite doubles the print beneath it.","Latin bis (twice) + refringere (to break up)."],
+  ["matter",3,"azeotrope","/əˈziːətrəʊp/","n","A mixture whose vapour has exactly the composition of its liquid, so distillation can concentrate it no further.","Greek a- (not) + zein (to boil) + tropos (change)."],
+  ["matter",3,"libration","/laɪˈbreɪʃən/","n","The slow rocking of the moon in its orbit that lets us see a little around each limb — about 59% of the surface in all.","Latin librare, to balance."],
+  ["matter",4,"thixotropy","/θɪkˈsɒtrəpi/","n","The property of a gel that thins while it is stirred and stiffens again once left alone — ketchup, drilling mud, non-drip paint.","Greek thixis (a touching) + tropē (a turning)."],
+  ["matter",4,"enantiomer","/ɪˈnæntiəmə/","n","Either member of a pair of molecules that are mirror images of one another and cannot be superposed.","Greek enantios (opposite) + meros (part)."],
+  ["matter",4,"sonoluminescence","/ˌsɒnəʊluːmɪˈnɛsəns/","n","The flash of light given off by a bubble in a liquid when sound waves collapse it.","Latin sonus (sound) + lumen (light)."],
+  ["matter",4,"baryogenesis","/ˌbæriəʊˈdʒɛnɪsɪs/","n","The unsettled process in the early universe that left slightly more matter than antimatter — and so left anything at all.","Greek barys (heavy) + genesis."],
+  ["matter",4,"fugacity","/fjuːˈɡæsɪti/","n","The effective pressure of a real gas, corrected so it can be slotted into equations written for an ideal one.","Latin fugere, to flee."],
+  ["matter",5,"spallation","/spɔːˈleɪʃən/","n","The knocking of fragments out of a material by an energetic particle — the mechanism behind neutron sources and cosmic-ray damage.","From spall, a chip struck off stone."],
+  ["matter",5,"antiferromagnetism","/ˌæntiˌfɛrəʊˈmæɡnɪtɪzəm/","n","An ordering in which neighbouring atomic moments point in opposite directions and cancel, leaving no net magnetism.","Greek anti (against) + Latin ferrum (iron) + magnetism."],
+  ["matter",5,"mesophase","/ˈmɛzəʊfeɪz/","n","A state of matter caught between crystal and liquid — ordered in some directions, fluid in others, as in liquid crystals.","Greek mesos (middle) + phase."],
+  ["matter",5,"clathrate","/ˈklæθreɪt/","n","A compound in which one kind of molecule sits caged inside the crystal lattice of another — methane locked in ice on the sea floor.","Latin clathratus, furnished with a lattice."],
+  ["matter",5,"phonon","/ˈfəʊnɒn/","n","The quantum of vibration in a crystal lattice, treated as a particle because it carries energy and momentum like one.","Greek phōnē (sound), on the pattern of photon."],
+  // ── Body & Medicine ──
+  ["body",1,"anhedonia","/ˌænhɪˈdəʊniə/","n","The loss of the capacity to take pleasure in things that once gave it.","Greek an- (without) + hēdonē (pleasure)."],
+  ["body",1,"proprioception","/ˌprəʊpriəˈsɛpʃən/","n","The sense that tells you where your limbs are without your having to look.","Latin proprius (one’s own) + capere (to take)."],
+  ["body",1,"borborygmus","/ˌbɔːbəˈrɪɡməs/","n","The rumbling made by gas and fluid moving through the intestines.","Greek borborygmos, an imitation of the sound itself."],
+  ["body",1,"presbyopia","/ˌprɛzbiˈəʊpiə/","n","The age-related stiffening of the lens that pushes the newspaper steadily further from the face.","Greek presbys (old man) + ōps (eye)."],
+  ["body",1,"epistaxis","/ˌɛpɪˈstæksɪs/","n","Bleeding from the nose.","Greek epistazein, to bleed from the nose, from stazein (to drip)."],
+  ["body",2,"nociception","/ˌnəʊsɪˈsɛpʃən/","n","The nervous system’s detection of damaging stimuli — the signalling, which is not yet the felt pain.","Latin nocere (to harm) + capere (to take)."],
+  ["body",2,"petechia","/pɪˈtiːkiə/","n","A pinpoint spot of bleeding under the skin that does not blanch under pressure.","Italian petecchia, a small spot."],
+  ["body",2,"interoception","/ˌɪntərəˈsɛpʃən/","n","The sense of the body’s own internal state — heartbeat, breath, hunger, the need to move.","Latin interus (inward) + capere (to take)."],
+  ["body",2,"peristalsis","/ˌpɛrɪˈstælsɪs/","n","The travelling wave of muscular contraction that pushes contents along the gut.","Greek peri (around) + stalsis (constriction)."],
+  ["body",2,"apnoea","/æpˈniːə/","n","A temporary halt in breathing, most often noticed during sleep.","Greek a- (without) + pnoiē (breath)."],
+  ["body",3,"akathisia","/ˌækəˈθɪziə/","n","A distressing inner restlessness that makes staying still intolerable, often a drug side effect.","Greek a- (not) + kathizein (to sit)."],
+  ["body",3,"anosognosia","/ˌænɒsɒɡˈnəʊziə/","n","A patient’s genuine unawareness of their own deficit — denying a paralysed limb is paralysed.","Greek a- (without) + nosos (disease) + gnōsis (knowledge)."],
+  ["body",3,"allodynia","/ˌæləʊˈdɪniə/","n","Pain produced by something that should not hurt at all, such as the weight of a bedsheet.","Greek allos (other) + odynē (pain)."],
+  ["body",3,"dysgeusia","/dɪsˈɡjuːziə/","n","A persistent distortion of taste, often metallic, that overlays whatever is eaten.","Greek dys- (bad) + geusis (taste)."],
+  ["body",3,"hemianopia","/ˌhɛmiəˈnəʊpiə/","n","Blindness in half the visual field of each eye, usually from damage behind the eyes rather than in them.","Greek hēmi (half) + an- (without) + ōps (sight)."],
+  ["body",4,"prosopagnosia","/ˌprɒsəpæɡˈnəʊziə/","n","The inability to recognise faces, including familiar ones, with vision otherwise intact.","Greek prosōpon (face) + agnōsia (not knowing)."],
+  ["body",4,"synkinesis","/ˌsɪŋkɪˈniːsɪs/","n","Involuntary movement in one part of the body accompanying a voluntary movement in another — the eye closing as the mouth smiles.","Greek syn (together) + kinēsis (movement)."],
+  ["body",4,"apraxia","/əˈpræksiə/","n","The loss of the ability to carry out a learned movement on request, though strength, sensation and comprehension are unimpaired.","Greek a- (without) + praxis (action)."],
+  ["body",4,"hypnagogia","/ˌhɪpnəˈɡəʊdʒiə/","n","The threshold state between waking and sleep, with its own drifting imagery and jerks.","Greek hypnos (sleep) + agōgos (leading)."],
+  ["body",4,"formication","/ˌfɔːmɪˈkeɪʃən/","n","The sensation of insects crawling over or under the skin, with nothing there.","Latin formica, ant."],
+  ["body",5,"anosodiaphoria","/ˌænəʊsəʊdaɪəˈfɔːriə/","n","Acknowledging a serious deficit but remaining strangely indifferent to it — one step past anosognosia.","Greek a- (without) + nosos (disease) + diaphora (difference, concern)."],
+  ["body",5,"micropsia","/maɪˈkrɒpsiə/","n","A perceptual distortion in which objects appear smaller and further off than they are.","Greek mikros (small) + opsis (sight)."],
+  ["body",5,"palinopsia","/ˌpælɪˈnɒpsiə/","n","The persistence or return of a visual image after the object itself has gone from view.","Greek palin (again) + opsis (sight)."],
+  ["body",5,"dysdiadochokinesia","/dɪsˌdaɪədəʊkəʊkɪˈniːziə/","n","The inability to perform rapid alternating movements smoothly — a classic sign of cerebellar damage.","Greek dys- (bad) + diadochos (succeeding) + kinēsis (movement)."],
+  ["body",5,"asterixis","/ˌæstəˈrɪksɪs/","n","The abrupt loss and recovery of posture that makes an outstretched hand flap — a sign of metabolic encephalopathy.","Greek a- (without) + stērixis (fixed position)."],
+
+  // ── Arts & Craft ──
+  ["arts",1,"chiaroscuro","/kiˌɑːrəˈskʊərəʊ/","n","The modelling of form through strong contrast of light and dark.","Italian chiaro (light) + oscuro (dark)."],
+  ["arts",1,"leitmotif","/ˈlaɪtməʊˌtiːf/","n","A short musical figure attached to a character or idea, returning whenever they do.","German Leitmotiv, ‘leading motive’, from Wagner criticism."],
+  ["arts",1,"pentimento","/ˌpɛntɪˈmɛntəʊ/","n","The ghost of an earlier version showing through a painting as its upper layers thin with age.","Italian pentimento, repentance — the painter’s change of mind made visible."],
+  ["arts",1,"impasto","/ɪmˈpæstəʊ/","n","Paint laid on thickly enough to stand proud of the surface and hold the mark of the brush.","Italian impastare, to make into a paste."],
+  ["arts",1,"patina","/ˈpætɪnə/","n","The film that age and handling leave on bronze, wood or leather, valued rather than cleaned away.","Latin patina, a shallow dish — from the film that formed on its surface."],
+  ["arts",2,"sfumato","/sfuːˈmɑːtəʊ/","n","The blending of tones so gradually that no outline can be found — Leonardo’s smoke.","Italian sfumare, to shade off like smoke."],
+  ["arts",2,"ostinato","/ˌɒstɪˈnɑːtəʊ/","n","A short musical figure repeated without let-up beneath changing material above it.","Italian, ‘obstinate’."],
+  ["arts",2,"grisaille","/ɡrɪˈzaɪ/","n","Painting carried out wholly in greys, either as an underlayer or to imitate sculpture.","French gris, grey."],
+  ["arts",2,"tessitura","/ˌtɛsɪˈtʊərə/","n","The stretch of a range where a voice or part actually sits, as distinct from the extremes it can reach.","Italian, ‘texture’."],
+  ["arts",2,"repoussé","/rəˈpuːseɪ/","n","Metalwork raised into relief by hammering it from the reverse side.","French repousser, to push back."],
+  ["arts",3,"contrapposto","/ˌkɒntrəˈpɒstəʊ/","n","The stance in which weight rests on one leg, setting hips and shoulders on opposing tilts — the posture that gave sculpture its ease.","Italian, ‘set against’."],
+  ["arts",3,"melisma","/mɪˈlɪzmə/","n","One syllable sung across a run of several notes.","Greek melisma, a song or tune."],
+  ["arts",3,"craquelure","/ˈkrækəljʊə/","n","The fine web of cracks that opens across an aged painted surface, and whose pattern helps date it.","French craqueler, to crackle."],
+  ["arts",3,"ekphrasis","/ˈɛkfrəsɪs/","n","A verbal description of a visual work so vivid it stands as a work of its own — the shield of Achilles.","Greek ekphrasis, ‘speaking out’."],
+  ["arts",3,"scumbling","/ˈskʌmblɪŋ/","n","Dragging a thin, broken layer of opaque light paint over a darker one so the underlayer glows through.","From scum, in the sense of a film drawn over a surface."],
+  ["arts",4,"tenebrism","/ˈtɛnɪbrɪzəm/","n","A manner of painting in which darkness holds the field and light falls violently on a few passages — Caravaggio and his followers.","Latin tenebrae, darkness."],
+  ["arts",4,"hemiola","/ˌhɛmiˈəʊlə/","n","A rhythmic displacement in which three beats occupy the span of two, or the reverse.","Greek hēmiolios, ‘one and a half’."],
+  ["arts",4,"mordent","/ˈmɔːdənt/","n","An ornament in which a note is bitten into by rapid alternation with its neighbour.","Italian mordente, biting."],
+  ["arts",4,"sprezzatura","/ˌsprɛtsəˈtʊərə/","n","Studied nonchalance — the art of making the difficult look unrehearsed.","Coined by Castiglione in Il Cortegiano, 1528."],
+  ["arts",4,"entasis","/ˈɛntəsɪs/","n","The slight swelling given to a column’s shaft to correct the eye’s tendency to read straight sides as pinched.","Greek entasis, a stretching."],
+  ["arts",5,"anastylosis","/ˌænəstaɪˈləʊsɪs/","n","Rebuilding a ruin from its own fallen members, with any new material left visibly distinguishable.","Greek ana (again) + stylos (column)."],
+  ["arts",5,"isocephaly","/ˌaɪsəʊˈsɛfəli/","n","The convention of setting every head at the same height across a composition, whatever the figures are doing.","Greek isos (equal) + kephalē (head)."],
+  ["arts",5,"cangiante","/ˌkændʒiˈɑːnteɪ/","n","A painting mode in which a colour shifts to a different hue, rather than merely darkening, as it turns into shadow.","Italian, ‘changing’ — one of the four modes named in Renaissance practice."],
+  ["arts",5,"prolation","/prəʊˈleɪʃən/","n","In mensural notation, whether the semibreve divides into two minims or three.","Latin prolatio, an extension."],
+  ["arts",5,"repoussoir","/rəpuːˈswɑː/","n","A figure or mass set at the near edge of a picture to push the eye past it into depth.","French repousser, to push back."],
+  // ── Society & Law ──
+  ["society",1,"usufruct","/ˈjuːzjʊfrʌkt/","n","The right to use another’s property and take its fruits, provided you leave the thing itself unimpaired.","Latin usus (use) + fructus (enjoyment, fruit)."],
+  ["society",1,"interregnum","/ˌɪntəˈrɛɡnəm/","n","The gap between one reign or government and the next, when authority is suspended.","Latin inter (between) + regnum (reign)."],
+  ["society",1,"sinecure","/ˈsaɪnɪkjʊə/","n","An office that pays but asks for nothing much in return.","Latin sine cura, ‘without care’ — originally a benefice with no cure of souls."],
+  ["society",1,"hegemony","/hɪˈɡɛməni/","n","Dominance exercised as much through consent and common sense as through force.","Greek hēgemonia, leadership."],
+  ["society",1,"plebiscite","/ˈplɛbɪsɪt/","n","A direct vote of the whole electorate on a single question, often on sovereignty itself.","Latin plebs (the common people) + scitum (decree)."],
+  ["society",2,"corvée","/ˈkɔːveɪ/","n","Unpaid labour owed by a tenant or subject to a lord or state — days of road-building instead of coin.","French, from Latin corrogare, to requisition."],
+  ["society",2,"manumission","/ˌmænjʊˈmɪʃən/","n","The formal act by which an owner freed a slave.","Latin manus (hand) + mittere (to send away) — a sending out from the hand."],
+  ["society",2,"irredentism","/ˌɪrɪˈdɛntɪzəm/","n","A state’s claim on territory held by another, argued from shared language, history or blood.","Italian Italia irredenta, ‘unredeemed Italy’."],
+  ["society",2,"estoppel","/ɪˈstɒpəl/","n","The bar that stops a party asserting what contradicts a position others have already relied on.","Old French estopper, to stop up or bung."],
+  ["society",2,"subsidiarity","/səbˌsɪdiˈærɪti/","n","The principle that a decision belongs at the lowest level able to take it competently.","Latin subsidium, reserve troops brought up in support."],
+  ["society",3,"autochthonous","/ɔːˈtɒkθənəs/","adj","Sprung from the very soil where it is found; indigenous, with no story of arrival.","Greek autos (self) + chthōn (earth)."],
+  ["society",3,"prebend","/ˈprɛbənd/","n","The income a cathedral canon drew from an estate set aside to support that particular stall.","Medieval Latin praebenda, ‘things to be supplied’."],
+  ["society",3,"allodial","/əˈləʊdiəl/","adj","Held in outright ownership, owing no service or rent to any lord — the opposite of feudal tenure.","Medieval Latin allodium, an estate held in full right."],
+  ["society",3,"amphictyony","/æmfˈɪktiəni/","n","A league of neighbouring states bound together by shared custody of a sanctuary.","Greek amphiktyones, ‘those dwelling round about’."],
+  ["society",3,"eleemosynary","/ˌɛliːˈmɒzɪnəri/","adj","Of or supported by charity; given as alms.","Greek eleēmosynē, compassion — the same root that wore down into ‘alms’."],
+  ["society",4,"appanage","/ˈæpənɪdʒ/","n","Land or revenue settled on the younger sons of a sovereign so they might live without a throne.","Old French apanage, from Latin ad panem, ‘for bread’."],
+  ["society",4,"ultra vires","/ˌʌltrə ˈvaɪəriːz/","phr","Beyond the legal powers of the body that acted, and void for that reason alone.","Latin, ‘beyond the powers’."],
+  ["society",4,"wergild","/ˈwɜːɡɪld/","n","The price set on a person’s life in early Germanic law, paid to their kin in place of a feud.","Old English wer (man) + gield (payment)."],
+  ["society",4,"sortition","/sɔːˈtɪʃən/","n","The filling of public office by lot rather than election — Athens’ answer to the ambition of candidates.","Latin sortitio, a casting of lots."],
+  ["society",4,"synoecism","/sɪˈniːsɪzəm/","n","The fusing of several villages into a single city-state, in law if not always in fact.","Greek synoikismos, ‘a dwelling together’."],
+  ["society",5,"anacyclosis","/ˌænəsaɪˈkləʊsɪs/","n","Polybius’s cycle of constitutions: monarchy souring into tyranny, aristocracy into oligarchy, democracy into mob rule, and round again.","Greek anakyklōsis, recurrence."],
+  ["society",5,"advowson","/ədˈvaʊzən/","n","The right to nominate the clergyman to a vacant parish — a property right, bought and sold like any other.","Old French avoeson, from Latin advocatio."],
+  ["society",5,"frankalmoin","/ˌfræŋkˈælmɔɪn/","n","Tenure by which a religious house held land in return for prayers rather than service or rent.","Old French franc almoigne, ‘free alms’."],
+  ["society",5,"proskynesis","/ˌprɒskɪˈniːsɪs/","n","Ritual prostration before a superior — the Persian court usage whose demand by Alexander scandalised his Macedonians.","Greek proskynēsis, ‘kissing towards’."],
+  ["society",5,"latifundium","/ˌlætɪˈfʌndiəm/","n","A very large estate worked by slaves or dependants, whose spread hollowed out the Roman smallholder.","Latin latus (broad) + fundus (estate)."],
+
+  // ── Number & Systems ──
+  ["systems",1,"heuristic","/hjʊəˈrɪstɪk/","n","A rule of thumb that reaches a good-enough answer quickly, with no promise it is the best one.","Greek heuriskein, to find."],
+  ["systems",1,"idempotent","/ˌaɪdɛmˈpəʊtənt/","adj","Giving the same result whether applied once or a hundred times — the property that makes a retry safe.","Latin idem (same) + potens (having power)."],
+  ["systems",1,"asymptote","/ˈæsɪmptəʊt/","n","A line a curve draws ever closer to and never touches.","Greek asymptōtos, ‘not falling together’."],
+  ["systems",1,"tautology","/tɔːˈtɒlədʒi/","n","A statement true by its form alone, and so telling you nothing about the world.","Greek tauto (the same) + logos (word)."],
+  ["systems",1,"modulo","/ˈmɒdjʊləʊ/","adv","With respect to a given divisor, counting only the remainder — 17 modulo 12 is 5.","Latin modulus, a small measure."],
+  ["systems",2,"monotonic","/ˌmɒnəˈtɒnɪk/","adj","Moving in one direction only, never turning back.","Greek monos (single) + tonos (tone, tension)."],
+  ["systems",2,"orthogonal","/ɔːˈθɒɡənəl/","adj","At right angles; by extension, varying wholly independently of one another.","Greek orthos (straight) + gōnia (angle)."],
+  ["systems",2,"cardinality","/ˌkɑːdɪˈnælɪti/","n","The size of a set, defined by matching rather than counting so that infinite sets can be compared.","Latin cardinalis, principal, from cardo (hinge)."],
+  ["systems",2,"isomorphism","/ˌaɪsəˈmɔːfɪzəm/","n","A correspondence that preserves all structure, making two objects the same in everything but naming.","Greek isos (equal) + morphē (form)."],
+  ["systems",2,"recursion","/rɪˈkɜːʃən/","n","A definition or procedure that invokes itself on a smaller case until a case small enough to answer outright.","Latin recurrere, to run back."],
+  ["systems",3,"eigenvector","/ˈaɪɡənˌvɛktə/","n","A direction that a transformation merely stretches or shrinks, leaving it otherwise unturned.","German eigen (own, characteristic) + vector."],
+  ["systems",3,"convolution","/ˌkɒnvəˈluːʃən/","n","An operation that slides one function across another and accumulates their overlap at every offset.","Latin convolvere, to roll together."],
+  ["systems",3,"stochastic","/stəˈkæstɪk/","adj","Governed by probability rather than by a fixed rule, so that outcomes are described by distributions.","Greek stochastikos, able to guess, from stochos (a target)."],
+  ["systems",3,"memoization","/ˌmɛməʊaɪˈzeɪʃən/","n","Caching a function’s results so that a repeated call is answered from the record rather than recomputed.","From memo — coined deliberately without the r of memorization."],
+  ["systems",3,"surjective","/sɜːˈdʒɛktɪv/","adj","Of a map that reaches every element of its target, leaving nothing in the codomain unhit.","French sur (onto) + Latin jacere (to throw)."],
+  ["systems",4,"monoid","/ˈmɒnɔɪd/","n","A set with an associative way of combining two elements and a neutral element that changes nothing.","Greek monos (single) + -oid."],
+  ["systems",4,"catamorphism","/ˌkætəˈmɔːfɪzəm/","n","A recursion scheme that folds a whole structure down to a single value — sum as the archetype.","Greek kata (down) + morphē (form)."],
+  ["systems",4,"homotopy","/həˈmɒtəpi/","n","A continuous deformation carrying one map into another, and the relation that deformability defines.","Greek homos (same) + topos (place)."],
+  ["systems",4,"quine","/kwaɪn/","n","A program that takes no input and prints its own source exactly.","Named for the logician W. V. O. Quine, whose paradox turns on self-reference."],
+  ["systems",4,"linearizability","/ˌlɪniəraɪzəˈbɪlɪti/","n","The guarantee that each concurrent operation appears to take effect instantaneously at some instant between its call and its return.","Latin linea, a line."],
+  ["systems",5,"sheaf","/ʃiːf/","n","A structure that attaches data to every open piece of a space and specifies how local pieces glue into global ones.","English sheaf, a bundle of stalks — the image of many strands tied at a point."],
+  ["systems",5,"ultrafilter","/ˈʌltrəˌfɪltə/","n","A maximal coherent notion of ‘large’ subsets, deciding for every set whether it or its complement counts as large.","Latin ultra (beyond) + filter."],
+  ["systems",5,"anamorphism","/ˌænəˈmɔːfɪzəm/","n","The mirror of a catamorphism: a scheme that unfolds a single seed into a whole structure.","Greek ana (up) + morphē (form)."],
+  ["systems",5,"paraconsistency","/ˌpærəkənˈsɪstənsi/","n","The property of a logic in which a contradiction does not license every conclusion whatsoever.","Greek para (beside) + consistency."],
+  ["systems",5,"oracle machine","/ˈɒrəkəl məˌʃiːn/","n","A hypothetical computer granted a black box that settles some problem in a single step, used to measure relative difficulty.","Latin oraculum, a divine pronouncement; the term is Turing’s."],
+];
+
+// ── model ───────────────────────────────────────────────────────────────────
+const ENTRIES = RAW.map((row, id) => Object.assign({ id }, ...FIELDS.map((f, i) => ({ [f]: row[i] }))));
+const domainName = (key) => DOMAINS.find((d) => d.key === key).name;
+const levelOf = (n) => LEVELS.find((l) => l.n === n);
+
+const STORE = "lexicon:v1";
+const state = { level: 1, domains: new Set(DOMAINS.map((d) => d.key)), current: null };
+// Draw without replacement so a session tours the pool instead of repeating.
+let seen = new Set();
+
+const load = () => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE) || "{}");
+    if (LEVELS.some((l) => l.n === saved.level)) state.level = saved.level;
+    if (Array.isArray(saved.domains) && saved.domains.length) {
+      const known = saved.domains.filter((k) => DOMAINS.some((d) => d.key === k));
+      if (known.length) state.domains = new Set(known);
+    }
+    if (saved.theme) document.documentElement.dataset.theme = saved.theme;
+  } catch { /* a corrupt entry just means defaults */ }
+};
+
+const save = () => {
+  const theme = document.documentElement.dataset.theme;
+  try {
+    localStorage.setItem(STORE, JSON.stringify({ level: state.level, domains: [...state.domains], theme }));
+  } catch { /* private mode — settings simply don't persist */ }
+};
+
+const pool = () => ENTRIES.filter((e) => e.level === state.level && state.domains.has(e.domain));
+
+// ── view ────────────────────────────────────────────────────────────────────
+const $ = (id) => document.getElementById(id);
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const buildLevels = () => {
+  $("levels").innerHTML = LEVELS.map((l) => `
+    <button class="lvl" type="button" role="radio" data-level="${l.n}" aria-checked="false" aria-label="Level ${l.n}, ${l.name}">
+      <span class="num" aria-hidden="true">${l.roman}</span><span class="nm">${l.name}</span>
+    </button>`).join("");
+};
+
+const buildChips = () => {
+  $("chips").innerHTML = DOMAINS.map((d) => `
+    <button class="chip" type="button" data-domain="${d.key}" aria-pressed="false">${d.name}</button>`).join("");
+};
+
+const syncControls = () => {
+  document.querySelectorAll(".lvl").forEach((b) => {
+    b.setAttribute("aria-checked", String(Number(b.dataset.level) === state.level));
+    b.tabIndex = Number(b.dataset.level) === state.level ? 0 : -1;
+  });
+  document.querySelectorAll(".chip").forEach((b) => {
+    b.setAttribute("aria-pressed", String(state.domains.has(b.dataset.domain)));
+  });
+  $("lvlDesc").textContent = levelOf(state.level).desc;
+  const n = pool().length;
+  $("poolCount").textContent = n === 1 ? "1 word in play" : `${n} words in play`;
+};
+
+const stagger = (nodes) => {
+  if (reduced) return;
+  nodes.forEach((node, i) => node.animate(
+    [{ opacity: 0, transform: "translateY(9px)" }, { opacity: 1, transform: "none" }],
+    { duration: 480, delay: i * 70, easing: "cubic-bezier(.2,.7,.2,1)", fill: "backwards" },
+  ));
+};
+
+const render = (entry) => {
+  const stage = $("stage");
+  state.current = entry;
+  $("dl").disabled = !entry;
+
+  if (!entry) {
+    stage.classList.add("empty");
+    $("tagDomain").textContent = "No pool";
+    $("tagLevel").textContent = levelOf(state.level).name;
+    $("word").textContent = "Nothing at this level";
+    $("phon").hidden = true;
+    $("def").textContent = "Turn on another domain, or move to a different level — this combination is empty.";
+    $("rootLine").hidden = true;
+    return;
+  }
+
+  stage.classList.remove("empty");
+  $("phon").hidden = false;
+  $("rootLine").hidden = false;
+  $("tagDomain").textContent = domainName(entry.domain);
+  $("tagLevel").textContent = `${levelOf(entry.level).roman} · ${levelOf(entry.level).name}`;
+  $("word").textContent = entry.word;
+  $("ipa").textContent = entry.ipa;
+  $("pos").textContent = POS[entry.pos] || entry.pos;
+  $("def").textContent = entry.def;
+  $("root").textContent = entry.root;
+  stagger([$("word"), $("phon"), $("def"), $("rootLine")]);
+};
+
+const draw = () => {
+  const bag = pool();
+  if (!bag.length) return render(null);
+
+  let fresh = bag.filter((e) => !seen.has(e.id));
+  if (!fresh.length) {
+    seen = new Set();
+    fresh = bag.filter((e) => !state.current || e.id !== state.current.id);
+    if (!fresh.length) fresh = bag;
+  }
+  const pick = fresh[Math.floor(Math.random() * fresh.length)];
+  seen.add(pick.id);
+  render(pick);
+};
+
+// ── memory card ─────────────────────────────────────────────────────────────
+// Always drawn on the light paper palette: the card is meant for print, not screen.
+const CARD = { w: 600, h: 380, pad: 42, gut: 56, margin: 40, scale: 2 };
+const INK = { paper: "#faf7f1", sheet: "#ffffff", edge: "#ddd6c6", ink: "#1a1917", soft: "#4c4840", muted: "#8b8375", accent: "#9c3b26" };
+
+const wrap = (ctx, text, maxWidth) => {
+  const lines = [];
+  let line = "";
+  for (const word of text.split(" ")) {
+    const next = line ? `${line} ${word}` : word;
+    if (ctx.measureText(next).width > maxWidth && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = next;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+};
+
+// Shrink until the block fits its box — long definitions and words like
+// "dysdiadochokinesia" must not spill off the card.
+const fitLines = (ctx, text, maxWidth, maxLines, font, from, to) => {
+  for (let size = from; size >= to; size -= 1) {
+    ctx.font = font(size);
+    const lines = wrap(ctx, text, maxWidth);
+    if (lines.length <= maxLines) return { lines, size };
+  }
+  ctx.font = font(to);
+  return { lines: wrap(ctx, text, maxWidth).slice(0, maxLines), size: to };
+};
+
+const panel = (ctx, x, y) => {
+  ctx.fillStyle = INK.paper;
+  ctx.strokeStyle = INK.edge;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, CARD.w, CARD.h, 14);
+  else ctx.rect(x, y, CARD.w, CARD.h);
+  ctx.fill();
+  ctx.stroke();
+};
+
+const kicker = (ctx, text, x, y, align, color) => {
+  ctx.font = "500 12px ui-monospace, Menlo, Consolas, monospace";
+  ctx.letterSpacing = "0.16em";
+  ctx.fillStyle = color;
+  ctx.textAlign = align;
+  ctx.fillText(text.toUpperCase(), x, y);
+  ctx.letterSpacing = "0px";
+  ctx.textAlign = "left";
+};
+
+const renderCard = (entry) => {
+  const sheetW = CARD.margin * 2 + CARD.w * 2 + CARD.gut;
+  const sheetH = CARD.margin * 2 + CARD.h;
+  const canvas = document.createElement("canvas");
+  canvas.width = sheetW * CARD.scale;
+  canvas.height = sheetH * CARD.scale;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(CARD.scale, CARD.scale);
+  ctx.textBaseline = "alphabetic";
+
+  ctx.fillStyle = INK.sheet;
+  ctx.fillRect(0, 0, sheetW, sheetH);
+
+  const serif = (size, style = "400", ital = "") => `${ital} ${style} ${size}px Newsreader, Georgia, serif`.trim();
+  const sans = (size, style = "400") => `${style} ${size}px Inter, system-ui, sans-serif`;
+
+  const left = CARD.margin;
+  const right = CARD.margin + CARD.w + CARD.gut;
+  const lvl = levelOf(entry.level);
+
+  // cut guide between the two cards
+  ctx.strokeStyle = "#d8d2c4";
+  ctx.setLineDash([5, 7]);
+  ctx.beginPath();
+  ctx.moveTo(sheetW / 2, CARD.margin * 0.45);
+  ctx.lineTo(sheetW / 2, sheetH - CARD.margin * 0.45);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ── front: the prompt ──
+  panel(ctx, left, CARD.margin);
+  const fx = left + CARD.pad;
+  const fTop = CARD.margin + CARD.pad;
+  kicker(ctx, domainName(entry.domain), fx, fTop + 4, "left", INK.muted);
+  kicker(ctx, `${lvl.roman} · ${lvl.name}`, left + CARD.w - CARD.pad, fTop + 4, "right", INK.accent);
+
+  ctx.strokeStyle = INK.edge;
+  ctx.beginPath();
+  ctx.moveTo(fx, fTop + 20);
+  ctx.lineTo(left + CARD.w - CARD.pad, fTop + 20);
+  ctx.stroke();
+
+  // Both faces centre their block in the band between the hairline and the
+  // footer line, so a one-word front and a five-line back stay balanced.
+  const innerW = CARD.w - CARD.pad * 2;
+  const bandTop = fTop + 20;
+  const bandBottom = CARD.margin + CARD.h - CARD.pad - 12;
+
+  const word = fitLines(ctx, entry.word, innerW, 2, (s) => serif(s, "400"), 62, 24);
+  const IPA_GAP = 34;
+  const wordBlock = (word.lines.length - 1) * word.size * 1.1 + word.size * 0.72;
+  const wordY = bandTop + (bandBottom - bandTop - (wordBlock + IPA_GAP)) / 2 + word.size * 0.72;
+
+  ctx.fillStyle = INK.ink;
+  ctx.textAlign = "center";
+  word.lines.forEach((line, i) => ctx.fillText(line, left + CARD.w / 2, wordY + i * word.size * 1.1));
+
+  ctx.font = serif(19, "300", "italic");
+  ctx.fillStyle = INK.muted;
+  ctx.fillText(`${entry.ipa}   ·   ${POS[entry.pos] || entry.pos}`, left + CARD.w / 2, wordY + (word.lines.length - 1) * word.size * 1.1 + IPA_GAP);
+  ctx.textAlign = "left";
+
+  kicker(ctx, "poc-lab · lexicon", fx, CARD.margin + CARD.h - CARD.pad + 12, "left", "#b9b1a1");
+
+  // ── back: the answer ──
+  panel(ctx, right, CARD.margin);
+  const bx = right + CARD.pad;
+  kicker(ctx, "Definition", bx, fTop + 4, "left", INK.muted);
+  kicker(ctx, `${lvl.roman} · ${lvl.name}`, right + CARD.w - CARD.pad, fTop + 4, "right", INK.accent);
+  ctx.strokeStyle = INK.edge;
+  ctx.beginPath();
+  ctx.moveTo(bx, fTop + 20);
+  ctx.lineTo(right + CARD.w - CARD.pad, fTop + 20);
+  ctx.stroke();
+
+  const def = fitLines(ctx, entry.def, innerW, 5, (s) => serif(s, "400"), 23, 15);
+  const root = fitLines(ctx, entry.root, innerW, 4, (s) => sans(s, "400"), 14, 11);
+  const ROOT_GAP = 26;
+  const defBlock = def.lines.length * def.size * 1.42;
+  const rootBlock = 20 + root.lines.length * root.size * 1.5;
+  const answerRoom = 30; // the word itself sits on the bottom right
+  let y = bandTop + (bandBottom - answerRoom - bandTop - (defBlock + ROOT_GAP + rootBlock)) / 2 + def.size;
+
+  // fitLines leaves its own font active, so re-assert before each block draws.
+  ctx.font = serif(def.size, "400");
+  ctx.fillStyle = INK.ink;
+  def.lines.forEach((line) => { ctx.fillText(line, bx, y); y += def.size * 1.42; });
+
+  y += ROOT_GAP;
+  kicker(ctx, "Root", bx, y, "left", INK.accent);
+  y += 20;
+  ctx.font = sans(root.size, "400");
+  ctx.fillStyle = INK.soft;
+  root.lines.forEach((line) => { ctx.fillText(line, bx, y); y += root.size * 1.5; });
+
+  ctx.font = serif(21, "400", "italic");
+  ctx.fillStyle = INK.accent;
+  ctx.textAlign = "right";
+  ctx.fillText(entry.word, right + CARD.w - CARD.pad, CARD.margin + CARD.h - CARD.pad + 14);
+  ctx.textAlign = "left";
+
+  return canvas;
+};
+
+const download = async () => {
+  const entry = state.current;
+  if (!entry) return;
+  const btn = $("dl");
+  btn.disabled = true;
+  const was = btn.textContent;
+  btn.textContent = "Drawing…";
+  try {
+    // The card is typeset in the same faces as the page, so wait for them.
+    if (document.fonts) {
+      await Promise.all(["400 62px Newsreader", "italic 300 19px Newsreader", "400 14px Inter"].map((f) => document.fonts.load(f)));
+      await document.fonts.ready;
+    }
+    const canvas = renderCard(entry);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `lexicon-${entry.word.replace(/[^a-z]+/gi, "-").toLowerCase()}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+    btn.textContent = "Saved";
+    setTimeout(() => { btn.textContent = was; }, 1400);
+  } catch {
+    btn.textContent = "Card failed";
+    setTimeout(() => { btn.textContent = was; }, 1800);
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+// ── wiring ──────────────────────────────────────────────────────────────────
+const setLevel = (n) => {
+  state.level = n;
+  seen = new Set();
+  syncControls();
+  save();
+  draw();
+};
+
+buildLevels();
+buildChips();
+load();
+syncControls();
+draw();
+
+$("levels").addEventListener("click", (e) => {
+  const btn = e.target.closest(".lvl");
+  if (btn) setLevel(Number(btn.dataset.level));
+});
+
+$("levels").addEventListener("keydown", (e) => {
+  const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+  if (!step) return;
+  e.preventDefault();
+  const next = Math.min(LEVELS.length, Math.max(1, state.level + step));
+  setLevel(next);
+  document.querySelector(`.lvl[data-level="${next}"]`).focus();
+});
+
+$("chips").addEventListener("click", (e) => {
+  const btn = e.target.closest(".chip");
+  if (!btn) return;
+  const key = btn.dataset.domain;
+  if (state.domains.has(key)) state.domains.delete(key);
+  else state.domains.add(key);
+  seen = new Set();
+  syncControls();
+  save();
+  draw();
+});
+
+const setAll = (on) => {
+  state.domains = new Set(on ? DOMAINS.map((d) => d.key) : []);
+  seen = new Set();
+  syncControls();
+  save();
+  draw();
+};
+$("allDomains").addEventListener("click", () => setAll(true));
+$("noDomains").addEventListener("click", () => setAll(false));
+
+$("next").addEventListener("click", draw);
+$("dl").addEventListener("click", download);
+
+$("theme").addEventListener("click", () => {
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const now = document.documentElement.dataset.theme || (dark ? "dark" : "light");
+  document.documentElement.dataset.theme = now === "dark" ? "light" : "dark";
+  save();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target.closest("button, input, textarea, select")) return;
+  if (e.key === " " || e.key === "Enter") { e.preventDefault(); draw(); }
+  if (e.key.toLowerCase() === "d") { e.preventDefault(); download(); }
+});
+
+$("stat").textContent = `${ENTRIES.length} words · ${DOMAINS.length} domains · ${LEVELS.length} levels`;
+</script>
+</body>
+</html>
