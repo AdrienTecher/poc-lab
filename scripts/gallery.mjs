@@ -102,6 +102,8 @@ export async function buildGallery({ root, dist, apps }) {
     });
   }
 
+  assignFolios(records);
+
   // featured first, then newest, then alphabetical
   records.sort(
     (a, b) =>
@@ -120,6 +122,20 @@ export async function buildGallery({ root, dist, apps }) {
   writeFileSync(join(dist, "index.html"), renderPage(records, site, facets));
   console.log(`gallery: ${records.length} app(s), ${facets.length} tag(s) -> dist/index.html`);
   return records;
+}
+
+// The folio is an identity, not a position: it is assigned once by order of
+// creation (slug breaking ties) and never moves. Sorting, filtering and new
+// arrivals all leave it alone, so an app answers to the same number for life —
+// which is the whole point of printing one. Width is shared across the set so
+// the column stays flush.
+function assignFolios(records) {
+  const width = Math.max(2, String(records.length).length);
+  [...records]
+    .sort((a, b) => a.created.localeCompare(b.created) || a.slug.localeCompare(b.slug))
+    .forEach((r, i) => {
+      r.folio = String(i + 1).padStart(width, "0");
+    });
 }
 
 // Tags ranked by how many apps share them, then alphabetically. Shared tags are
@@ -149,7 +165,7 @@ function renderApp(app, i) {
   const tags = app.tags.length
     ? `<ul class="app__tags">${app.tags.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>`
     : "";
-  return `        <a class="app" href="./${esc(app.slug)}/"
+  return `        <a class="app" href="./${esc(app.slug)}/" id="e-${esc(app.slug)}"
            style="--h:${app.hue};--i:${i}"
            data-slug="${esc(app.slug)}"
            data-tags="${esc(app.tags.join(" "))}"
@@ -158,7 +174,7 @@ function renderApp(app, i) {
            data-text="${haystack}">
           <span class="app__rail" aria-hidden="true"></span>
           <div class="app__head">
-            <span class="app__dot" aria-hidden="true"></span>
+            <span class="app__folio" aria-hidden="true">${esc(app.folio)}</span>
             <h2 class="app__title">${title}</h2>
             ${featured}
             <time datetime="${esc(app.created)}">${esc(app.created)}</time>
@@ -417,7 +433,14 @@ function renderPage(apps, site, facets) {
     .app.is-lit { border-color: var(--rail); box-shadow: 0 18px 40px -18px oklch(var(--rail-l) var(--rail-c) var(--h) / 0.5); }
 
     .app__head { display: flex; align-items: baseline; gap: var(--sp-2); }
-    .app__dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--rail); align-self: center; }
+    /* The folio carries the identity hue, so it replaces the plain dot rather
+       than sitting beside it — one marker, two jobs. Tabular figures keep the
+       column flush down a long index. */
+    .app__folio {
+      flex: none; align-self: center; color: var(--accent);
+      font-family: var(--font-mono); font-size: var(--step--1); font-weight: 500;
+      font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
+    }
     .app__title { margin: 0; font-family: var(--font-display); font-size: var(--step-1); font-weight: 500; letter-spacing: -0.015em; line-height: 1.2; transition: color 0.22s ease; }
     .app:hover .app__title { color: var(--accent); }
     .app__star { flex: none; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); align-self: center; box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 18%, transparent); }
