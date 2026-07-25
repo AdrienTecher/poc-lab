@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Nuage — le mouton à câliner</title>
+<meta name="description" content="Un mouton tout doux à caresser : il sourit sous les câlins et reste heureux cinq minutes. Sinon, il boude sous son petit nuage." />
+<meta name="theme-color" content="#7e8798" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='19' r='9' fill='%23fffaf1'/%3E%3Ccircle cx='7' cy='17' r='5' fill='%23fffaf1'/%3E%3Ccircle cx='25' cy='17' r='5' fill='%23fffaf1'/%3E%3Ccircle cx='16' cy='11' r='6.5' fill='%23f7e5df'/%3E%3Ccircle cx='16' cy='6' r='4.5' fill='%23fffaf1'/%3E%3Ccircle cx='13.4' cy='11' r='1.5' fill='%233b2f3f'/%3E%3Ccircle cx='18.6' cy='11' r='1.5' fill='%233b2f3f'/%3E%3C/svg%3E" />
+<style>
+  /* ---------------------------------------------------------------------
+     Mood is one number: --m (0 sad → 1 happy), rewritten every frame by the
+     rig. Every colour in the scene is a mix keyed on it, so the whole world
+     warms up with the sheep instead of switching between two states.
+     --------------------------------------------------------------------- */
+  :root{
+    --m: 0;
+
+    --sky-top:  color-mix(in oklab, #74d2f2 calc(var(--m) * 100%), #6f7a8c);
+    --sky-mid:  color-mix(in oklab, #bfe9f6 calc(var(--m) * 100%), #98a1ae);
+    --sky-low:  color-mix(in oklab, #ffe6ad calc(var(--m) * 100%), #b9bfc8);
+    --hill-far: color-mix(in oklab, #8fcf78 calc(var(--m) * 100%), #6f7b74);
+    --hill-mid: color-mix(in oklab, #74be5f calc(var(--m) * 100%), #5f6c65);
+    --grass:    color-mix(in oklab, #5fac4c calc(var(--m) * 100%), #4f5d55);
+    --blade:    color-mix(in oklab, #86d06a calc(var(--m) * 100%), #66766c);
+
+    --wool:      color-mix(in oklab, #fffaf1 calc(var(--m) * 100%), #e3e1e7);
+    --wool-edge: color-mix(in oklab, #f0dfc9 calc(var(--m) * 100%), #c7c4d0);
+    --face:      color-mix(in oklab, #f9e7e0 calc(var(--m) * 100%), #e1d5d5);
+    --muzzle:    color-mix(in oklab, #fff4ee calc(var(--m) * 100%), #ebe2e2);
+    --ear:       color-mix(in oklab, #eccfc6 calc(var(--m) * 100%), #cec2c5);
+    --ear-in:    color-mix(in oklab, #dda9a4 calc(var(--m) * 100%), #b7a3aa);
+    --leg:       color-mix(in oklab, #d9b7ab calc(var(--m) * 100%), #b8acb0);
+    --hoof:      color-mix(in oklab, #b2887c calc(var(--m) * 100%), #938a90);
+    --blush:     color-mix(in oklab, #ff9db0 calc(var(--m) * 100%), #c9a6b0);
+
+    --hud:      rgba(255,255,255,.15);
+    --hud-line: rgba(255,255,255,.28);
+    --display:'Fredoka', ui-rounded, system-ui, sans-serif;
+    --mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%; margin:0; overflow:hidden}
+  body{
+    font-family:var(--display); color:#fff; background:var(--sky-low);
+    -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+  }
+  button{font:inherit; color:inherit; background:none; border:0; padding:0; cursor:pointer}
+  :focus-visible{outline:3px solid #fff; outline-offset:4px; border-radius:12px}
+
+  /* ---------------- scene ---------------- */
+  .scene{position:fixed; inset:0; overflow:hidden; user-select:none}
+  .sky{
+    position:absolute; inset:0;
+    background:linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 52%, var(--sky-low) 100%);
+  }
+  /* Sun and overcast veil cross-fade on mood — what makes the sad scene read
+     as weather rather than as a dimmed screen. */
+  .sun{
+    position:absolute; top:7%; right:11%; width:min(30vmin,220px); aspect-ratio:1;
+    opacity:calc(var(--m) * .95);
+  }
+  .sun__core{
+    position:absolute; inset:27%; border-radius:50%;
+    background:radial-gradient(circle at 40% 38%, #fffbe8, #ffd977 62%, #ffc44d);
+    box-shadow:0 0 60px 18px rgba(255,214,120,.45);
+  }
+  .sun__rays{position:absolute; inset:0; animation:spin 48s linear infinite}
+  .sun__rays span{
+    position:absolute; left:50%; top:50%; width:3px; height:41%;
+    margin-left:-1.5px; transform-origin:50% 0; border-radius:3px;
+    background:linear-gradient(180deg, rgba(255,238,175,.9), rgba(255,238,175,0));
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .veil{
+    position:absolute; inset:0; opacity:calc(1 - var(--m));
+    background:
+      radial-gradient(120% 70% at 50% -10%, rgba(58,68,84,.36), transparent 62%),
+      linear-gradient(180deg, rgba(92,102,118,.32), rgba(120,128,142,.05) 62%);
+  }
+  .hills{position:absolute; left:0; right:0; bottom:0; width:100%; height:54%}
+  .hill-far{fill:var(--hill-far)}
+  .hill-mid{fill:var(--hill-mid)}
+  .ground{fill:var(--grass)}
+
+  .cloudbank{position:absolute; inset:0}
+  .cloudbank .puff{fill:#fff; opacity:calc(.26 + (1 - var(--m)) * .30); animation:drift linear infinite}
+  @keyframes drift{from{transform:translateX(-320px)} to{transform:translateX(1520px)}}
+
+  /* meadow: blades, flowers and the clovers you can pick */
+  .meadow{position:absolute; left:0; right:0; bottom:0; width:100%; height:27vh; overflow:visible}
+  .blade{fill:var(--blade); transform-box:fill-box; transform-origin:50% 100%; animation:sway 4s ease-in-out infinite}
+  @keyframes sway{0%,100%{transform:rotate(-3.5deg)}50%{transform:rotate(3.5deg)}}
+  .flower{transform-box:fill-box; transform-origin:50% 100%; transform:scale(0); transition:transform .55s cubic-bezier(.2,1.7,.4,1)}
+  .flower.bloom{transform:scale(1)}
+  .clover{cursor:grab; outline:none; transform-box:fill-box; transform-origin:50% 100%; transition:opacity .3s, filter .25s}
+  .clover:focus-visible{filter:drop-shadow(0 0 7px #fff)}
+  .clover:focus-visible .clover__leaves{transform:scale(1.18)}
+  .clover:hover .clover__leaves{transform:scale(1.16) rotate(-5deg)}
+  .clover__leaves{transform-box:fill-box; transform-origin:50% 90%; transition:transform .4s cubic-bezier(.2,1.7,.4,1)}
+  .clover.picked{opacity:0; pointer-events:none}
+
+  /* ---------------- sheep ---------------- */
+  .stage{position:absolute; left:50%; bottom:11vh; transform:translateX(-50%); width:min(660px, 92vw)}
+  .sheep{display:block; width:100%; height:auto; overflow:visible; touch-action:none}
+  .wool{fill:var(--wool)}
+  .wool-edge{fill:var(--wool-edge)}
+  .face{fill:var(--face)}
+  .muzzle{fill:var(--muzzle)}
+  .ear{fill:var(--ear)}
+  .ear-in{fill:var(--ear-in)}
+  .leg{stroke:var(--leg); stroke-width:17; stroke-linecap:round}
+  .hoof{fill:var(--hoof)}
+  .eye{fill:#3b2f3f}
+  .glint{fill:#fff}
+  .brow{stroke:#b9958f; stroke-width:4.4; stroke-linecap:round; fill:none}
+  .mouth{stroke:#3b2f3f; stroke-width:4.6; stroke-linecap:round; stroke-linejoin:round}
+  .nose{fill:#d99a9a}
+  .blush{fill:var(--blush)}
+  .shadow{fill:#2c3a2e; opacity:.16}
+  #hit{fill:transparent; cursor:grab; outline:none}
+  .stage.cuddling #hit{cursor:grabbing}
+  /* focus follows his silhouette rather than boxing him in */
+  #hit:focus-visible{outline:none; fill:rgba(255,255,255,.10); stroke:#fff; stroke-width:3; stroke-dasharray:9 11}
+  .raincloud{opacity:calc(1 - var(--m))}
+  .raincloud .rc{fill:#8b94a5}
+  .raincloud .rc-base{fill:#6f7a8c; opacity:.55}
+  .drop{stroke:#b3c1d2; stroke-width:3; stroke-linecap:round}
+
+  /* ---------------- HUD ---------------- */
+  .hud{
+    position:absolute; top:0; left:0; right:0; z-index:3; pointer-events:none;
+    display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
+    padding:clamp(14px,2.4vw,26px);
+  }
+  .brand{text-shadow:0 2px 12px rgba(30,36,48,.32)}
+  .brand h1{margin:0; font-size:clamp(1.5rem,3.6vw,2.1rem); font-weight:600; letter-spacing:-.01em; line-height:1}
+  .brand p{margin:.3em 0 0; font-size:clamp(.74rem,1.5vw,.86rem); font-weight:400; opacity:.88}
+  .brand p .en{opacity:.6}
+  .hud__right{display:flex; align-items:center; gap:10px; pointer-events:auto}
+  .chip{
+    display:flex; align-items:center; gap:10px; padding:7px 15px 7px 8px;
+    background:var(--hud); border:1px solid var(--hud-line); border-radius:999px;
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    box-shadow:0 8px 24px rgba(28,38,54,.14);
+  }
+  .chip__ring{width:32px; height:32px; flex:none; transform:rotate(-90deg)}
+  .chip__ring circle{fill:none; stroke-width:3.4; stroke-linecap:round}
+  .chip__track{stroke:rgba(255,255,255,.26)}
+  .chip__fill{stroke:#fff; transition:stroke-dashoffset .25s linear}
+  .chip__text{display:flex; flex-direction:column; line-height:1.14}
+  .chip__state{font-size:.84rem; font-weight:500; white-space:nowrap}
+  .chip__time{font-family:var(--mono); font-size:.7rem; opacity:.72; letter-spacing:.01em; white-space:nowrap}
+  .icon-btn{
+    width:44px; height:44px; display:grid; place-items:center; border-radius:50%;
+    background:var(--hud); border:1px solid var(--hud-line);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    transition:background .2s, transform .2s;
+  }
+  .icon-btn:hover{background:rgba(255,255,255,.26); transform:translateY(-1px)}
+  .icon-btn svg{width:20px; height:20px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
+  .icon-btn[aria-pressed="false"] .wave{opacity:.22}
+
+  .hint{
+    position:absolute; left:50%; bottom:clamp(14px,3.2vh,30px); transform:translateX(-50%);
+    z-index:3; display:flex; align-items:center; gap:10px; padding:9px 18px;
+    background:var(--hud); border:1px solid var(--hud-line); border-radius:999px;
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    font-size:.86rem; white-space:nowrap; pointer-events:none;
+    transition:opacity .5s, transform .5s;
+  }
+  .hint .en{opacity:.58; font-size:.78rem}
+  .hint.gone{opacity:0; transform:translate(-50%,12px)}
+  .hint__hand{width:19px; height:19px; flex:none; animation:pet 2s ease-in-out infinite}
+  @keyframes pet{0%,100%{transform:translateX(-4px) rotate(-9deg)}50%{transform:translateX(4px) rotate(9deg)}}
+
+  .drag{position:fixed; left:0; top:0; z-index:5; width:64px; height:64px; margin:-32px 0 0 -32px; pointer-events:none}
+  .drag svg{width:100%; height:100%; filter:drop-shadow(0 6px 10px rgba(30,50,30,.3))}
+
+  .sr{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0}
+
+  @media (prefers-reduced-motion: reduce){
+    .sun__rays,.blade,.cloudbank .puff,.hint__hand{animation:none}
+  }
+  @media (max-width:600px){
+    .brand p .en, .hint .en{display:none}
+  }
+  /* portrait: he takes the room the sky isn't using */
+  @media (max-aspect-ratio: 4/5){
+    .stage{width:min(660px, 116vw); bottom:26vh}
+    .meadow{height:22vh}
+  }
+</style>
+</head>
+<body>
+
+<div class="scene" id="scene">
+  <div class="sky"></div>
+
+  <div class="sun" aria-hidden="true">
+    <div class="sun__rays" id="rays"></div>
+    <div class="sun__core"></div>
+  </div>
+
+  <svg class="cloudbank" id="cloudbank" viewBox="0 0 1200 700" preserveAspectRatio="none" aria-hidden="true"></svg>
+  <div class="veil" aria-hidden="true"></div>
+
+  <svg class="hills" viewBox="0 0 1200 400" preserveAspectRatio="none" aria-hidden="true">
+    <path class="hill-far" d="M0,190 C160,120 300,150 430,178 C580,210 700,132 830,146 C960,160 1090,206 1200,176 L1200,400 L0,400 Z"/>
+    <path class="hill-mid" d="M0,258 C170,206 320,238 470,254 C640,272 780,224 930,238 C1050,249 1140,272 1200,262 L1200,400 L0,400 Z"/>
+    <path class="ground" d="M0,318 C200,300 380,316 600,318 C820,320 1010,306 1200,318 L1200,400 L0,400 Z"/>
+  </svg>
+
+  <div class="stage" id="stage">
+    <svg class="sheep" id="sheep" viewBox="0 0 400 372" role="group"
+         aria-label="Nuage, un mouton en laine que l'on peut caresser">
+
+      <defs>
+        <radialGradient id="woolShade" cx="38%" cy="28%" r="76%">
+          <stop offset="0%" stop-color="#fff" stop-opacity=".55"/>
+          <stop offset="62%" stop-color="#fff" stop-opacity="0"/>
+          <stop offset="100%" stop-color="#a2939e" stop-opacity=".24"/>
+        </radialGradient>
+        <radialGradient id="faceShade" cx="42%" cy="28%" r="80%">
+          <stop offset="0%" stop-color="#fff" stop-opacity=".5"/>
+          <stop offset="70%" stop-color="#fff" stop-opacity="0"/>
+          <stop offset="100%" stop-color="#b3928e" stop-opacity=".22"/>
+        </radialGradient>
+        <radialGradient id="petGlowGrad">
+          <stop offset="0%" stop-color="#fff" stop-opacity=".5"/>
+          <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+        </radialGradient>
+        <path id="heartPath" d="M0,3 C-4.6,-4 -12,-1.2 -12,4.6 C-12,11 -4.2,14.6 0,19 C4.2,14.6 12,11 12,4.6 C12,-1.2 4.6,-4 0,3 Z"/>
+        <path id="sparkPath" d="M0,-11 Q1.7,-1.7 11,0 Q1.7,1.7 0,11 Q-1.7,1.7 -11,0 Q-1.7,-1.7 0,-11 Z"/>
+        <g id="cloverLeaves">
+          <ellipse cx="0" cy="-11" rx="7" ry="8.5"/>
+          <ellipse cx="-10" cy="-3" rx="8.5" ry="7"/>
+          <ellipse cx="10" cy="-3" rx="8.5" ry="7"/>
+          <ellipse cx="0" cy="3" rx="7" ry="6"/>
+        </g>
+      </defs>
+
+      <ellipse id="shadow" class="shadow" cx="200" cy="352" rx="108" ry="13"/>
+
+      <!-- everything that hops and breathes lives under #body -->
+      <g id="body">
+        <!-- both leg pairs sit behind the wool, so only the stubs show -->
+        <g id="legsBack" opacity=".85">
+          <line class="leg" x1="156" y1="280" x2="152" y2="332"/>
+          <line class="leg" x1="244" y1="280" x2="248" y2="332"/>
+          <circle class="hoof" cx="152" cy="334" r="8.5"/>
+          <circle class="hoof" cx="248" cy="334" r="8.5"/>
+        </g>
+        <g id="legsFront">
+          <line class="leg" x1="178" y1="280" x2="176" y2="340"/>
+          <line class="leg" x1="222" y1="280" x2="224" y2="340"/>
+          <circle class="hoof" cx="176" cy="342" r="9"/>
+          <circle class="hoof" cx="224" cy="342" r="9"/>
+        </g>
+
+        <g id="tail">
+          <circle class="wool-edge" cx="0" cy="0" r="16"/>
+          <circle class="wool" cx="0" cy="0" r="13"/>
+        </g>
+
+        <!-- the rim is a scaled clone of the wool cluster: one shape, two tones -->
+        <use href="#woolBody" class="wool-edge" transform="translate(200 240) scale(1.05) translate(-200 -240)"/>
+        <g id="woolBody" class="wool">
+          <ellipse cx="200" cy="240" rx="86" ry="50"/>
+        </g>
+        <ellipse cx="200" cy="240" rx="102" ry="70" fill="url(#woolShade)" pointer-events="none"/>
+
+        <!-- head: rotates about the neck at (200, 216) -->
+        <g id="head">
+          <g id="earL">
+            <ellipse class="ear" cx="-20" cy="0" rx="28" ry="14"/>
+            <ellipse class="ear-in" cx="-23" cy="0" rx="16" ry="6.5"/>
+          </g>
+          <g id="earR">
+            <ellipse class="ear" cx="20" cy="0" rx="28" ry="14"/>
+            <ellipse class="ear-in" cx="23" cy="0" rx="16" ry="6.5"/>
+          </g>
+
+          <ellipse class="face" cx="200" cy="184" rx="47" ry="43"/>
+          <ellipse class="muzzle" cx="200" cy="202" rx="26" ry="19"/>
+          <ellipse cx="200" cy="184" rx="47" ry="43" fill="url(#faceShade)" pointer-events="none"/>
+
+          <ellipse id="blushL" class="blush" cx="163" cy="197" rx="11.5" ry="6.5" opacity="0"/>
+          <ellipse id="blushR" class="blush" cx="237" cy="197" rx="11.5" ry="6.5" opacity="0"/>
+
+          <path id="browL" class="brow" d="M-11,0 Q0,-4.5 11,0"/>
+          <path id="browR" class="brow" d="M-11,0 Q0,-4.5 11,0"/>
+
+          <g id="eyeL">
+            <g class="lid">
+              <ellipse class="eye" cx="0" cy="0" rx="9.6" ry="11.4"/>
+              <circle class="glint" cx="-3.4" cy="-4.2" r="3.5"/>
+              <circle class="glint" cx="3" cy="3.4" r="1.8" opacity=".58"/>
+            </g>
+            <path class="eye-arc" d="M-10,3 Q0,-8 10,3" fill="none" stroke="#3b2f3f" stroke-width="4.6" stroke-linecap="round" opacity="0"/>
+          </g>
+          <g id="eyeR">
+            <g class="lid">
+              <ellipse class="eye" cx="0" cy="0" rx="9.6" ry="11.4"/>
+              <circle class="glint" cx="-3.4" cy="-4.2" r="3.5"/>
+              <circle class="glint" cx="3" cy="3.4" r="1.8" opacity=".58"/>
+            </g>
+            <path class="eye-arc" d="M-10,3 Q0,-8 10,3" fill="none" stroke="#3b2f3f" stroke-width="4.6" stroke-linecap="round" opacity="0"/>
+          </g>
+
+          <path class="nose" d="M195,194 Q200,190.6 205,194 Q205,199.4 200,201.6 Q195,199.4 195,194 Z"/>
+          <path id="mouth" class="mouth" fill="none" d="M186,207 Q200,213 214,207"/>
+
+          <!-- the forelock is the same wool material, laid over the face -->
+          <use href="#woolHead" class="wool-edge" transform="translate(200 160) scale(1.07) translate(-200 -160)"/>
+          <g id="woolHead" class="wool"></g>
+        </g>
+      </g>
+
+      <!-- his own little weather system, tethered above the head -->
+      <g id="raincloud" class="raincloud">
+        <g id="rcBody">
+          <ellipse class="rc-base" cx="200" cy="58" rx="52" ry="14"/>
+          <ellipse class="rc" cx="200" cy="52" rx="42" ry="21"/>
+          <circle class="rc" cx="172" cy="46" r="19"/>
+          <circle class="rc" cx="204" cy="36" r="24"/>
+          <circle class="rc" cx="230" cy="48" r="17"/>
+        </g>
+        <g id="rain"></g>
+      </g>
+
+      <g id="butterflies"></g>
+      <g id="fx" pointer-events="none"></g>
+      <circle id="petGlow" r="48" fill="url(#petGlowGrad)" opacity="0" pointer-events="none"/>
+
+      <ellipse id="hit" cx="200" cy="238" rx="134" ry="130"/>
+    </svg>
+  </div>
+
+  <svg class="meadow" id="meadow" viewBox="0 0 1200 260" preserveAspectRatio="none" aria-hidden="true"></svg>
+</div>
+
+<header class="hud">
+  <div class="brand">
+    <h1>Nuage</h1>
+    <p>mouton à câliner <span class="en">· a sheep to cuddle</span></p>
+  </div>
+  <div class="hud__right">
+    <div class="chip">
+      <svg class="chip__ring" viewBox="0 0 34 34" aria-hidden="true">
+        <circle class="chip__track" cx="17" cy="17" r="13.6"/>
+        <circle class="chip__fill" id="ring" cx="17" cy="17" r="13.6"/>
+      </svg>
+      <span class="chip__text">
+        <span class="chip__state" id="chipState">Il boude</span>
+        <span class="chip__time" id="chipTime">—:—</span>
+      </span>
+    </div>
+    <button class="icon-btn" id="sound" aria-pressed="true" aria-label="Couper le son — mute">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 9.5v5h3.6L13 19V5L7.6 9.5H4z"/>
+        <path class="wave" d="M16.4 8.8a4.6 4.6 0 0 1 0 6.4"/>
+        <path class="wave" d="M19.3 6a8.6 8.6 0 0 1 0 12"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<div class="hint" id="hint">
+  <svg class="hint__hand" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12"/>
+    <path d="M11 12V4.5a1.5 1.5 0 0 1 3 0V12"/>
+    <path d="M14 12.5V6.5a1.5 1.5 0 0 1 3 0V14"/>
+    <path d="M17 10.5a1.5 1.5 0 0 1 3 0V16a6 6 0 0 1-6 6h-1.5a6 6 0 0 1-5.3-3.2L4.6 14a1.6 1.6 0 0 1 2.7-1.7L8 13.5"/>
+  </svg>
+  <span id="hintText">Maintiens et caresse-le <span class="en">· hold and stroke him</span></span>
+</div>
+
+<p class="sr" id="live" role="status" aria-live="polite">Nuage boude. Caresse-le pour le rendre heureux.</p>
+
+<script>
+(() => {
+  "use strict";
+
+  const NS = "http://www.w3.org/2000/svg";
+  const $ = (s, r = document) => r.querySelector(s);
+  const el = (n, a = {}) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); return e; };
+  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const now = () => performance.now() / 1000;
+  const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ------------------------------------------------------------------ *
+   * Rules of the world
+   * ------------------------------------------------------------------ */
+  const HAPPY_MS = 5 * 60 * 1000;   // a cuddle buys exactly five minutes
+  const FADE_MS = 20 * 1000;        // ...the last twenty of which he droops through
+  const PET_TARGET = 460;           // stroke distance (svg units) that fills one cuddle
+  const DOZE_AFTER = 55;            // seconds of being ignored before he nods off
+  const STORE_KEY = "nuage:happy-until";
+
+  const svg = $("#sheep"), stage = $("#stage"), fx = $("#fx");
+  const live = $("#live"), hintEl = $("#hint"), hintText = $("#hintText");
+
+  const state = {
+    happyUntil: 0,        // epoch ms — the only source of the five-minute window
+    cuddle: 0,            // 0..1, fills while stroking, decays when you stop
+    mood: 0,              // smoothed 0..1, what the whole scene keys on
+    petting: false,
+    dozing: false,
+    chewUntil: 0,
+    bleatUntil: 0,
+    lastPoke: now(),
+    lastPointer: -99,
+    everCuddled: false,
+    sound: true,
+  };
+
+  // restore an in-flight happiness window so a reload doesn't betray him
+  try {
+    const saved = Number(localStorage.getItem(STORE_KEY) || 0);
+    if (saved > Date.now()) { state.happyUntil = saved; state.mood = 1; state.everCuddled = true; }
+  } catch { /* private mode: he simply forgets */ }
+
+  /* ------------------------------------------------------------------ *
+   * Springs — every limb is a mass on a spring, which is what sells "alive"
+   * ------------------------------------------------------------------ */
+  const springs = {};
+  const S = (name, value, k, d) => (springs[name] = { v: value, vel: 0, target: value, k, d });
+  const set = (name, target) => (springs[name].target = target);
+  const v = (name) => springs[name].v;
+  const kick = (name, impulse) => (springs[name].vel += impulse);
+  const stepSpring = (s, dt) => {
+    s.vel += (s.k * (s.target - s.v) - s.d * s.vel) * dt;
+    s.v += s.vel * dt;
+  };
+
+  S("lean", 0, 90, 13);      // head tilt, degrees
+  S("gazeX", 0, 110, 15);
+  S("gazeY", 0, 110, 15);
+  S("hop", 0, 150, 11);      // vertical body offset, driven by impulses
+  S("earL", 0, 130, 12);
+  S("earR", 0, 130, 12);
+  S("tail", 0, 170, 11);
+  S("sway", 0, 60, 10);
+  S("mouth", -1, 80, 13);    // -1 frown … +1 grin
+  S("brow", 1, 80, 13);
+  S("open", 0, 190, 14);     // mouth opening, for bleats and chewing
+  S("moodS", state.mood, 26, 10);
+
+  /* ------------------------------------------------------------------ *
+   * Wool: a ring of blobs around an ellipse. Each breathes on its own phase
+   * and gets pushed aside by the petting hand.
+   * ------------------------------------------------------------------ */
+  const blobs = [];
+  const addBlobs = (parent, cx, cy, rx, ry, count, radius, from = -Math.PI, span = Math.PI * 2) => {
+    for (const i of [...Array(count).keys()]) {
+      const a = from + (span * i) / count;
+      const b = {
+        node: el("circle"),
+        bx: cx + Math.cos(a) * rx,
+        by: cy + Math.sin(a) * ry,
+        r: radius + Math.sin(i * 2.7) * radius * 0.15,
+        phase: rand(0, Math.PI * 2),
+        speed: rand(0.8, 1.5),
+      };
+      parent.appendChild(b.node);
+      blobs.push(b);
+    }
+  };
+  addBlobs($("#woolBody"), 200, 240, 88, 52, 16, 28);
+  addBlobs($("#woolHead"), 200, 186, 45, 42, 7, 18, -Math.PI * 0.97, Math.PI * 0.94);
+
+  /* ------------------------------------------------------------------ *
+   * Scenery: sun rays, cloud bank, grass, flowers, clovers
+   * ------------------------------------------------------------------ */
+  const rays = $("#rays");
+  for (const i of [...Array(12).keys()]) {
+    const s = document.createElement("span");
+    s.style.transform = `rotate(${i * 30}deg)`;
+    rays.appendChild(s);
+  }
+
+  const bank = $("#cloudbank");
+  for (const i of [...Array(5).keys()]) {
+    const g = el("g", { class: "puff" });
+    g.setAttribute("transform", `translate(${rand(0, 900)} ${50 + i * 46 + rand(-14, 14)}) scale(${rand(0.65, 1.3)})`);
+    g.style.animationDuration = `${rand(95, 180)}s`;
+    g.style.animationDelay = `${-rand(0, 140)}s`;
+    for (const [cx, cy, r] of [[0, 0, 26], [30, -11, 34], [64, 2, 24], [30, 12, 30]]) {
+      g.appendChild(el("ellipse", { cx, cy, rx: r * 1.3, ry: r * 0.8 }));
+    }
+    bank.appendChild(g);
+  }
+
+  const meadow = $("#meadow");
+  const flowers = [], clovers = [];
+  const PETAL = ["#ff9ec4", "#ffd166", "#c9a7ff", "#fff1f5"];
+
+  for (const i of [...Array(88).keys()]) {
+    const x = (i / 88) * 1240 - 20 + rand(-7, 7);
+    const h = rand(30, 88), w = rand(5, 10), bend = rand(-22, 22);
+    const p = el("path", {
+      class: "blade",
+      d: `M${x},260 C${x + bend * 0.3},${260 - h * 0.5} ${x + bend},${260 - h * 0.8} ${x + bend * 1.2},${260 - h} C${x + bend + w},${260 - h * 0.7} ${x + w},${260 - h * 0.3} ${x + w},260 Z`,
+    });
+    p.style.animationDuration = `${rand(3, 5.6)}s`;
+    p.style.animationDelay = `${-rand(0, 5)}s`;
+    meadow.appendChild(p);
+  }
+
+  for (const i of [...Array(20).keys()]) {
+    const g = el("g", { class: "flower" });
+    g.setAttribute("transform", `translate(${rand(20, 1180)} ${rand(140, 232)})`);
+    g.style.transitionDelay = `${rand(0, 0.7)}s`;
+    const hue = PETAL[i % PETAL.length];
+    g.appendChild(el("path", { d: `M0,0 L${rand(-5, 5)},28`, stroke: "#4e9440", "stroke-width": 3.4, "stroke-linecap": "round", fill: "none" }));
+    for (const k of [...Array(5).keys()]) {
+      const a = (k / 5) * Math.PI * 2;
+      g.appendChild(el("circle", { cx: Math.cos(a) * 7, cy: Math.sin(a) * 7, r: 5.6, fill: hue }));
+    }
+    g.appendChild(el("circle", { r: 4, fill: "#ffdf6e" }));
+    meadow.appendChild(g);
+    flowers.push(g);
+  }
+
+  // clovers are the treat: pick one out of the grass and offer it to him
+  for (const x of [140, 355, 890]) {
+    const g = el("g", { class: "clover", tabindex: "0", role: "button" });
+    g.setAttribute("transform", `translate(${x} 212) scale(1.35)`);
+    g.setAttribute("aria-label", "Offrir un trèfle — give him a clover");
+    g.appendChild(el("path", { d: "M0,2 L0,28", stroke: "#3f8a36", "stroke-width": 3, "stroke-linecap": "round", fill: "none" }));
+    const leaves = el("g", { class: "clover__leaves" });
+    leaves.appendChild(el("use", { href: "#cloverLeaves", fill: "#4ea343" }));
+    leaves.appendChild(el("use", { href: "#cloverLeaves", fill: "#69c257", transform: "scale(.82)" }));
+    g.appendChild(leaves);
+    meadow.appendChild(g);
+    clovers.push(g);
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Butterflies — idle company, and something for his eyes to follow
+   * ------------------------------------------------------------------ */
+  const butterflies = [];
+  const TINT = ["#ffd9f0", "#fff3b8", "#dbeaff"];
+  for (const i of [...Array(3).keys()]) {
+    const g = el("g", { cursor: "pointer" });
+    const wing = (sx) => {
+      const w = el("g", { fill: TINT[i], opacity: ".95" });
+      w.append(
+        el("ellipse", { cx: sx * 9, cy: -5, rx: 9.5, ry: 11 }),
+        el("ellipse", { cx: sx * 7.5, cy: 7, rx: 7, ry: 8 }),
+      );
+      return w;
+    };
+    const wingL = wing(-1), wingR = wing(1);
+    g.append(wingL, wingR, el("ellipse", { rx: 2.4, ry: 9, fill: "#5b4a55" }),
+      el("path", { d: "M-1,-8 C-4,-14 -7,-15 -9,-16 M1,-8 C4,-14 7,-15 9,-16", stroke: "#5b4a55", "stroke-width": 1.4, fill: "none", "stroke-linecap": "round" }));
+    $("#butterflies").appendChild(g);
+    const b = { node: g, wingL, wingR, x: 200, y: 150, seed: rand(0, 100), speed: rand(0.22, 0.4), flee: 0, alive: i === 0 };
+    g.addEventListener("pointerdown", (e) => { e.stopPropagation(); b.flee = 2.6; poke(); sfx.flutter(); });
+    butterflies.push(b);
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Sound — a tiny synth; nothing ever plays without a gesture behind it
+   * ------------------------------------------------------------------ */
+  const sfx = (() => {
+    let ctx = null;
+    const AC = () => {
+      if (!state.sound) return null;
+      if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === "suspended") ctx.resume();
+      return ctx;
+    };
+    const env = (c, node, t, attack, decay, peak) => {
+      const g = c.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + attack);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + attack + decay);
+      node.connect(g); g.connect(c.destination);
+      return g;
+    };
+    return {
+      /* a bleat is a detuned saw pair under heavy vibrato — the wobble is the sheep */
+      bleat(happy = true) {
+        const c = AC(); if (!c) return;
+        const t = c.currentTime;
+        const base = happy ? 430 : 262;
+        const filt = c.createBiquadFilter();
+        filt.type = "lowpass"; filt.frequency.value = happy ? 2200 : 1150;
+        env(c, filt, t, 0.03, happy ? 0.5 : 0.8, 0.11);
+        const lfo = c.createOscillator(); lfo.frequency.value = happy ? 19 : 12;
+        const lfoGain = c.createGain(); lfoGain.gain.value = happy ? 26 : 15;
+        lfo.connect(lfoGain);
+        for (const detune of [0, 7]) {
+          const o = c.createOscillator();
+          o.type = "sawtooth";
+          o.frequency.setValueAtTime(base + detune, t);
+          o.frequency.exponentialRampToValueAtTime(base * (happy ? 1.14 : 0.84) + detune, t + 0.16);
+          o.frequency.exponentialRampToValueAtTime(base * (happy ? 0.94 : 0.7) + detune, t + (happy ? 0.5 : 0.8));
+          lfoGain.connect(o.frequency);
+          o.connect(filt); o.start(t); o.stop(t + (happy ? 0.66 : 0.95));
+        }
+        lfo.start(t); lfo.stop(t + 1);
+      },
+      chime() {
+        const c = AC(); if (!c) return;
+        const t = c.currentTime;
+        [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+          const o = c.createOscillator(); o.type = "triangle"; o.frequency.value = f;
+          env(c, o, t + i * 0.075, 0.01, 0.5, 0.06);
+          o.start(t + i * 0.075); o.stop(t + i * 0.075 + 0.62);
+        });
+      },
+      munch() {
+        const c = AC(); if (!c) return;
+        for (const i of [...Array(3).keys()]) {
+          const t = c.currentTime + i * 0.17;
+          const buf = c.createBuffer(1, 2048, c.sampleRate);
+          const d = buf.getChannelData(0);
+          for (const k of [...Array(d.length).keys()]) d[k] = (Math.random() * 2 - 1) * (1 - k / d.length);
+          const src = c.createBufferSource(); src.buffer = buf;
+          const bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 900 + i * 240; bp.Q.value = 3;
+          src.connect(bp);
+          env(c, bp, t, 0.005, 0.09, 0.15);
+          src.start(t);
+        }
+      },
+      purr() {
+        const c = AC(); if (!c) return;
+        const t = c.currentTime;
+        const o = c.createOscillator(); o.type = "sine"; o.frequency.value = 138;
+        env(c, o, t, 0.05, 0.3, 0.045);
+        o.start(t); o.stop(t + 0.42);
+      },
+      flutter() {
+        const c = AC(); if (!c) return;
+        const t = c.currentTime;
+        const o = c.createOscillator(); o.type = "sine";
+        o.frequency.setValueAtTime(880, t);
+        o.frequency.exponentialRampToValueAtTime(1720, t + 0.18);
+        env(c, o, t, 0.01, 0.18, 0.03);
+        o.start(t); o.stop(t + 0.26);
+      },
+    };
+  })();
+
+  /* ------------------------------------------------------------------ *
+   * Particles
+   * ------------------------------------------------------------------ */
+  const parts = [];
+  const spawn = (node, opts) => {
+    fx.appendChild(node);
+    parts.push({ node, age: 0, life: 1.4, vx: 0, vy: -40, spin: 0, rot: 0, scale: 1, grow: 0, gravity: 0, x: 0, y: 0, ...opts });
+  };
+  const heart = (x, y) => spawn(el("use", { href: "#heartPath", fill: "#ff7fa6" }),
+    { x, y, vx: rand(-26, 26), vy: rand(-64, -104), life: rand(1.1, 1.7), scale: rand(0.5, 0.95), spin: rand(-60, 60) });
+  const sparkle = (x, y) => spawn(el("use", { href: "#sparkPath", fill: "#fff3c4" }),
+    { x, y, vx: rand(-18, 18), vy: rand(-34, -66), life: rand(0.7, 1.2), scale: rand(0.35, 0.7), spin: rand(-120, 120) });
+  const crumb = (x, y) => spawn(el("circle", { r: 2.6, fill: "#6fbe58" }),
+    { x, y, vx: rand(-64, 64), vy: rand(-40, -92), life: 0.9, gravity: 280 });
+  const tear = (x, y) => spawn(el("ellipse", { rx: 4, ry: 5.6, fill: "#a9d8ef", opacity: ".9" }),
+    { x, y, vx: rand(-4, 4), vy: 10, life: 1.5, gravity: 220 });
+  const zzz = (x, y) => {
+    const t = el("text", { fill: "#fff", "font-size": 22, "font-family": "Fredoka, sans-serif", opacity: ".8" });
+    t.textContent = "z";
+    spawn(t, { x, y, vx: 16, vy: -30, life: 2.4, grow: 0.6, spin: 10 });
+  };
+
+  /* ------------------------------------------------------------------ *
+   * Interaction
+   * ------------------------------------------------------------------ */
+  const ptr = { x: 200, y: 200, inside: false };
+  let ctm = null;
+  const refreshCTM = () => { ctm = svg.getScreenCTM(); };
+  addEventListener("resize", refreshCTM);
+  refreshCTM();
+
+  const toSvg = (e) => {
+    if (!ctm) refreshCTM();
+    const p = svg.createSVGPoint();
+    p.x = e.clientX; p.y = e.clientY;
+    return p.matrixTransform(ctm.inverse());
+  };
+  const onSheep = (p) => {
+    const dx = (p.x - 200) / 136, dy = (p.y - 238) / 132;
+    return dx * dx + dy * dy <= 1;
+  };
+  const poke = () => { state.lastPoke = now(); state.dozing = false; };
+  const announce = (msg) => { live.textContent = msg; };
+
+  const goHappy = (isRefresh) => {
+    const wasHappy = state.happyUntil > Date.now();
+    state.happyUntil = Date.now() + HAPPY_MS;
+    try { localStorage.setItem(STORE_KEY, String(state.happyUntil)); } catch { /* ignore */ }
+    if (!wasHappy) {
+      sfx.chime(); sfx.bleat(true);
+      kick("hop", -330);
+      for (const i of [...Array(14).keys()]) setTimeout(() => heart(rand(150, 250), rand(150, 235)), i * 55);
+      announce("Nuage sourit : il est heureux pour cinq minutes.");
+    } else if (isRefresh) {
+      heart(rand(172, 228), 172);
+      announce("Câlin renouvelé : cinq minutes de plus.");
+    }
+    if (!state.everCuddled) { state.everCuddled = true; }
+    hintEl.classList.add("gone");
+  };
+
+  let petPrev = null, keyPetting = false;
+
+  svg.addEventListener("pointerdown", (e) => {
+    const p = toSvg(e);
+    if (!onSheep(p)) return;
+    state.petting = true;
+    petPrev = p;
+    stage.classList.add("cuddling");
+    svg.setPointerCapture?.(e.pointerId);
+    poke();
+    kick("earL", -140); kick("earR", 140);
+  });
+
+  addEventListener("pointermove", (e) => {
+    const p = toSvg(e);
+    ptr.x = p.x; ptr.y = p.y; ptr.inside = true;
+    state.lastPointer = now();
+    if (!state.dozing || onSheep(p)) poke();
+
+    if (state.petting && petPrev) {
+      const d = Math.hypot(p.x - petPrev.x, p.y - petPrev.y);
+      petPrev = p;
+      if (d > 0.4) {
+        const before = state.cuddle;
+        state.cuddle = clamp(state.cuddle + d / PET_TARGET, 0, 1);
+        if (Math.random() < d / 90) sparkle(p.x + rand(-16, 16), p.y + rand(-16, 16));
+        if (Math.random() < d / 700) sfx.purr();
+        if (before < 1 && state.cuddle >= 1) goHappy(false);
+        else if (state.cuddle >= 1 && Math.random() < d / 500) goHappy(true);
+      }
+    }
+    if (dragging) moveDrag(e.clientX, e.clientY);
+  }, { passive: true });
+
+  const endPointer = (e) => {
+    if (state.petting) { state.petting = false; petPrev = null; stage.classList.remove("cuddling"); }
+    if (dragging) dropDrag(e);
+  };
+  addEventListener("pointerup", endPointer);
+  addEventListener("pointercancel", endPointer);
+  document.addEventListener("pointerleave", () => { ptr.inside = false; });
+
+  const bleat = () => {
+    state.bleatUntil = now() + 0.55;
+    sfx.bleat(state.mood > 0.5);
+    kick("hop", -70); kick("earL", -120); kick("earR", 120);
+    poke();
+  };
+
+  // a tap that doesn't travel is a poke, not a cuddle: he just answers
+  let downAt = 0, downPos = null;
+  svg.addEventListener("pointerdown", (e) => { downAt = now(); downPos = toSvg(e); });
+  svg.addEventListener("pointerup", (e) => {
+    if (!downPos) return;
+    const p = toSvg(e);
+    if (now() - downAt < 0.35 && Math.hypot(p.x - downPos.x, p.y - downPos.y) < 12 && onSheep(p)) bleat();
+    downPos = null;
+  });
+
+  /* ---- keyboard: the sheep itself is focusable and holdable ---- */
+  const hit = $("#hit");
+  hit.setAttribute("tabindex", "0");
+  hit.setAttribute("role", "button");
+  hit.setAttribute("aria-label", "Caresser Nuage — maintiens Espace pour le câliner");
+  hit.addEventListener("keydown", (e) => {
+    if (e.key === " " || e.key === "Enter") { e.preventDefault(); keyPetting = state.petting = true; poke(); }
+  });
+  const stopKeyPet = () => { keyPetting = state.petting = false; };
+  hit.addEventListener("keyup", (e) => { if (e.key === " " || e.key === "Enter") stopKeyPet(); });
+  hit.addEventListener("blur", stopKeyPet);
+  addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() === "f") {
+      const c = clovers.find((c) => !c.classList.contains("picked"));
+      if (c) feedFrom(c);
+    }
+  });
+
+  /* ---- clover drag & drop ---- */
+  let dragging = null;
+  const dragNode = document.createElement("div");
+  dragNode.className = "drag";
+  dragNode.innerHTML =
+    `<svg viewBox="-22 -22 44 44"><g><use href="#cloverLeaves" fill="#4ea343"/><use href="#cloverLeaves" fill="#69c257" transform="scale(.82)"/></g></svg>`;
+
+  const moveDrag = (x, y) => { dragNode.style.transform = `translate(${x}px, ${y}px) rotate(${Math.sin(now() * 7) * 9}deg)`; };
+  const startDrag = (clover, x, y) => {
+    dragging = clover;
+    clover.classList.add("picked");
+    document.body.appendChild(dragNode);
+    moveDrag(x, y);
+    poke();
+  };
+  const regrow = (clover) => setTimeout(() => clover.classList.remove("picked"), 5000);
+  const dropDrag = (e) => {
+    const clover = dragging;
+    dragging = null;
+    dragNode.remove();
+    const p = toSvg(e);
+    // generous drop zone: anywhere near his head counts as an offering
+    if (onSheep(p) || Math.hypot(p.x - 200, p.y - 196) < 190) { feed(); regrow(clover); }
+    else clover.classList.remove("picked");
+  };
+  const feedFrom = (clover) => { clover.classList.add("picked"); feed(); regrow(clover); };
+
+  const feed = () => {
+    state.chewUntil = now() + 2.1;
+    poke();
+    sfx.munch();
+    kick("earL", -180); kick("earR", 180);
+    for (const i of [...Array(8).keys()]) setTimeout(() => crumb(200 + rand(-14, 14), 206), i * 70);
+    // a treat doesn't buy happiness — only a cuddle does — but it tops up a
+    // window that is already running, which is how a well-fed sheep stays happy.
+    if (state.happyUntil > Date.now()) {
+      state.happyUntil = Math.min(state.happyUntil + 30000, Date.now() + HAPPY_MS);
+      setTimeout(() => heart(200, 172), 900);
+      announce("Nuage croque le trèfle : trente secondes de bonheur en plus.");
+    } else {
+      announce("Nuage croque le trèfle, mais ce sont les câlins qui le rendent heureux.");
+    }
+  };
+
+  for (const c of clovers) {
+    c.addEventListener("pointerdown", (e) => { e.stopPropagation(); startDrag(c, e.clientX, e.clientY); });
+    c.addEventListener("keydown", (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); feedFrom(c); } });
+  }
+
+  /* ---- sound toggle ---- */
+  const soundBtn = $("#sound");
+  soundBtn.addEventListener("click", () => {
+    state.sound = !state.sound;
+    soundBtn.setAttribute("aria-pressed", String(state.sound));
+    soundBtn.setAttribute("aria-label", state.sound ? "Couper le son — mute" : "Activer le son — unmute");
+    if (state.sound) sfx.flutter();
+  });
+
+  /* ------------------------------------------------------------------ *
+   * The rig loop
+   * ------------------------------------------------------------------ */
+  const head = $("#head"), bodyG = $("#body"), shadow = $("#shadow");
+  const earL = $("#earL"), earR = $("#earR"), tail = $("#tail");
+  const eyeL = $("#eyeL"), eyeR = $("#eyeR");
+  const lidL = eyeL.querySelector(".lid"), lidR = eyeR.querySelector(".lid");
+  const arcL = eyeL.querySelector(".eye-arc"), arcR = eyeR.querySelector(".eye-arc");
+  const browL = $("#browL"), browR = $("#browR");
+  const mouth = $("#mouth"), blushL = $("#blushL"), blushR = $("#blushR");
+  const petGlowEl = $("#petGlow"), rcBody = $("#rcBody");
+  const ring = $("#ring"), chipState = $("#chipState"), chipTime = $("#chipTime");
+
+  const RING_LEN = 2 * Math.PI * 13.6;
+  ring.setAttribute("stroke-dasharray", RING_LEN.toFixed(2));
+  ring.setAttribute("stroke-dashoffset", RING_LEN.toFixed(2));
+
+  const rainDrops = [];
+  for (const i of [...Array(9).keys()]) {
+    const node = el("line", { class: "drop" });
+    $("#rain").appendChild(node);
+    rainDrops.push({ node, x: rand(-42, 42), y: rand(0, 70), sp: rand(90, 150), len: rand(7, 14) });
+  }
+
+  let t = 0, last = performance.now(), lastMoodWrite = -1;
+  let nextBlink = 2, blinkT = -1;
+  let nextTwitch = 4, nextIdleHop = 4, nextTear = 22, nextBaa = 12, nextZ = 0;
+  let bloomed = false;
+
+  const writeMood = (m) => {
+    if (Math.abs(m - lastMoodWrite) < 0.004) return;
+    lastMoodWrite = m;
+    document.documentElement.style.setProperty("--m", m.toFixed(3));
+  };
+
+  const frame = (ms) => {
+    const dt = Math.min(0.034, (ms - last) / 1000);
+    last = ms; t += dt;
+
+    /* ---- mood: the five-minute window, plus the live cuddle underneath ---- */
+    const remaining = state.happyUntil - Date.now();
+    const timerMood = remaining <= 0 ? 0 : clamp(remaining / FADE_MS, 0, 1);
+    if (keyPetting) {
+      state.cuddle = clamp(state.cuddle + dt * 0.62, 0, 1);
+      if (state.cuddle >= 1) goHappy(remaining > 0);
+    } else if (!state.petting) {
+      state.cuddle = Math.max(0, state.cuddle - dt * (timerMood > 0 ? 0.25 : 0.5));
+    }
+
+    set("moodS", clamp(Math.max(state.cuddle * 0.96, timerMood), 0, 1));
+    stepSpring(springs.moodS, dt);
+    const m = state.mood = clamp(springs.moodS.v, 0, 1);
+    writeMood(m);
+
+    if (now() - state.lastPoke > DOZE_AFTER && m < 0.2) state.dozing = true;
+    const dozing = state.dozing;
+    const chewing = now() < state.chewUntil;
+    const bleating = now() < state.bleatUntil;
+    const petting = state.petting;
+
+    /* ---- what he looks at: your hand, else a butterfly, else a slow drift ---- */
+    let gx, gy;
+    const bfly = butterflies.find((b) => b.alive);
+    if (dragging) {
+      gx = 0; gy = 0.7;
+    } else if (ptr.inside && now() - state.lastPointer < 2.2) {
+      gx = clamp((ptr.x - 200) / 190, -1, 1);
+      gy = clamp((ptr.y - 190) / 170, -1, 1);
+    } else if (bfly && !dozing) {
+      gx = clamp((bfly.x - 200) / 200, -1, 1);
+      gy = clamp((bfly.y - 190) / 180, -1, 1);
+    } else {
+      gx = Math.sin(t * 0.31) * 0.35;
+      gy = Math.sin(t * 0.23 + 1.4) * 0.2;
+    }
+    if (dozing) { gx *= 0.1; gy = 0.6; }
+    set("gazeX", gx); set("gazeY", gy);
+
+    /* ---- posture ---- */
+    set("lean", dozing ? 7 : lerp(-2, 0, m) + gx * lerp(5, 9, m) + (petting ? gx * 5 : 0));
+    set("mouth", lerp(-1, 1, m) + (petting ? 0.3 : 0));
+    set("brow", 1 - m);
+    set("earL", dozing ? 14 : lerp(26, -12, m) + (petting ? -8 : 0));
+    set("earR", dozing ? -14 : lerp(-26, 12, m) + (petting ? 8 : 0));
+    set("tail", Math.sin(t * (2 + m * 7)) * lerp(4, 22, m));
+    set("sway", Math.sin(t * (0.6 + m * 0.9)) * lerp(2, 7, m));
+    set("open", bleating ? 1 : chewing ? 0.44 + Math.sin(t * 17) * 0.34 : 0);
+
+    /* ---- scheduled life: blinks, twitches, hops, bleats, tears ---- */
+    nextBlink -= dt;
+    if (nextBlink <= 0 && !dozing) { blinkT = 0.16; nextBlink = rand(2.4, 6.5); }
+    if (blinkT >= 0) blinkT -= dt;
+
+    nextTwitch -= dt;
+    if (nextTwitch <= 0) {
+      nextTwitch = rand(3.5, 9);
+      if (!dozing) kick(Math.random() < 0.5 ? "earL" : "earR", rand(-260, 260));
+    }
+
+    if (m > 0.55 && !REDUCED) {
+      nextIdleHop -= dt;
+      if (nextIdleHop <= 0) {
+        nextIdleHop = rand(2.6, 5.4);
+        kick("hop", -190);
+        if (Math.random() < 0.5) sparkle(rand(140, 260), rand(190, 250));
+      }
+      nextBaa -= dt;
+      if (nextBaa <= 0) { nextBaa = rand(12, 28); bleat(); }
+    } else {
+      nextTear -= dt;
+      if (nextTear <= 0 && m < 0.25 && !dozing) {
+        nextTear = rand(18, 34);
+        tear(200 + (Math.random() < 0.5 ? -22 : 22), 188);
+      }
+    }
+    if (dozing) {
+      nextZ -= dt;
+      if (nextZ <= 0) { nextZ = 2.3; zzz(234, 152); }
+    }
+
+    for (const k in springs) stepSpring(springs[k], dt);
+
+    /* ---- body: breathe, hop, squash ---- */
+    const breathe = Math.sin(t * 1.35) * (1.6 + m * 0.8);
+    const hopY = v("hop");
+    const squash = clamp(1 - springs.hop.vel / 2600, 0.9, 1.1);
+    const by = hopY + breathe;
+    bodyG.setAttribute("transform",
+      `translate(${v("sway").toFixed(2)} ${by.toFixed(2)}) translate(200 344) scale(${(2 - squash).toFixed(4)} ${squash.toFixed(4)}) translate(-200 -344)`);
+    shadow.setAttribute("transform", `translate(200 352) scale(${(1 + hopY / 300).toFixed(3)} 1) translate(-200 -352)`);
+    shadow.setAttribute("opacity", clamp(0.16 - hopY / 900, 0.05, 0.2).toFixed(3));
+
+    /* ---- wool: breathing blobs, pushed aside by the petting hand ---- */
+    const pushing = petting && !keyPetting;
+    for (const b of blobs) {
+      let x = b.bx, y = b.by;
+      const wob = Math.sin(t * b.speed + b.phase) * (1.6 + m * 1.4);
+      if (pushing) {
+        const dx = b.bx - ptr.x + v("sway"), dy = b.by - ptr.y + by;
+        const d = Math.hypot(dx, dy) || 1;
+        if (d < 76) { const f = (1 - d / 76) * 9; x += (dx / d) * f; y += (dy / d) * f; }
+      }
+      b.node.setAttribute("cx", (x + wob * 0.4).toFixed(2));
+      b.node.setAttribute("cy", (y + wob).toFixed(2));
+      b.node.setAttribute("r", (b.r + wob * 0.5).toFixed(2));
+    }
+
+    /* ---- head, ears, tail ---- */
+    head.setAttribute("transform",
+      `rotate(${v("lean").toFixed(2)} 200 216) translate(${(v("gazeX") * 4).toFixed(2)} ${(Math.sin(t * 1.35 + 0.6) * 1.2 + v("gazeY") * 2 + (1 - m) * 5).toFixed(2)})`);
+    earL.setAttribute("transform", `translate(160 178) rotate(${(-16 + v("earL")).toFixed(2)})`);
+    earR.setAttribute("transform", `translate(240 178) rotate(${(16 + v("earR")).toFixed(2)})`);
+    tail.setAttribute("transform", `translate(312 246) rotate(${v("tail").toFixed(2)} -16 -4)`);
+
+    /* ---- eyes ---- */
+    const gxp = v("gazeX") * 3.2, gyp = v("gazeY") * 2.6;
+    const blink = blinkT > 0 ? clamp(Math.abs(blinkT - 0.08) / 0.08, 0.05, 1) : 1;
+    const lidOpen = dozing ? 0.06 : blink * lerp(0.84, 1, m);
+    const beaming = m > 0.86 && (petting || bleating || springs.hop.vel < -60);
+    const arcAmt = beaming || dozing ? 1 : 0;
+
+    for (const [g, lid, arc, sx] of [[eyeL, lidL, arcL, -1], [eyeR, lidR, arcR, 1]]) {
+      g.setAttribute("transform", `translate(${(200 + sx * 22 + gxp).toFixed(2)} ${(181 + gyp).toFixed(2)})`);
+      lid.setAttribute("transform", `scale(${(1 + (1 - m) * 0.06).toFixed(3)} ${lidOpen.toFixed(3)})`);
+      lid.setAttribute("opacity", (1 - arcAmt).toFixed(2));
+      arc.setAttribute("opacity", arcAmt.toFixed(2));
+      arc.setAttribute("transform", dozing ? "scale(1 -0.8) translate(0 -3)" : "scale(1 1)");
+    }
+
+    const bt = v("brow");
+    for (const [b, sx] of [[browL, -1], [browR, 1]]) {
+      b.setAttribute("transform",
+        `translate(${(200 + sx * 22 + gxp * 0.7).toFixed(2)} ${(160 + gyp * 0.6 - (1 - bt) * 3).toFixed(2)}) rotate(${(sx * -bt * 22).toFixed(2)})`);
+      b.setAttribute("opacity", (0.25 + bt * 0.75).toFixed(2));
+    }
+
+    /* ---- mouth: one quadratic whose control point carries the whole mood ---- */
+    const mc = v("mouth"), open = v("open");
+    const my = 207 + gyp * 0.4 + open * 2;
+    const halfW = 14 + open * 2;
+    if (open > 0.06) {
+      const oh = 4 + open * 9;
+      mouth.setAttribute("fill", "#8c4b58");
+      mouth.setAttribute("d", `M${200 - halfW},${my} Q200,${my + oh * 1.8} ${200 + halfW},${my} Q200,${my - oh * 0.3} ${200 - halfW},${my} Z`);
+    } else {
+      mouth.setAttribute("fill", "none");
+      mouth.setAttribute("d", `M${200 - halfW},${my.toFixed(2)} Q200,${(my + mc * 7).toFixed(2)} ${200 + halfW},${my.toFixed(2)}`);
+    }
+
+    const blushA = clamp(m * 0.55 + (petting ? 0.35 : 0), 0, 0.85);
+    blushL.setAttribute("opacity", blushA.toFixed(2));
+    blushR.setAttribute("opacity", blushA.toFixed(2));
+
+    petGlowEl.setAttribute("opacity", pushing ? "1" : "0");
+    if (pushing) { petGlowEl.setAttribute("cx", ptr.x.toFixed(1)); petGlowEl.setAttribute("cy", ptr.y.toFixed(1)); }
+
+    /* ---- his weather: the cloud floats up and away as he cheers up ---- */
+    rcBody.setAttribute("transform",
+      `translate(${(Math.sin(t * 0.5) * 6).toFixed(2)} ${(Math.sin(t * 0.8) * 3 - m * 80).toFixed(2)}) scale(${(1 - m * 0.35).toFixed(3)})`);
+    for (const d of rainDrops) {
+      d.y += d.sp * dt * (1 - m);
+      if (d.y > 64) { d.y = rand(-12, 8); d.x = rand(-44, 44); }
+      const x = 200 + d.x, y = 64 + d.y - m * 80;
+      d.node.setAttribute("x1", x.toFixed(1)); d.node.setAttribute("y1", y.toFixed(1));
+      d.node.setAttribute("x2", (x - 1.5).toFixed(1)); d.node.setAttribute("y2", (y + d.len).toFixed(1));
+      d.node.setAttribute("opacity", (0.75 * (1 - m)).toFixed(2));
+    }
+
+    /* ---- butterflies: one always, the others only when the sun is out ---- */
+    butterflies.forEach((b, i) => {
+      b.alive = i === 0 || m > 0.35;
+      b.node.setAttribute("opacity", b.alive ? "1" : "0");
+      if (!b.alive) return;
+      if (b.flee > 0) {
+        b.flee -= dt;
+        b.y -= 130 * dt;
+        b.x += Math.sin(t * 6 + i) * 70 * dt;
+        if (b.y < -70) { b.y = 320; b.flee = 0; }
+      } else {
+        b.x = 200 + Math.sin(t * b.speed + b.seed) * 215 + Math.sin(t * b.speed * 2.3 + b.seed) * 45;
+        b.y = 118 + Math.cos(t * b.speed * 1.4 + b.seed) * 62 + Math.sin(t * b.speed * 3.1) * 14;
+      }
+      const flap = Math.abs(Math.sin(t * 11 + i));
+      b.node.setAttribute("transform",
+        `translate(${b.x.toFixed(1)} ${b.y.toFixed(1)}) rotate(${(Math.sin(t * b.speed + b.seed) * 12).toFixed(1)}) scale(${(0.72 + i * 0.08).toFixed(2)})`);
+      b.wingL.setAttribute("transform", `scale(${(0.4 + flap * 0.6).toFixed(2)} 1)`);
+      b.wingR.setAttribute("transform", `scale(${(0.4 + flap * 0.6).toFixed(2)} 1)`);
+    });
+
+    /* ---- particles ---- */
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i];
+      p.age += dt;
+      if (p.age >= p.life) { p.node.remove(); parts.splice(i, 1); continue; }
+      p.vy += p.gravity * dt;
+      p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.spin * dt;
+      const k = p.age / p.life;
+      const sc = (p.scale + p.grow * k) * (1 + Math.sin(k * Math.PI) * 0.12);
+      p.node.setAttribute("transform", `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${p.rot.toFixed(1)}) scale(${sc.toFixed(3)})`);
+      p.node.setAttribute("opacity", (1 - k * k).toFixed(3));
+    }
+
+    /* ---- the meadow blooms when he does ---- */
+    if (m > 0.5 !== bloomed) {
+      bloomed = m > 0.5;
+      for (const f of flowers) f.classList.toggle("bloom", bloomed);
+    }
+
+    /* ---- HUD ---- */
+    const ratio = remaining > 0 ? clamp(remaining / HAPPY_MS, 0, 1) : state.cuddle;
+    ring.setAttribute("stroke-dashoffset", (RING_LEN * (1 - ratio)).toFixed(2));
+    if (remaining > 0) {
+      const s = Math.ceil(remaining / 1000);
+      chipState.textContent = "Heureux";
+      chipTime.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} restantes`;
+    } else if (state.cuddle > 0.02) {
+      chipState.textContent = "Câlin…";
+      chipTime.textContent = `${Math.round(state.cuddle * 100)} %`;
+    } else if (dozing) {
+      chipState.textContent = "Il somnole";
+      chipTime.textContent = "réveille-le";
+    } else {
+      chipState.textContent = "Il boude";
+      chipTime.textContent = "—:—";
+    }
+
+    requestAnimationFrame(frame);
+  };
+
+  /* when the five minutes run out, he says so */
+  let wasHappy = state.happyUntil > Date.now();
+  setInterval(() => {
+    const isHappy = state.happyUntil > Date.now();
+    if (wasHappy && !isHappy) {
+      sfx.bleat(false);
+      announce("Les cinq minutes sont passées : Nuage boude de nouveau.");
+      hintText.innerHTML = "Encore un câlin ? <span class=\"en\">· one more cuddle?</span>";
+      hintEl.classList.remove("gone");
+      try { localStorage.removeItem(STORE_KEY); } catch { /* ignore */ }
+    }
+    wasHappy = isHappy;
+  }, 1000);
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
