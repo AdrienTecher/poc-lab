@@ -13,7 +13,7 @@ list to edit** when adding one.
 | `apps/<slug>/package.json` present | **buildable** | Vite build (base `/poc-lab/<slug>/`) → `dist/<slug>/` |
 
 - `scripts/build.mjs` — orchestrator: per app, build or copy into `dist/`, write `.nojekyll`, then generate the gallery.
-- `scripts/gallery.mjs` — writes `dist/index.html` + `dist/apps.json` from each app's `meta.json` (falling back to its `<title>`/`<meta description>`).
+- `scripts/gallery.mjs` — writes `dist/index.html` + `dist/apps.json` from each app's `meta.json` (falling back to its `<title>`/`<meta description>`), and copies `assets/fonts/` into `dist/assets/fonts/`. The landing page renders every app server-side, so it works with JavaScript off; search, tag facets, sort and density are progressive enhancement over that list, held in the URL. Density defaults to cards up to 24 apps and to the index past that; the reader can override it.
 - `scripts/validate.mjs` — gates every `apps/<slug>/meta.json` against `schema/app.schema.json` (runs as `prebuild` and in CI).
 - `.github/workflows/deploy.yml` — validate → build → deploy to Pages on push to `main`.
 

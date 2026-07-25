@@ -1,0 +1,17 @@
+{
+  "slug": "lexicon",
+  "title": "Lexicon",
+  "description": "Un mot rare par tirage, en français ou en anglais : deux fonds de 200 mots, cinq niveaux d'érudition, domaines activables et une fiche mémo à imprimer.",
+  "description_en": "A rare word per draw, in French or English — two banks of 200 words, five levels of erudition, toggleable domains and a printable memory card.",
+  "tags": [
+    "vocabulaire",
+    "langue",
+    "apprentissage",
+    "bilingue",
+    "interactif"
+  ],
+  "updated": "2026-07-25",
+  "created": "2026-07-25",
+  "source": "claude-code",
+  "kind": "static"
+}

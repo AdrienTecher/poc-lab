@@ -1,0 +1,16 @@
+{
+  "slug": "el-nino-2026",
+  "title": "El Niño 2026–27 — l'explication interactive",
+  "description": "La mécanique océan-atmosphère à manipuler au curseur, les probabilités officielles d'intensité, la réponse région par région — et ce que cela veut dire, ou non, pour la France. Bilingue FR/EN.",
+  "description_en": "A hands-on explainer of the 2026–27 El Niño: drag the coupled ocean–atmosphere model, read the official strength odds, and see what it does and does not imply for France.",
+  "tags": [
+    "climat",
+    "science",
+    "explicatif",
+    "carte",
+    "bilingue"
+  ],
+  "created": "2026-07-25",
+  "source": "claude.ai",
+  "kind": "static"
+}
