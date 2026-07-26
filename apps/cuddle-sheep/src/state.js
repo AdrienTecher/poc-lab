@@ -3,7 +3,10 @@
 // threading a context through every call.
 //
 // What is NOT here: anything persisted. The save file owns that
-// (engine/save.js), and this is rehydrated from it at boot.
+// (engine/save.js), and this is rehydrated from it at the foot of this module —
+// before any other module's body runs, which is what lets them read a state
+// that is already true.
+import * as save from "./engine/save.js";
 import { now } from "./engine/math.js";
 import { FIRST_FLEECE, WOOL_FULL_MS } from "./rules.js";
 
@@ -12,6 +15,7 @@ export const state = {
   cuddle: 0,            // 0..1, fills while stroking, decays when you stop
   mood: 0,              // smoothed 0..1, what the whole scene keys on
   petting: false,
+  byKey: null,          // null | "pet" | "shear" — a held key, not a held pointer
   dozing: false,
   chewUntil: 0,
   bleatUntil: 0,
@@ -28,4 +32,18 @@ export const state = {
   shiverUntil: 0,
   fed: 0,               // clovers eaten, all-time
   lookAt: 0,            // until when his gaze is forced at the meadow sprout
+  dragging: null,       // the clover currently in your hand, if any
 };
+
+// restore an in-flight happiness window so a reload doesn't betray him
+if (save.data.sheep.happyUntil > Date.now()) {
+  state.happyUntil = save.data.sheep.happyUntil;
+  state.mood = 1;
+  state.everCuddled = true;
+}
+// A first visit starts mid-fleece — write that epoch down straight away, or a
+// player who never shears would start over at 45% on every reload.
+if (save.data.sheep.woolFrom > 0) state.woolFrom = save.data.sheep.woolFrom;
+else { save.data.sheep.woolFrom = state.woolFrom; save.touch(true); }
+state.fed = save.data.care.fed;
+state.sound = save.data.prefs.sound;

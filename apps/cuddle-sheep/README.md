@@ -8,6 +8,26 @@ pnpm --filter @poc-lab/cuddle-sheep dev     # vite dev server
 pnpm build                                  # from the repo root, into dist/cuddle-sheep/
 ```
 
+## Layout
+
+Plain ES modules, no framework. `main.js` decides nothing: it builds the world
+in the one order that matters — the meadow is an SVG, so DOM order *is* paint
+order — and runs the single frame loop.
+
+| tree | what lives there |
+|---|---|
+| `engine/` | reusable and world-agnostic: springs, particles, the synth, the 2:1 iso kit, painter order, the save file |
+| `world/` | what he *is*: the rig, the mood, the fleece, the clover patch, your hands, the progression |
+| `places/` | where he *goes*: one diorama per module, exactly one mounted at a time |
+| `puzzles/` | the rules of a place, as pure functions of where the pieces are |
+| `ui/` | the chrome around the scene: the two clock rings, the hint bubble, the live region |
+
+Two rules keep it from tangling. **Painter order is computed, not hand-wired** —
+he is a DOM actor between two SVG layers, and every piece declares its own depth
+(`engine/depth.js`). **The progression is a store, not a call** — the clover
+patch and the four-leaf sprout both watch `world/valley.js`, so neither has to
+be known by whatever changed it.
+
 ## The two clocks
 
 Both are a single stored epoch, derived on read, so they keep running while the
