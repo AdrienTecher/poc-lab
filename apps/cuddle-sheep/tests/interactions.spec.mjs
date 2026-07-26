@@ -72,6 +72,36 @@ export default async ({ newPage, check, APP }) => {
   check("the fleece becomes a cloud", (await page.locator("#cloudbank .puff").count()) > 5);
   await page.close();
 
+  // --- the shears from the keyboard: t takes them, and anything else lets go
+  page = await newPage({ viewport: { width: 1280, height: 800 } });
+  await boot(page, APP, { "nuage:wool-from": Date.now() - 15 * MINUTE });
+  const holding = () => page.evaluate(() => document.body.classList.contains("tooling"));
+  await page.keyboard.press("t");
+  await page.waitForTimeout(300);
+  check("t takes the shears", await holding());
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(250);
+  check("Escape puts them back", !(await holding()));
+  await page.keyboard.press("t");
+  await page.waitForTimeout(250);
+  await page.mouse.click(6, 400);              // anywhere outside the world
+  await page.waitForTimeout(250);
+  check("clicking elsewhere puts them back", !(await holding()));
+
+  await cuddle(page);                          // he holds still for the blades once settled
+  await page.keyboard.press("t");
+  await page.waitForTimeout(250);
+  const pct = async () => Number((await page.locator("#woolPct").innerText()).replace(/\D/g, ""));
+  const fleece = await pct();
+  await page.locator("#hit").focus();
+  await page.keyboard.down(" ");
+  const shorn = await page
+    .waitForFunction((was) => Number(document.querySelector("#woolPct").textContent.replace(/\D/g, "")) < was, fleece, { timeout: 10000 })
+    .then(() => true, () => false);
+  await page.keyboard.up(" ");
+  check("holding Space with them in hand shears him", shorn, `still ${await pct()}% of ${fleece}%`);
+  await page.close();
+
   // --- keyboard only
   page = await newPage({ viewport: { width: 1280, height: 800 } });
   await boot(page, APP, { "nuage:unlocked": 1 });

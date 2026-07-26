@@ -5,6 +5,23 @@ import { boot, tapSheep, clickMid } from "./helpers.mjs";
 const row = async (page) => { await page.locator("#crossRow").click(); await page.waitForTimeout(1300); };
 
 export default async ({ newPage, check, APP }) => {
+  // --- the key is earned by caring: five clovers grow the four-leaf one
+  const door = await newPage({ viewport: { width: 1280, height: 800 } });
+  await boot(door, APP);
+  // three clovers stand in the grass at a time, and a picked one is five
+  // seconds coming back — so the fourth and fifth wait for a regrowth
+  for (const i of [...Array(5).keys()]) { await door.keyboard.press("f"); await door.waitForTimeout(i === 2 ? 5400 : 300); }
+  await door.waitForTimeout(1500);
+  const opened = await door.evaluate(() => JSON.parse(localStorage.getItem("nuage:save")).valley.unlocked);
+  check("five clovers unlock the river", opened.includes("riviere"), JSON.stringify(opened));
+  check("the four-leaf clover shows itself", await door.locator(".sprout").evaluate((n) => n.classList.contains("reveal")));
+  check("and he is told where to tap", (await door.locator("#live").innerText()).includes("quatre feuilles"));
+  const sprout = await door.locator(".sprout").boundingBox();
+  await door.mouse.click(sprout.x + sprout.width / 2, sprout.y + sprout.height * 0.55);
+  await door.waitForTimeout(900);
+  check("tapping it walks him to the river", (await door.evaluate(() => document.documentElement.dataset.mode)) === "cross");
+  await door.close();
+
   const page = await newPage({ viewport: { width: 1280, height: 800 } });
   await boot(page, APP, { "nuage:unlocked": 1 });
   await page.keyboard.press("j");
