@@ -5,6 +5,11 @@
      --------------------------------------------------------------------- */
   :root{
     --m: 0;
+    /* the hour, written by world/daylight.js and read by nothing else */
+    --day: 1; --night: 0; --arc: .5; --dusk: 0;
+    --night-grade: .46; --dusk-grade: .6;
+    --lamp: #ffdca0;   /* what a low sun lays along the horizon */
+    --dark: #2c3766;   /* and what the sky becomes once it has gone */
 
     --sky-top:  color-mix(in oklab, #74d2f2 calc(var(--m) * 100%), #6f7a8c);
     --sky-mid:  color-mix(in oklab, #bfe9f6 calc(var(--m) * 100%), #98a1ae);
@@ -77,15 +82,71 @@
   :focus-visible{outline:3px solid #fff; outline-offset:4px; border-radius:12px}
 
   /* ---------------- scene ---------------- */
-  .scene{position:fixed; inset:0; overflow:hidden; user-select:none}
+  /* isolation, so the grades below composite against the scene and not against
+     the page — and so the HUD, the hint and the held tools stay out of them */
+  .scene{position:fixed; inset:0; overflow:hidden; user-select:none; isolation:isolate}
+
+  .moon{
+    position:absolute; z-index:1; pointer-events:none;
+    left:calc(4% + var(--arc) * 84%); top:calc(58% - var(--night) * 46%);
+    width:min(15vmin,104px); aspect-ratio:1; border-radius:50%;
+    opacity:calc(var(--night) * .92);
+    background:radial-gradient(circle at 38% 34%, #fbfcff, #dfe6ff 58%, #b9c6f2);
+    box-shadow:0 0 44px 14px rgba(200,216,255,.34);
+  }
+
+  /* ---- the day ----------------------------------------------------------
+     Two grades over the finished scene. They multiply, which darkens without
+     tinting toward a flat colour — but note that multiply scales the DISTANCE
+     between the happy and the sad palette as well as the palette itself, and
+     that distance is what --m means. The grade ceilings are therefore measured
+     rather than chosen: see tests/day.spec.mjs. At noon both are zero and the
+     meadow is exactly the one that shipped. */
+  .grade{position:absolute; inset:0; z-index:2; pointer-events:none; mix-blend-mode:multiply}
+  .grade--dusk{
+    opacity:calc(var(--dusk) * var(--dusk-grade));
+    background:
+      radial-gradient(56% 32% at calc(6% + var(--arc) * 88%) 68%,
+        var(--lamp) 0%, color-mix(in oklab, var(--lamp) 64%, #ef9f70) 44%, transparent 76%),
+      linear-gradient(180deg, #d3b9dc 0%, #f4d0ad 56%, #ffe8cc 100%);
+  }
+  /* the ground barely moves — moonlight on a field, and the reason his wool is
+     the brightest thing in the frame at 3am */
+  .grade--night{
+    opacity:calc(var(--night) * var(--night-grade));
+    background:linear-gradient(180deg,
+      var(--dark) 0%,
+      color-mix(in oklab, var(--dark) 54%, #a9b2e0) 36%,
+      color-mix(in oklab, var(--dark) 20%, #e2e0f2) 68%,
+      color-mix(in oklab, var(--dark) 6%,  #f6f3fb) 100%);
+  }
+  /* and a screen pass puts the speculars back that the multiply took: his eye
+     glints, the river crests, the moon on the water */
+  .grade--night::after{
+    content:""; position:absolute; inset:0; mix-blend-mode:screen;
+    opacity:calc(var(--night) * .5);
+    background:radial-gradient(32% 26% at calc(6% + var(--arc) * 88%) 16%,
+      rgba(206,222,255,.46), rgba(150,178,244,.1) 46%, transparent 72%);
+  }
+  html[data-season="printemps"]{ --lamp:#ffe9c4; --dark:#2b3a6e }
+  html[data-season="ete"]      { --lamp:#fff1c0; --dark:#24306a }
+  html[data-season="automne"]  { --lamp:#ffc27a; --dark:#38315f }
+  html[data-season="hiver"]    { --lamp:#e8eeff; --dark:#222c58 }
+
+  /* two washes must not stack into mud: the sadness haze steps back after dark */
+  .veil{opacity:calc((1 - var(--m)) * (.4 + .6 * var(--day)))}
+
   .sky{
     position:absolute; inset:0;
     background:linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 52%, var(--sky-low) 100%);
   }
   /* Sun and overcast veil cross-fade on mood — what makes the sad scene read
      as weather rather than as a dimmed screen. */
+  /* the sun does not fade out, it SETS: .hills is a later sibling at z-auto and
+     genuinely occludes it, so the disc sinks behind the ridge */
   .sun{
-    position:absolute; top:7%; right:11%; width:min(30vmin,220px); aspect-ratio:1;
+    position:absolute; width:min(30vmin,220px); aspect-ratio:1;
+    left:calc(4% + var(--arc) * 84%); top:calc(58% - var(--day) * 54%);
     opacity:calc(var(--m) * .95);
   }
   .sun__core{
@@ -101,7 +162,7 @@
   }
   @keyframes spin{to{transform:rotate(360deg)}}
   .veil{
-    position:absolute; inset:0; pointer-events:none; opacity:calc(1 - var(--m));
+    position:absolute; inset:0; pointer-events:none;
     background:
       radial-gradient(120% 70% at 50% -10%, rgba(58,68,84,.36), transparent 62%),
       linear-gradient(180deg, rgba(92,102,118,.32), rgba(120,128,142,.05) 62%);

@@ -17,6 +17,7 @@ import * as butterflies from "./world/butterflies.js";
 import * as hands from "./world/hands.js";
 import * as mood from "./world/mood.js";
 import * as valley from "./world/valley.js";
+import * as daylight from "./world/daylight.js";
 import * as riviere from "./places/riviere.js";
 import * as grange from "./places/grange.js";
 import * as camera from "./engine/camera.js";
@@ -57,6 +58,7 @@ const frame = (ms) => {
   const dt = Math.min(0.034, (ms - last) / 1000);
   last = ms; t += dt;
 
+  daylight.step();
   const m = mood.step(dt);
   const w = wool.step(dt);
   sheep.step(dt, t, m);          // steps every spring, the camera's included

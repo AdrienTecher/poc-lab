@@ -88,3 +88,61 @@ export const VIEWPORTS = [
   ["phone", 390, 844], ["phone-small", 360, 640], ["phone-tiny", 320, 568],
   ["ultrawide", 2560, 1080],
 ];
+
+/* ---- reading actual pixels -------------------------------------------- *
+ * Some things can only be settled by looking at what the compositor did.
+ * A blend mode's effect on the distance between two palettes is one of them:
+ * modelling it means assuming a grade colour and ignoring every layer over it,
+ * and the modelled answer and the real one differ by a lot. Playwright hands
+ * back a PNG; this is the smallest correct reader for one. */
+import { inflateSync } from "node:zlib";
+
+const paeth = (a, b, c) => {
+  const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c);
+  return pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+};
+
+/** → { width, height, pixels: Uint8Array (RGBA) } for an 8-bit non-interlaced PNG. */
+export const decodePNG = (buf) => {
+  let at = 8, width = 0, height = 0, colour = 6;
+  const parts = [];
+  while (at < buf.length) {
+    const len = buf.readUInt32BE(at);
+    const type = buf.toString("ascii", at + 4, at + 8);
+    const body = buf.subarray(at + 8, at + 8 + len);
+    if (type === "IHDR") { width = body.readUInt32BE(0); height = body.readUInt32BE(4); colour = body[9]; }
+    if (type === "IDAT") parts.push(body);
+    at += len + 12;
+  }
+  const bpp = colour === 6 ? 4 : 3;
+  const raw = inflateSync(Buffer.concat(parts));
+  const out = new Uint8Array(width * height * 4);
+  const stride = width * bpp;
+  const line = new Uint8Array(stride), prev = new Uint8Array(stride);
+  for (let y = 0, p = 0; y < height; y++) {
+    const filter = raw[p++];
+    for (let i = 0; i < stride; i++) {
+      const x = raw[p + i];
+      const a = i >= bpp ? line[i - bpp] : 0, b = prev[i], c = i >= bpp ? prev[i - bpp] : 0;
+      line[i] = (x + (filter === 1 ? a : filter === 2 ? b : filter === 3 ? ((a + b) >> 1) : filter === 4 ? paeth(a, b, c) : 0)) & 255;
+    }
+    p += stride;
+    for (let x = 0; x < width; x++) {
+      out[(y * width + x) * 4] = line[x * bpp];
+      out[(y * width + x) * 4 + 1] = line[x * bpp + 1];
+      out[(y * width + x) * 4 + 2] = line[x * bpp + 2];
+      out[(y * width + x) * 4 + 3] = 255;
+    }
+    prev.set(line);
+  }
+  return { width, height, pixels: out };
+};
+
+/** The average colour of a patch of the live page, as actually composited. */
+export const patch = async (page, clip) => {
+  const { pixels } = decodePNG(await page.screenshot({ clip }));
+  const n = pixels.length / 4;
+  const sum = [0, 0, 0];
+  for (let i = 0; i < n; i++) for (const k of [0, 1, 2]) sum[k] += pixels[i * 4 + k];
+  return sum.map((v) => v / n);
+};

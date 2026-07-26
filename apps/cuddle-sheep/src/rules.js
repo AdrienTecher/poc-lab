@@ -17,3 +17,27 @@ export const FIRST_FLEECE = 0.45;           // a first visit starts mid-fleece: 
 
 export const CLOVERS_TO_UNLOCK = 5;         // clovers eaten before the river puzzle opens
 export const FLEECES_TO_UNLOCK = 3;         // fleeces shorn before the barn opens — they ARE the bales
+
+/* ---- the day ----------------------------------------------------------- *
+ * The only clock in the game with no stored state: it is read from the
+ * player's own clock, so it cannot rewind and cannot be fallen behind on.
+ * Sunrise and sunset by month, for the latitude the game is written in — a
+ * declared table rather than a solar model, because the point is that the
+ * meadow agrees with the window, and a table can be checked by looking. */
+export const SUNRISE = [
+  [8.7, 17.1], [8.1, 18.0], [7.1, 18.9], [6.9, 20.8], [6.0, 21.5], [5.8, 21.9],
+  [6.1, 21.8], [6.8, 21.1], [7.5, 20.0], [8.3, 19.0], [8.1, 17.2], [8.7, 16.9],
+];
+export const SEASONS = [
+  "hiver", "hiver", "printemps", "printemps", "printemps", "ete",
+  "ete", "ete", "automne", "automne", "automne", "hiver",
+];
+export const GOLDEN = 0.34;      // solar altitude either side of the horizon that reads as golden
+
+// How dark the night is allowed to get. NOT a taste value: a grade multiplies
+// the distance between the happy and the sad palette as well as the palette
+// itself, so this number is the one that decides whether --m still means
+// anything after dark. It is set by measurement — see tests/day.spec.mjs — and
+// night is when most people will actually be here, so it is set gently.
+export const NIGHT_GRADE = 0.40;
+export const DUSK_GRADE = 0.6;
