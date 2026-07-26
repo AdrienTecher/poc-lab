@@ -695,7 +695,7 @@ import {
       <path d="M-38,-34 Q0,-14 38,-34" stroke="#5faa46" stroke-width="3.4" fill="none" stroke-linecap="round"/>
       <ellipse cx="-16" cy="-68" rx="10" ry="6.5" fill="#c9 efa0" opacity="0"/>
       <ellipse cx="-16" cy="-68" rx="10" ry="6.5" fill="#c8efa2" opacity=".45"/>`;
-    layers.add(chou, () => (game.where.chou === "boat" ? -1000 : 1000), "chou");   // OLD RULE EMULATION
+    layers.add(chou, () => depthOf("chou"), "chou");
     game.tok = { loup: wolf, chou };
     bindTok("loup"); bindTok("chou"); bindBoat();
   };

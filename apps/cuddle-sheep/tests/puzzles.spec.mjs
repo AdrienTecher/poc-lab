@@ -16,8 +16,14 @@ export default async ({ newPage, check, APP }) => {
   await row(page);
   check("sheep + cabbage alone is caught", (await page.locator("#live").innerText()).includes("mangé le chou"));
   check("and it is a rewind, not a loss", (await page.locator("#crossUndo").isEnabled()));
+  await page.waitForTimeout(1500);          // let the choreography finish first
+  const moves = () => page.locator("#crossMoves").innerText();
+  check("the failed crossing counted as a move", (await moves()).startsWith("1"));
   await page.locator("#crossUndo").click();
-  await page.waitForTimeout(600);
+  await page.waitForTimeout(700);
+  check("undo gives the move back", (await moves()).startsWith("0"));
+  const board = await page.locator("#live").innerText();
+  check("undo puts everyone back on the left bank", board.includes("Rive droite : personne"), board);
 
   // leaving the wolf with the sheep is caught too
   await page.locator("#crossReset").click();
@@ -32,7 +38,15 @@ export default async ({ newPage, check, APP }) => {
   // Nuage must be drawn in the layer in front of him, and behind when it is not
   const layerOfChou = () => page.evaluate(() => document.querySelector("#tokChou").parentElement.id);
   check("the cabbage starts in front of him", (await layerOfChou()) === "crossFront");
-  await tapSheep(page);                 // Nuage crosses, so he is now the far piece
+
+  // The case that separates the computed rule from the hand-wired one it replaced:
+  // the old code moved the cabbage behind him whenever it was aboard. Aboard the
+  // boat with Nuage still on the NEAR bank, the boat is closer to the camera, so
+  // the cabbage belongs in front. The old rule got this wrong.
+  await clickMid(page, "#tokChou");
+  check("aboard, with him on the near bank, it stays in front", (await layerOfChou()) === "crossFront");
+  await clickMid(page, "#tokChou");     // put it back ashore
+  await tapSheep(page);                 // Nuage crosses, so he becomes the far piece
   await row(page);
   await row(page);                      // the boat comes back empty
   await clickMid(page, "#tokChou");     // and the cabbage boards
