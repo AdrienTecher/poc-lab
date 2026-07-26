@@ -37,23 +37,39 @@ git config gpg.ssh.allowedSignersFile ~/.config/git/allowed_signers
 git rebase --exec "git commit --amend --no-edit -S" b225cd6
 ```
 
-**One thing is still outstanding, and it needs a human.** GitHub will show these as
-*Unverified* until the public key is registered as a **signing** key on the account,
-which needs the `admin:ssh_signing_key` scope and therefore an interactive OAuth
-refresh:
-
-```bash
-gh auth refresh -h github.com -s admin:ssh_signing_key
-gh ssh-key add ~/.ssh/id_ed25519_signing.pub --type signing --title "nuage signing"
-```
-
-No rewrite is needed for that. GitHub evaluates signatures **at render time**
-against whatever keys the account has when the page loads, so registering the key
-turns all 26 green retroactively.
+**Signing is done.** The public key is registered on the account as a *signing* key
+(`gh ssh-key add … --type signing`), and GitHub reports every one of the 36 as
+`"verified": true, "reason": "valid"`. Signatures are evaluated at RENDER time
+against whatever keys the account holds when the page loads, so registering the key
+turned the whole range green retroactively with no second rewrite.
 
 Two caveats on that key, both deliberate and both reversible by deleting it: it has
-**no passphrase**, because a rebase of 26 commits cannot stop to prompt for one; and
-the git config above is **repo-local**, so nothing outside poc-lab was touched.
+**no passphrase**, because a rebase of 36 commits cannot stop to prompt for one; and
+the git config is **repo-local**, so nothing outside poc-lab was touched.
+
+**The history before `ac3ea2a` is left alone, deliberately.** 38 commits there still
+carry `Claude <noreply@anthropic.com>` as author — the thing git.md calls absolute —
+and 7 of them are unsigned. It stays that way because fixing it is not the small job
+it looks like:
+
+  * Those 7 cannot be reached in isolation. The oldest is `2bf4bae`, pulled into main
+    *through* PR merges #1 and #2, so rewriting it moves **68 commits and 7 merges**.
+  * A flat rebase was tried and **aborted on the first commit**. The merges carry real
+    conflict resolutions — two parallel sessions both appended to `log.md`, and each
+    merge is where someone reconciled them — so a linear replay has to redo every one.
+    Worse, it would mean *inventing* the intermediate states of that file.
+  * `--rebase-merges` would work (it replays the merges with their resolutions) but
+    still rewrites all 68 shas and replaces GitHub's own web-flow signature on the
+    three PR merges with this key's.
+  * `git filter-repo` is the right tool for authorship across merges and cannot sign,
+    so it would fix 38 authors and leave 7 commits unsigned.
+
+None of that is worth it for commits nobody will touch again, and the merges honestly
+record that the repo was built by parallel sessions. If it is ever revisited:
+`filter-repo` for the authorship, and accept the 7.
+
+The four oldest commits (`e21b309`…`511fb8b`) are unsigned too, and are genuinely
+Adrien's — they predate signing entirely.
 
 **`git rev-parse --short` takes exactly one revision.** Passing two — as in
 `git rev-parse --short origin/main HEAD` — fails with `fatal: Needed a single
