@@ -29,7 +29,7 @@ jobs:
       - run: pnpm build
 
       # job-local only: never written back to the repo
-      - run: pnpm add -Dw --no-frozen-lockfile playwright
+      - run: pnpm add -Dw playwright@1.49.1
       - run: pnpm exec playwright install --with-deps chromium
 
       - run: node apps/cuddle-sheep/tests/run.mjs
