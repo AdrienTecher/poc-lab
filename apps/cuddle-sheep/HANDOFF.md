@@ -1,6 +1,6 @@
 # Nuage — handoff
 
-**Phase 3 is closed.** Six places on the road, two animals, **231/231 green**.
+**Phase 3 is closed.** Six places on the road, two animals, **362/362 green**.
 `la rivière`, `la grange`, `le pont`, `le clocher`, `la clôture`, `la lisière`.
 This is what a fresh session needs to pick it up.
 
@@ -83,7 +83,7 @@ must not touch `package.json` or `pnpm-lock.yaml` — CI installs it job-locally
 Installing it into a scratch directory and symlinking `node_modules/playwright`
 keeps the tree clean.
 
-Full run is ~15 minutes. Run **one at a time** — concurrent runs fight over the
+Full run is ~22 minutes. Run **one at a time** — concurrent runs fight over the
 server port and hang.
 
 ## 3. Shape
@@ -152,7 +152,14 @@ server port and hang.
     lights-out system is non-trivial only at 2 mod 3 — at seven the answer is
     unique, which is the only reason a minimum can be claimed at all. Change the
     count and that claim silently becomes a lie.
-13. **Tests assert what must become true, not when.** Three assertions once
+13. **A transition covers a change of PLACE, never a walk.** The fleece curtain
+    (`ui/curtain.js`) sweeps on meadow↔place and is deliberately absent on travel,
+    because he crosses ground on screen and watching him is the whole design of it.
+    `registry.mount()` takes a `quiet` flag for that; registry still imports nothing
+    and the curtain subscribes via `onSwap`. Anything laid over the whole screen
+    must go on the BODY — inside `.scene` its z-index is trapped by that element's
+    `isolation:isolate` and can only ever pass under the HUD.
+14. **Tests assert what must become true, not when.** Three assertions once
     sampled a position at a fixed instant inside a process that accelerates,
     reverses and decays; the baseline was silently 134/136, and one assertion was
     passing *vacuously* because its expected value equalled the failure state of
