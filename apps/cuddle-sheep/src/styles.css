@@ -142,6 +142,36 @@
     --cloture-iron:    color-mix(in oklab, #4a4038 calc(var(--m) * 100%), #3d3b3d);
     --cloture-glass:   color-mix(in oklab, #7d94a6 calc(var(--m) * 100%), #5f6266);
     --cloture-flame:   #ffd071;
+
+    /* le chien — global rather than per-place, because he IS one animal: the dog
+       in the grass and the dog on the perch read from these same three. */
+    --chien-coat:   color-mix(in oklab, #4a4f63 calc(var(--m) * 100%), #4b4a50);
+    --chien-coat-l: color-mix(in oklab, #35394a calc(var(--m) * 100%), #3a393e);
+    --chien-bib:    color-mix(in oklab, #f3ece0 calc(var(--m) * 100%), #d5d2d6);
+
+    /* la lisière — the fox is drawn warm because a fox at a treeline is the one
+       warm thing in a cold wood, and he is scenery with a motive rather than a
+       rule: nothing in that place can be lost. */
+    --lisiere-grass:   color-mix(in oklab, #6fa463 calc(var(--m) * 100%), #616b64);
+    --lisiere-grass-l: color-mix(in oklab, #547f4e calc(var(--m) * 100%), #4d564f);
+    --lisiere-grass-r: color-mix(in oklab, #416539 calc(var(--m) * 100%), #3f4640);
+    --lisiere-fern:    color-mix(in oklab, #79b268 calc(var(--m) * 100%), #646d64);
+    --lisiere-rail:    color-mix(in oklab, #b0824f calc(var(--m) * 100%), #7c7671);
+    --lisiere-post:    color-mix(in oklab, #9e7346 calc(var(--m) * 100%), #6d6864);
+    --lisiere-post-l:  color-mix(in oklab, #7e5a36 calc(var(--m) * 100%), #575350);
+    --lisiere-post-r:  color-mix(in oklab, #62452a calc(var(--m) * 100%), #45413f);
+    --lisiere-box:     color-mix(in oklab, #cf9a5d calc(var(--m) * 100%), #8b8580);
+    --lisiere-box-l:   color-mix(in oklab, #a87b47 calc(var(--m) * 100%), #6e6a66);
+    --lisiere-roof:    color-mix(in oklab, #8a5a3a calc(var(--m) * 100%), #5f5a57);
+    --lisiere-hole:    color-mix(in oklab, #3d2a1c calc(var(--m) * 100%), #353334);
+    --lisiere-watch:   #fff2c4;
+    --hen-body:  color-mix(in oklab, #f6efe3 calc(var(--m) * 100%), #d8d5d9);
+    --hen-wing:  color-mix(in oklab, #ddc9a8 calc(var(--m) * 100%), #b6b3b8);
+    --hen-comb:  color-mix(in oklab, #e05a52 calc(var(--m) * 100%), #8e7d7d);
+    --hen-beak:  color-mix(in oklab, #e8a63f calc(var(--m) * 100%), #9c9288);
+    --fox-coat:   color-mix(in oklab, #cf7137 calc(var(--m) * 100%), #7f746e);
+    --fox-coat-l: color-mix(in oklab, #a9532a calc(var(--m) * 100%), #665e5a);
+    --fox-bib:    color-mix(in oklab, #f6eee4 calc(var(--m) * 100%), #d3d0d3);
     --cross-top: clamp(70px,11vh,110px);
     --cross-bot: clamp(78px,13vh,120px);
     --hud:      rgba(255,255,255,.15);
@@ -435,6 +465,7 @@
   html[data-mode="bridge"] #bridgeUI{display:flex}
   html[data-mode="bells"] #bellsUI{display:flex}
   html[data-mode="fence"] #fenceUI{display:flex}
+  html[data-mode="edge"] #edgeUI{display:flex}
   .place-ui button{
     padding:8px 16px; border-radius:999px; font-size:.84rem; font-weight:500;
     background:var(--hud); border:1px solid var(--hud-line); color:#fff;
@@ -522,6 +553,35 @@
   .lamppost.lit .lamppost__flame{opacity:1}
   .lamppost.lit .lamppost__lamp{filter:drop-shadow(0 0 7px var(--cloture-flame))}
   .lamppost:hover .lamppost__lamp, .lamppost:focus-visible .lamppost__lamp{filter:drop-shadow(0 0 9px #fff)}
+
+  /* le chien: the one animal here who is not on a clock. He wags and that is all
+     that happens — no window opens, so nothing about him may look like a gauge. */
+  .chien{cursor:pointer; outline:none; transition:filter .25s}
+  .chien:hover, .chien:focus-visible{filter:drop-shadow(0 0 8px #fff)}
+  .chien__tail{transform-box:fill-box; transform-origin:100% 100%}
+  .chien.wagging .chien__tail{animation:wag .28s ease-in-out infinite}
+  @keyframes wag{0%,100%{transform:rotate(-13deg)}50%{transform:rotate(13deg)}}
+
+  /* la lisière: a watched box is brighter, and a hen inside one is at ease. Both
+     are shown, because "is she safe" is the question the board is asking. */
+  html[data-place] .nest:not([disabled]), html[data-place] .hen:not([disabled]),
+  html[data-place] .watchdog:not([disabled]){pointer-events:auto; cursor:pointer}
+  .nest, .hen, .watchdog{outline:none}
+  .nest[disabled], .hen[disabled], .watchdog[disabled]{cursor:default; pointer-events:none}
+  .nest__watch{opacity:0; transition:opacity .35s ease}
+  .nest.watched .nest__watch{opacity:.3}
+  .nest.free .nest__watch{opacity:.14}
+  .nest.free.watched .nest__watch{opacity:.38}
+  .nest:hover .nest__box, .nest:focus-visible .nest__box{filter:drop-shadow(0 0 7px #fff)}
+  .hen{transition:filter .25s}
+  .hen:hover, .hen:focus-visible{filter:drop-shadow(0 0 7px #fff)}
+  .hen.chosen{filter:drop-shadow(0 0 10px #fff) drop-shadow(0 0 20px var(--lisiere-watch))}
+  .hen.safe .hen__tail{animation:none}
+  .hen__tail{transform-box:fill-box; transform-origin:100% 100%; animation:wag 1.9s ease-in-out infinite}
+  .watchdog{transition:filter .25s}
+  .watchdog:hover, .watchdog:focus-visible{filter:drop-shadow(0 0 8px #fff)}
+  .watchdog.chosen{filter:drop-shadow(0 0 11px var(--lisiere-watch))}
+  .fox__tail{transform-box:fill-box; transform-origin:100% 100%; transform:rotate(var(--sway, 0deg))}
 
   /* la grange: a post lights up when the bale in his mouth may go there */
   .post{cursor:pointer; outline:none}

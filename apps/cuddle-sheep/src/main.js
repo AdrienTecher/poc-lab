@@ -24,6 +24,8 @@ import * as grange from "./places/grange.js";
 import * as pont from "./places/pont.js";
 import * as clocher from "./places/clocher.js";
 import * as cloture from "./places/cloture.js";
+import * as lisiere from "./places/lisiere.js";
+import * as chien from "./world/chien.js";
 import * as camera from "./engine/camera.js";
 import { refreshCTM } from "./world/pointer.js";
 import { active, placeOf } from "./places/registry.js";
@@ -40,6 +42,7 @@ wool.build();
 sprout.build();
 gate.build();
 pelote.build();
+chien.build();      // a meadow prop: DOM order here IS paint order, so he goes in the grass
 butterflies.build();
 hud.build();
 hands.build();
@@ -48,6 +51,7 @@ grange.build();
 pont.build();
 clocher.build();
 cloture.build();
+lisiere.build();
 clovers.settle();   // past solves may have earned more than the three he starts with
 mood.watch();
 

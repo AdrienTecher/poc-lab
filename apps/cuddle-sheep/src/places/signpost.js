@@ -19,6 +19,9 @@ import * as valley from "../world/valley.js";
 import { roster } from "./registry.js";
 
 const PLANK_H = 15, GAP = 4;
+const STEP = PLANK_H * 2 + GAP;   // one plank's worth of post
+const HEAD = 20;                  // bare post above the topmost plank
+const FOOT = 14;                  // ...and below the bottom one, so it reads as planted
 
 /** One plank: an arrow pointing the way, with the name of what is down it. */
 const plank = (label, dir, y, onPick, aria) => {
@@ -69,7 +72,8 @@ export const signpost = (scene, gx, gy, me, onGo, onHome) => {
   g.appendChild(el("ellipse", { cx: px.toFixed(1), cy: py.toFixed(1), rx: 9, ry: 4.5, fill: "#2c3a2e", opacity: ".2" }));
 
   const post = el("g", { transform: `translate(${px.toFixed(1)} ${py.toFixed(1)})` });
-  post.appendChild(el("rect", { x: -3, y: -104, width: 6, height: 104, rx: 3, fill: "var(--iso-wood-r)" }));
+  const mast = el("rect", { x: -3, y: -104, width: 6, height: 104, rx: 3, fill: "var(--iso-wood-r)" });
+  post.appendChild(mast);
   g.appendChild(post);
 
   const boards = el("g", { transform: `translate(${px.toFixed(1)} ${py.toFixed(1)})` });
@@ -87,12 +91,26 @@ export const signpost = (scene, gx, gy, me, onGo, onHome) => {
         .filter((p) => p !== me && valley.opened(p.id))
         .sort((a, b) => a.road - b.road);
 
-      let y = -86;
+      // The POST is sized to its planks, rather than the planks being hung on a
+      // post of a fixed height. It was written the other way round — a 104-unit
+      // mast and a first plank at y = -86 — which was right at two places and
+      // silently wrong at six: 170 units of board on a 104-unit post ran off the
+      // bottom of the frame. And a plank outside the frame is worse than a clipped
+      // one, because overflow:hidden hides it while leaving its bounding box where
+      // it was, so it keeps a click target somewhere nobody can see, over the top
+      // of the place's control bar. A sign with six ways on it is simply a taller
+      // sign, which is also what one looks like.
+      const n = open.length + 1;                       // + the plank home
+      const height = Math.max(104, HEAD + (n - 1) * STEP + PLANK_H + FOOT);
+      mast.setAttribute("y", String(-height));
+      mast.setAttribute("height", String(height));
+
+      let y = -height + HEAD + PLANK_H;
       for (const p of open) {
         const dir = Math.sign(p.road - me.road) || 1;
         boards.appendChild(plank(p.label[0], dir, y, () => onGo(p.id),
           `Aller vers ${p.label[0]} — go to ${p.label[1]}`));
-        y += PLANK_H * 2 + GAP;
+        y += STEP;
       }
       // home is always the last plank, and always points back
       boards.appendChild(plank("le pré", -1, y, onHome, "Revenir au pré — back to the meadow"));

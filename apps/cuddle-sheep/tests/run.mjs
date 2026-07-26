@@ -21,7 +21,7 @@ try {
   process.exit(2);
 }
 
-const SPECS = ["geometry", "interactions", "puzzles", "barn", "pont", "clocher", "cloture", "travel", "day", "save"];
+const SPECS = ["geometry", "interactions", "puzzles", "barn", "pont", "clocher", "cloture", "lisiere", "travel", "day", "save"];
 const only = process.argv.slice(2);
 const picked = only.length ? SPECS.filter((s) => only.some((o) => s.includes(o))) : SPECS;
 if (!picked.length) {
