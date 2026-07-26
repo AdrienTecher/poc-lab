@@ -90,9 +90,9 @@ const buildWorld = () => {
   post.appendChild(el("ellipse", { cx: 0, cy: 0, rx: 9, ry: 4, fill: "#2c3a2e", opacity: ".18" }));
   post.appendChild(el("polygon", { points: "-9,0 9,0 6,-7 -6,-7", fill: "var(--iso-earth-l)" }));
   post.appendChild(el("rect", { x: -2, y: -58, width: 4, height: 54, rx: 2, fill: "var(--iso-wood-r)" }));
-  const flag = el("polygon", { class: "pennant", points: "2,-57 33,-47 2,-37", fill: "#ff9ec4" });
-  flag.setAttribute("id", "pennant");
+  const flag = el("polygon", { class: "pennant", id: "pennant", points: "2,-57 33,-47 2,-37", fill: "#ff9ec4" });
   post.appendChild(flag);
+  game.pennant = flag;
   decor.appendChild(post);
 
   /* ---- the boat: faceted hull, and oars that actually pull ---- */
@@ -215,6 +215,7 @@ const syncTokens = () => {
 export const enter = () => {
   if (game.on || !valley.opened("riviere")) return;
   buildWorld();
+  scene.show(true);
   game.on = true;
   game.phase = "idle";
   poke();
@@ -239,6 +240,7 @@ export const exit = () => {
   game.phase = "idle";
   unmount();
   unhost();
+  scene.show(false);
   stage.classList.remove("riding", "gliding");
   setTimeout(refreshCTM, 60);
   setTimeout(refreshCTM, 700);
@@ -259,7 +261,7 @@ const resetBoard = (animate = true) => {
   for (const id of CARGO) game.tok[id].classList.remove("gone");
   game.tok.chou.style.transform = "";
   layers.reset();
-  $("#pennant").classList.remove("up");
+  game.pennant.classList.remove("up");
   setMoves(); syncTokens(); drawActors(); measureUI();
   if (animate) { readout(); }
 };
@@ -360,7 +362,7 @@ const win = () => {
   sfx.chime();
   kick("hop", -300);
   for (const i of [...Array(18).keys()]) setTimeout(() => sparkle(rand(140, 260), rand(170, 250)), 460 + i * 40);
-  setTimeout(() => $("#pennant").classList.add("up"), 700);
+  setTimeout(() => game.pennant.classList.add("up"), 700);
   // if he is sad, the victory bleat is the sad bleat
   setTimeout(() => sfx.bleat(state.mood > 0.5), 900);
   valley.solve("riviere");
@@ -383,7 +385,7 @@ const undo = () => {
   springs.boatX.target = DOCK[game.boat];
   if (REDUCED) springs.boatX.v = DOCK[game.boat];
   for (const id of CARGO) game.tok[id].classList.remove("gone");
-  $("#pennant").classList.remove("up");
+  game.pennant.classList.remove("up");
   stage.classList.remove("riding");
   setMoves(); syncTokens(); drawActors(); readout();
 };
