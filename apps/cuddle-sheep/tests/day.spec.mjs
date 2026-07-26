@@ -140,16 +140,47 @@ export const pelote = async ({ newPage, check, APP }) => {
   const before = await where();
   const box = await page.locator(".pelote").boundingBox();
   await page.mouse.click(box.x + box.width * 0.25, box.y + box.height * 0.6);
-  await page.waitForTimeout(700);
-  const after = await where();
-  check("pushing it sets it rolling", Math.abs(after - before) > 40, `${before} -> ${after}`);
 
-  // it must come to rest, and it must never leave the meadow
-  await page.waitForTimeout(2200);
-  const rest = await where();
-  await page.waitForTimeout(700);
-  check("and it rolls to a stop", Math.abs((await where()) - rest) < 3);
-  check("without ever leaving the meadow", rest > -20 && rest < 1280, `${rest}`);
+  // How far it got, not where it was at some particular moment. It is pushed
+  // toward him, and he noses whatever comes within REACH straight back — so its
+  // distance from where it started rises, falls through zero and rises again.
+  // A single sample at a fixed delay can catch it back at the start and read that
+  // as "it never moved".
+  const farthest = async (ms) => {
+    const t0 = Date.now();
+    let far = 0;
+    while (Date.now() - t0 < ms) {
+      far = Math.max(far, Math.abs((await where()) - before));
+      await page.waitForTimeout(80);
+    }
+    return far;
+  };
+  const travelled = await farthest(1400);
+  check("pushing it sets it rolling", travelled > 40, `${Math.round(travelled)}px at its furthest`);
+
+  // It must come to rest, and it must never leave the meadow.
+  //
+  // Polled rather than timed. How long it rolls is not a constant: the shove is
+  // rand(340, 520), grass takes it out at DRAG per second, and if it passes
+  // within REACH of him he noses it back at 240 or more — which restarts the
+  // decay. So the settling time ranges over seconds, and an earlier version that
+  // sampled at a fixed 2.9s was asserting a number the physics never promised.
+  // What the toy actually owes you is that it stops at all, and stops in frame.
+  const settle = async (cap = 12000) => {
+    const t0 = Date.now();
+    let last = await where(), still = 0;
+    while (Date.now() - t0 < cap) {
+      await page.waitForTimeout(250);
+      const now = await where();
+      still = Math.abs(now - last) < 1 ? still + 1 : 0;
+      last = now;
+      if (still >= 3) return { x: now, ms: Date.now() - t0 };
+    }
+    return { x: last, ms: null };
+  };
+  const rest = await settle();
+  check("and it rolls to a stop", rest.ms !== null, `still moving after 12s, at ${Math.round(rest.x)}`);
+  check("without ever leaving the meadow", rest.x > -20 && rest.x < 1280, `${Math.round(rest.x)}`);
 
   // it costs nothing and buys nothing: playing is not a clock
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("nuage:save")));

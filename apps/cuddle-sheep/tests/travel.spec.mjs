@@ -87,21 +87,31 @@ export default async ({ newPage, check, APP }) => {
 
   // --- a thumb dragged across the sky walks him; one dragged across his back
   // is a cuddle and must never be mistaken for one
+  //
+  // A swipe has a DEADLINE — hands.js rejects a gesture held longer than 0.6s,
+  // because a slow drag is somebody pointing rather than somebody swiping. So
+  // this must be one continuous motion: an earlier version stepped eight times
+  // with a waitForTimeout between each, which cost 0.9s of round trips and was
+  // rejected by the app on every run. It read as an app bug and was a test that
+  // could not make the gesture it was testing. Do not put a sleep in here.
   const drag = async (from, to, y) => {
     await page.mouse.move(from, y);
     await page.mouse.down();
-    for (const i of [...Array(8).keys()]) {
-      await page.mouse.move(from + (to - from) * ((i + 1) / 8), y, { steps: 2 });
-      await page.waitForTimeout(12);
-    }
+    await page.mouse.move(to, y, { steps: 6 });
     await page.mouse.up();
-    await page.waitForTimeout(2600);
+    await page.waitForTimeout(2800);
   };
   await drag(900, 640, 150);                 // across the sky, right to left
   check("a swipe walks him east", (await mode()) === "barn", await mode());
-  await drag(500, 800, 150);                 // and back
+  // Start clear of him: at 1280x800 his box reaches x=592, and a drag that BEGINS
+  // on his back is a cuddle by design — so starting one there and then asserting
+  // "he did not move" passes whether travel works or not. Both directions have to
+  // be real journeys, or the pair proves nothing.
+  await drag(700, 1000, 150);                // and back, east to west
   check("and the other way walks him west", (await mode()) === "cross", await mode());
 
+  // ...which is what makes this check mean something: the same gesture, the same
+  // speed, the same distance — moved onto his back, and now it must NOT travel.
   const sheepBox = await page.locator("#sheep").boundingBox();
   const cy = sheepBox.y + sheepBox.height * 0.62;
   await drag(sheepBox.x + sheepBox.width * 0.25, sheepBox.x + sheepBox.width * 0.75, cy);
