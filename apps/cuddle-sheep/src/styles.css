@@ -55,6 +55,7 @@
     --iso-plank-r: color-mix(in oklab, #7d5936 calc(var(--m) * 100%), #575250);
     --iso-barn:    color-mix(in oklab, #8f4f42 calc(var(--m) * 100%), #6a5f5d);
     --iso-barn-l:  color-mix(in oklab, #733f36 calc(var(--m) * 100%), #564e4c);
+    --iso-roof:    color-mix(in oklab, #4e3a30 calc(var(--m) * 100%), #3f3a3c);
     --cross-top: clamp(70px,11vh,110px);
     --cross-bot: clamp(78px,13vh,120px);
     --hud:      rgba(255,255,255,.15);

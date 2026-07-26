@@ -41,6 +41,7 @@ const { decor, layers } = scene;
 // him and the near one in front, and walking re-files all three.
 const POST = [[1.6, 3.4], [4.4, 2.2], [7.2, 1.0]];
 const STAND = [[1.6, 4.5], [4.4, 3.3], [7.2, 2.1]];   // where he stands to work a post
+const FLOOR = 0.35;          // the plank floor's top: everything in here stands on it
 const POST_H = 2.3;          // tiles: tall enough to show above a full stack
 const BALE_H = 0.58;         // tiles per bale, so three of them clear the peg
 const BALE_W = [1.15, 1.62, 2.10];
@@ -74,10 +75,10 @@ const baleSpot = (bale) => {
   if (game.carrying === bale) {
     const [gx, gy] = hisSpot();
     // riding on his back: a bale carried is a bale above his shoulders
-    return [isoX(gx, gy), isoY(gx, gy, 1) - 74 + v("baleY")];
+    return [isoX(gx, gy), isoY(gx, gy, FLOOR) - 74 + v("baleY")];
   }
   const [gx, gy] = POST[postOf(bale)];
-  return [isoX(gx, gy), isoY(gx, gy, heightOf(bale) * BALE_H)];
+  return [isoX(gx, gy), isoY(gx, gy, FLOOR + heightOf(bale) * BALE_H)];
 };
 const baleDepth = (bale) => {
   // a carried bale reports HIS depth, and depth.js files an equal depth in
@@ -92,21 +93,57 @@ const buildWorld = () => {
   if (game.built) return;
   game.built = true;
 
-  // the plank floor, and the two walls that meet at the back corner
-  boxAt(decor, -0.6, -0.6, 9.4, 5.4, 0, 0.35, "var(--iso-plank)", "var(--iso-plank-l)", "var(--iso-plank-r)");
-  poly(decor, [pt(-0.6, -0.6, 0.35), pt(8.8, -0.6, 0.35), pt(8.8, -0.6, 3.6), pt(-0.6, -0.6, 3.6)].join(" "), "var(--iso-barn)");
-  poly(decor, [pt(-0.6, -0.6, 0.35), pt(-0.6, 4.8, 0.35), pt(-0.6, 4.8, 3.6), pt(-0.6, -0.6, 3.6)].join(" "), "var(--iso-barn-l)");
+  // The barn is drawn as a cutaway: back wall, back roof slope and the ridge,
+  // with the near half left off so you can see in. That is the diorama
+  // convention, and it is also why the sky is allowed to be behind it.
+  const W = 8.8, D = 4.8;                 // the floor's far corner, in tiles
+  const WALL = 3.4, RIDGE = 4.9;          // wall top and ridge height
 
-  // the beams: three uprights along the back wall and the tie across them
-  for (const gx of [0.4, 4.0, 7.6]) {
-    boxAt(decor, gx, -0.5, 0.26, 0.26, 0.35, 3.1, "var(--iso-wood)", "var(--iso-wood-l)", "var(--iso-wood-r)");
+  boxAt(decor, -0.6, -0.6, 9.4, 5.4, 0, FLOOR, "var(--iso-plank)", "var(--iso-plank-l)", "var(--iso-plank-r)");
+
+  // the two walls that meet at the back corner
+  poly(decor, [pt(-0.6, -0.6, FLOOR), pt(W, -0.6, FLOOR), pt(W, -0.6, WALL), pt(-0.6, -0.6, WALL)].join(" "), "var(--iso-barn)");
+  poly(decor, [pt(-0.6, -0.6, FLOOR), pt(-0.6, D, FLOOR), pt(-0.6, D, WALL), pt(-0.6, -0.6, WALL)].join(" "), "var(--iso-barn-l)");
+  // the gable above the left wall, closing the end of the roof
+  poly(decor, [pt(-0.6, -0.6, WALL), pt(-0.6, D, WALL), pt(-0.6, (D - 0.6) / 2, RIDGE)].join(" "), "var(--iso-barn-l)");
+
+  // the back roof slope, seen from underneath, and the ridge beam it hangs from
+  poly(decor, [pt(-0.9, -0.9, WALL - 0.1), pt(W + 0.3, -0.9, WALL - 0.1),
+    pt(W + 0.3, (D - 0.6) / 2, RIDGE), pt(-0.9, (D - 0.6) / 2, RIDGE)].join(" "), "var(--iso-roof)");
+  poly(decor, [pt(-0.9, (D - 0.6) / 2, RIDGE), pt(W + 0.3, (D - 0.6) / 2, RIDGE),
+    pt(W + 0.3, (D - 0.6) / 2, RIDGE - 0.14), pt(-0.9, (D - 0.6) / 2, RIDGE - 0.14)].join(" "), "var(--iso-wood-r)");
+
+  // rafters running down the slope, the detail that makes a roof read as built
+  for (const gx of [0.2, 2.0, 3.8, 5.6, 7.4]) {
+    poly(decor, [pt(gx, -0.85, WALL - 0.08), pt(gx + 0.16, -0.85, WALL - 0.08),
+      pt(gx + 0.16, (D - 0.6) / 2, RIDGE - 0.06), pt(gx, (D - 0.6) / 2, RIDGE - 0.06)].join(" "), "var(--iso-wood-r)", 0.55);
   }
-  poly(decor, [pt(-0.4, -0.42, 3.0), pt(8.6, -0.42, 3.0), pt(8.6, -0.42, 3.25), pt(-0.4, -0.42, 3.25)].join(" "), "var(--iso-wood-l)");
+
+  // the posts that hold the wall up, and the tie beam across them
+  for (const gx of [0.4, 4.0, 7.6]) {
+    boxAt(decor, gx, -0.5, 0.26, 0.26, FLOOR, WALL - FLOOR, "var(--iso-wood)", "var(--iso-wood-l)", "var(--iso-wood-r)");
+  }
+  poly(decor, [pt(-0.4, -0.42, WALL - 0.4), pt(8.6, -0.42, WALL - 0.4),
+    pt(8.6, -0.42, WALL - 0.15), pt(-0.4, -0.42, WALL - 0.15)].join(" "), "var(--iso-wood-l)");
+
+  // a bale of the old crop stacked in the corner, and a fork left leaning
+  boxAt(decor, 7.6, 0.1, 1.0, 0.7, FLOOR, 0.5, "var(--iso-hay)", "var(--iso-hay-l)", "var(--iso-hay-r)");
+  boxAt(decor, 7.7, 0.2, 0.8, 0.6, FLOOR + 0.5, 0.45, "var(--iso-hay)", "var(--iso-hay-l)", "var(--iso-hay-r)");
+  const fx = isoX(0.6, 1.5), fy = isoY(0.6, 1.5, FLOOR);
+  const fork = el("g", { transform: `translate(${fx.toFixed(1)} ${fy.toFixed(1)}) rotate(-14)` });
+  fork.appendChild(el("line", { x1: 0, y1: 0, x2: 0, y2: -66, stroke: "var(--iso-wood-r)", "stroke-width": 4, "stroke-linecap": "round" }));
+  for (const dx of [-9, 0, 9]) {
+    fork.appendChild(el("line", {
+      x1: dx * 0.4, y1: -63, x2: dx * 0.8, y2: -82,
+      stroke: "var(--iso-wood-l)", "stroke-width": 3, "stroke-linecap": "round",
+    }));
+  }
+  decor.appendChild(fork);
 
   // loose straw on the floor, so the barn is lived in rather than swept
   for (const i of [...Array(26).keys()]) {
     const gx = rand(-0.3, 8.6), gy = rand(-0.3, 4.6);
-    const x = isoX(gx, gy), y = isoY(gx, gy, 0.35);
+    const x = isoX(gx, gy), y = isoY(gx, gy, FLOOR);
     const a = rand(-0.5, 0.5);
     decor.appendChild(el("line", {
       x1: (x - 7).toFixed(1), y1: (y - a * 4).toFixed(1),
@@ -117,10 +154,10 @@ const buildWorld = () => {
 
   // the three posts
   for (const [i, [gx, gy]] of POST.entries()) {
-    boxAt(decor, gx - 0.09, gy - 0.09, 0.18, 0.18, 0.35, POST_H,
+    boxAt(decor, gx - 0.09, gy - 0.09, 0.18, 0.18, FLOOR, POST_H,
       "var(--iso-wood)", "var(--iso-wood-l)", "var(--iso-wood-r)");
     const base = el("ellipse", {
-      cx: isoX(gx, gy).toFixed(1), cy: isoY(gx, gy, 0.35).toFixed(1),
+      cx: isoX(gx, gy).toFixed(1), cy: isoY(gx, gy, FLOOR).toFixed(1),
       rx: 26, ry: 13, fill: "#2c2318", opacity: ".16",
     });
     decor.appendChild(base);
@@ -128,15 +165,15 @@ const buildWorld = () => {
     // the tap target for a post is a piece, not decor: it has to be reachable
     const hit = el("g", { id: `post${i}`, class: "post", tabindex: "0", role: "button" });
     hit.setAttribute("aria-label", `${WHERE[i]} — post ${i + 1}`);
-    const px = isoX(gx, gy), py = isoY(gx, gy, 0.35);
+    const px = isoX(gx, gy), py = isoY(gx, gy, FLOOR);
     hit.appendChild(el("rect", {
       x: (px - 46).toFixed(1), y: (py - POST_H * 30 - 34).toFixed(1),
       width: 92, height: POST_H * 30 + 46, fill: "transparent",
     }));
     hit.appendChild(el("polygon", {
       class: "post__glow",
-      points: [pt(gx - 0.42, gy - 0.42, 0.36), pt(gx + 0.42, gy - 0.42, 0.36),
-        pt(gx + 0.42, gy + 0.42, 0.36), pt(gx - 0.42, gy + 0.42, 0.36)].join(" "),
+      points: [pt(gx - 0.42, gy - 0.42, FLOOR + 0.01), pt(gx + 0.42, gy - 0.42, FLOOR + 0.01),
+        pt(gx + 0.42, gy + 0.42, FLOOR + 0.01), pt(gx - 0.42, gy + 0.42, FLOOR + 0.01)].join(" "),
       fill: "#fff6cd",
     }));
     layers.add(hit, () => gx + gy, `post${i}`);
@@ -148,7 +185,9 @@ const buildWorld = () => {
     game.posts.push(hit);
   }
 
-  // the bales, biggest first so the small one is drawn over it when stacked
+  // The bales. What makes a bale read as hay rather than as a crate is not its
+  // shape — it is the cut ends catching the light on the sides, the straw
+  // escaping the edges, and the twine biting into it. All three, cheaply.
   for (const size of [...Array(BALES).keys()]) {
     const w = BALE_W[size], node = el("g", { class: "bale", "data-bale": String(size) });
     const ax = w * 23, ay = w * 11.5, hz = BALE_H * 30;   // half-diagonals of the footprint
@@ -156,13 +195,51 @@ const buildWorld = () => {
     node.appendChild(el("polygon", { points: `${-ax},${-hz} 0,${-hz + ay} ${ax},${-hz} 0,${-hz - ay}`, fill: "var(--iso-hay)" }));
     node.appendChild(el("polygon", { points: `${-ax},${-hz} 0,${-hz + ay} 0,${ay} ${-ax},0`, fill: "var(--iso-hay-l)" }));
     node.appendChild(el("polygon", { points: `${ax},${-hz} 0,${-hz + ay} 0,${ay} ${ax},0`, fill: "var(--iso-hay-r)" }));
-    // two twine bands, the thing that makes it read as a bale and not a crate
-    for (const t of [-0.42, 0.42]) {
-      node.appendChild(el("polyline", {
-        points: `${ax * t - ax * 0.02},${-hz + ay * t + ay * 0.5} ${ax * t},${-hz + ay * t} ${ax * t + ax * 0.5},${-hz + ay * t + ay * 0.5}`,
-        stroke: "var(--iso-twine)", "stroke-width": 2.6, fill: "none",
+
+    // the cut ends: short strokes down each visible face, following its slope
+    for (const [side, tint] of [[-1, "#8f7a4e"], [1, "#7a6640"]]) {
+      for (const i of [...Array(7).keys()]) {
+        const u = 0.12 + (i / 7) * 0.82;
+        const x = side * (ax - u * ax), yTop = -hz + u * ay, h = hz * rand(0.42, 0.78);
+        node.appendChild(el("line", {
+          x1: x.toFixed(1), y1: (yTop + hz * 0.12).toFixed(1),
+          x2: x.toFixed(1), y2: (yTop + hz * 0.12 + h).toFixed(1),
+          stroke: tint, "stroke-width": 1.5, "stroke-linecap": "round", opacity: ".5",
+        }));
+      }
+    }
+
+    // straw escaping along the two top edges, which is what softens the silhouette
+    for (const side of [-1, 1]) {
+      for (const i of [...Array(6).keys()]) {
+        const u = 0.1 + (i / 6) * 0.85;
+        const x = side * (ax - u * ax), y = -hz + u * ay;
+        const a = rand(-0.7, 0.7);
+        node.appendChild(el("line", {
+          x1: x.toFixed(1), y1: y.toFixed(1),
+          x2: (x + side * rand(3, 7)).toFixed(1), y2: (y + a * 4 - 2).toFixed(1),
+          stroke: "var(--iso-straw)", "stroke-width": 1.4, "stroke-linecap": "round", opacity: ".85",
+        }));
+      }
+    }
+
+    // two twine bands wrapping the near faces — the detail that says "baled"
+    for (const u of [0.3, 0.72]) {
+      for (const side of [-1, 1]) {
+        const x = side * (ax - u * ax), yTop = -hz + u * ay;
+        node.appendChild(el("line", {
+          x1: x.toFixed(1), y1: yTop.toFixed(1), x2: x.toFixed(1), y2: (yTop + hz).toFixed(1),
+          stroke: "var(--iso-twine)", "stroke-width": 2.2, "stroke-linecap": "round", opacity: ".8",
+        }));
+      }
+      // and across the top, joining the two ends of the same band
+      node.appendChild(el("line", {
+        x1: (-(ax - u * ax)).toFixed(1), y1: (-hz + u * ay).toFixed(1),
+        x2: (u * ax).toFixed(1), y2: (-hz + u * ay - ay).toFixed(1),
+        stroke: "var(--iso-twine)", "stroke-width": 2, "stroke-linecap": "round", opacity: ".55",
       }));
     }
+
     layers.add(node, () => baleDepth(size), `bale${size}`);
     game.bales.push(node);
   }
@@ -178,7 +255,7 @@ const draw = () => {
     game.bales[size].classList.toggle("carried", game.carrying === size);
   }
   const [gx, gy] = hisSpot();
-  scene.host(isoX(gx, gy), isoY(gx, gy, 1));
+  scene.host(isoX(gx, gy), isoY(gx, gy, FLOOR));
   layers.sort(hisDepth());
 };
 
