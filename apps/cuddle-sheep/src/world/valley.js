@@ -16,6 +16,14 @@ const changed = () => { for (const fn of watchers) fn(); };
 export const opened = (place) => save.data.valley.unlocked.includes(place);
 export const solves = (place) => save.data.valley.solves[place] ?? 0;
 export const shorn = () => save.data.care.shorn;
+export const board = (place) => save.data.valley.boards[place] ?? null;
+
+/** Remember a half-finished board. Throttled, because it is written on every
+ *  move; the flush on pagehide is what makes the last one count. */
+export const keep = (place, blob) => {
+  save.data.valley.boards[place] = blob;
+  save.touch();
+};
 export const at = () => save.data.valley.at;
 export const visited = (place) => save.data.valley.visited.includes(place);
 export const seen = () => save.data.valley.visited;

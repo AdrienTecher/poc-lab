@@ -5,7 +5,7 @@
 // rather than a broken one. A comfort toy does not greet you with an error.
 
 const KEY = "nuage:save";
-const VERSION = 3;
+const VERSION = 4;
 const THROTTLE = 500;
 
 // The meadow: where a new sheep starts, and where a save that has lost track of
@@ -42,7 +42,7 @@ const fresh = () => ({
   v: VERSION,
   sheep: { happyUntil: 0, woolFrom: 0 },
   care: { fed: 0, shorn: 0 },
-  valley: { at: HOME, visited: [HOME], unlocked: [], solves: {} },
+  valley: { at: HOME, visited: [HOME], unlocked: [], solves: {}, boards: {} },
   prefs: { sound: true },
 });
 
@@ -68,6 +68,9 @@ const graft = (blob) => {
       at,
       visited,
       unlocked: ids(valley.unlocked),
+      // a board is opaque here: only the puzzle that wrote it knows its shape,
+      // and a shape this build does not recognise is dropped by that puzzle
+      boards: valley.boards && typeof valley.boards === "object" ? { ...valley.boards } : {},
       solves: Object.fromEntries(
         Object.entries(valley.solves && typeof valley.solves === "object" ? valley.solves : {})
           .map(([place, count]) => [place, num(count)]),

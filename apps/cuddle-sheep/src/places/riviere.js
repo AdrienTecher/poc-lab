@@ -26,6 +26,7 @@ import { release } from "../world/hands.js";
 import * as valley from "../world/valley.js";
 import { HOME } from "../engine/save.js";
 import { PIECES, OPTIMAL, unsafe, solved } from "../puzzles/traversee.js";
+import { history, fanfare } from "../puzzles/board.js";
 import { mount, unmount, enrol } from "./registry.js";
 import { dioramaFor } from "./diorama.js";
 import { signpost } from "./signpost.js";
@@ -48,10 +49,12 @@ const NAME = { loup: "le loup", mouton: "Nuage", chou: "le chou" };
 const SIDE_FR = { L: "rive gauche", R: "rive droite" };
 const CARGO = ["loup", "chou"];   // the two he can carry; the third is himself
 
+const past = history();
+
 const game = {
   on: false, built: false, phase: "idle", rowTimer: 0, pose: {},
   boat: "L", where: { loup: "L", mouton: "L", chou: "L" },
-  aboard: null, moves: 0, stack: [], rowUntil: 0, rowing: 0, shake: 0,
+  aboard: null, moves: 0, rowUntil: 0, rowing: 0, shake: 0,
 };
 
 S("boatX", DOCK.L, 34, 11);
@@ -206,7 +209,7 @@ const readout = () => {
 };
 const setMoves = () => {
   crossMoves.textContent = `${game.moves} passage${game.moves > 1 ? "s" : ""}`;
-  $("#crossUndo").disabled = game.stack.length === 0;
+  $("#crossUndo").disabled = past.depth === 0;
   $("#crossRow").disabled = game.phase !== "idle";
 };
 const syncTokens = () => {
@@ -218,6 +221,36 @@ const syncTokens = () => {
     node.setAttribute("tabindex", reachable && game.phase === "idle" ? "0" : "-1");
   }
 };
+
+/* ---- the board, written down ---- */
+const serialize = () => ({
+  boat: game.boat, where: { ...game.where }, aboard: game.aboard,
+  moves: game.moves, phase: game.phase === "rowing" ? "idle" : game.phase, past: past.all(),
+});
+
+/** Read a board back. Anything this build cannot make sense of is refused
+ *  wholesale rather than half-applied — a half-restored board is a broken one,
+ *  and a fresh crossing is a perfectly good thing to be given instead. */
+const deserialize = (blob) => {
+  if (!blob || typeof blob !== "object") return false;
+  const where = blob.where;
+  const legal = where && typeof where === "object"
+    && PIECES.every((id) => ["L", "R", "boat"].includes(where[id]))
+    && ["L", "R"].includes(blob.boat);
+  if (!legal) return false;
+  game.boat = blob.boat;
+  game.where = { ...where };
+  game.aboard = PIECES.find((id) => where[id] === "boat") ?? null;
+  game.moves = Number.isFinite(blob.moves) && blob.moves >= 0 ? blob.moves : 0;
+  game.phase = blob.phase === "won" || blob.phase === "failed" ? blob.phase : "idle";
+  game.pose = {};
+  past.load(blob.past);
+  springs.boatX.target = springs.boatX.v = DOCK[game.boat];
+  springs.cargoY.target = springs.cargoY.v = 0;
+  return true;
+};
+
+const remember = () => valley.keep("riviere", serialize());
 
 /* ---- the three beats of arriving somewhere ---- */
 
@@ -255,7 +288,7 @@ export const enter = () => {
   release();
   dropShears();
   cancelDrag();
-  if (!game.seen) { game.seen = true; resetBoard(false); }
+  if (!game.seen) { game.seen = true; if (!deserialize(valley.board("riviere"))) resetBoard(false); }
   land();
   stage.classList.add("gliding");
   setTimeout(() => stage.classList.remove("gliding"), 1000);
@@ -283,7 +316,7 @@ const resetBoard = (animate = true) => {
   game.where = { loup: "L", mouton: "L", chou: "L" };
   game.aboard = null;
   game.moves = 0;
-  game.stack = [];
+  past.clear();
   game.phase = "idle";
   springs.boatX.target = springs.boatX.v = DOCK.L;
   springs.cargoY.target = springs.cargoY.v = 0;
@@ -292,6 +325,7 @@ const resetBoard = (animate = true) => {
   layers.reset();
   game.pennant.classList.remove("up");
   setMoves(); syncTokens(); drawActors(); measureUI();
+  remember();
   if (animate) { readout(); }
 };
 
@@ -309,12 +343,12 @@ const embark = (id) => {
   } else return;
   poke();
   sfx.flutter();
-  syncTokens(); drawActors(); readout();
+  syncTokens(); drawActors(); readout(); remember();
 };
 
 const row = () => {
   if (!game.on || game.phase !== "idle" || now() < game.rowUntil) return;
-  game.stack.push({ boat: game.boat, where: { ...game.where }, moves: game.moves });
+  past.push({ boat: game.boat, where: { ...game.where }, moves: game.moves });
   const from = game.boat;
   game.boat = from === "L" ? "R" : "L";
   game.moves += 1;
@@ -328,6 +362,7 @@ const row = () => {
   sfx.row();
   poke();
   setMoves(); syncTokens();
+  remember();
   clearTimeout(game.rowTimer);
   game.rowTimer = setTimeout(() => arrive(from), (game.rowUntil - now()) * 1000);
 };
@@ -346,7 +381,7 @@ const arrive = (from) => {
   const bad = unsafe(game.where, from);   // the one call site
   if (bad) return fail(bad);
   if (solved(game.where)) return win();
-  readout();                              // silence is the reward for a correct move
+  readout(); remember();                              // silence is the reward for a correct move
 };
 
 const fail = (pair) => {
@@ -388,13 +423,8 @@ const fail = (pair) => {
 const win = () => {
   game.phase = "won";
   syncTokens();
-  sfx.chime();
-  kick("hop", -300);
-  for (const i of [...Array(18).keys()]) setTimeout(() => sparkle(rand(140, 260), rand(170, 250)), 460 + i * 40);
+  fanfare("riviere");
   setTimeout(() => game.pennant.classList.add("up"), 700);
-  // if he is sad, the victory bleat is the sad bleat
-  setTimeout(() => sfx.bleat(state.mood > 0.5), 900);
-  valley.solve("riviere");
   const best = game.moves === OPTIMAL ? " C'est la solution optimale." : "";
   announce(`Tout le monde est passé en ${game.moves} passages.${best}`);
   setHint(`Tout le monde est passé — ${game.moves} passages${game.moves === OPTIMAL ? ", le minimum" : ""}`,
@@ -402,10 +432,10 @@ const win = () => {
 };
 
 const undo = () => {
-  if (!game.on || !game.stack.length || game.phase === "rowing") return;
+  if (!game.on || !past.depth || game.phase === "rowing") return;
   clearTimeout(game.rowTimer);
   game.pose = {};
-  const prev = game.stack.pop();
+  const prev = past.pop();
   game.boat = prev.boat;
   game.where = { ...prev.where };
   game.moves = prev.moves;
@@ -416,7 +446,7 @@ const undo = () => {
   for (const id of CARGO) game.tok[id].classList.remove("gone");
   game.pennant.classList.remove("up");
   stage.classList.remove("riding");
-  setMoves(); syncTokens(); drawActors(); readout();
+  setMoves(); syncTokens(); drawActors(); readout(); remember();
 };
 
 /* ---- bindings ---- */

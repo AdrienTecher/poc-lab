@@ -97,7 +97,7 @@ export default async ({ newPage, check, APP }) => {
       .filter((k) => localStorage.getItem(k) !== null),
   }));
   check("the old keys are cleared away", migrated.leftovers.length === 0, migrated.leftovers.join(","));
-  check("and the blob is current", migrated.blob.v === 3 && migrated.blob.valley.unlocked.includes("riviere"));
+  check("and the blob is current", migrated.blob.v === 4 && migrated.blob.valley.unlocked.includes("riviere"));
   await page.close();
 
   // --- an older blob is climbed, not discarded: every v2 fixture above proves
@@ -113,9 +113,46 @@ export default async ({ newPage, check, APP }) => {
     }),
   });
   const climbed = await page.evaluate(() => JSON.parse(localStorage.getItem("nuage:save")));
-  check("a v2 save is upgraded in place", climbed.v === 3, JSON.stringify(climbed).slice(0, 90));
+  check("a v2 save is upgraded in place", climbed.v === 4, JSON.stringify(climbed).slice(0, 90));
   check("the upgrade keeps what v2 knew", climbed.care.fed === 2 && climbed.valley.solves.riviere === 4);
   check("and defaults what it did not", climbed.care.shorn === 0 && climbed.valley.at === "pre");
   check("he has been where he is", climbed.valley.visited.includes("pre"));
+  await page.close();
+
+  // --- a board half-played survives a reload, and a nonsense one does not
+  // half-apply: it is refused whole and he is given a fresh crossing instead
+  page = await newPage({ viewport: { width: 1280, height: 800 } });
+  await boot(page, APP, {
+    "nuage:save": JSON.stringify({
+      v: 4, sheep: { happyUntil: 0, woolFrom: 0 }, care: { fed: 5, shorn: 0 },
+      valley: {
+        at: "riviere", visited: ["pre", "riviere"], unlocked: ["riviere"], solves: {},
+        boards: { riviere: { boat: "R", where: { loup: "L", mouton: "R", chou: "L" }, moves: 3, phase: "idle", past: [] } },
+      },
+      prefs: { sound: false },
+    }),
+  });
+  await page.waitForTimeout(900);
+  const live = await page.locator("#live").innerText();
+  check("a half-played crossing comes back", live.includes("Rive droite : Nuage"), live);
+  check("with the moves he had made", (await page.locator("#crossMoves").innerText()).startsWith("3"),
+    await page.locator("#crossMoves").innerText());
+  await page.close();
+
+  page = await newPage({ viewport: { width: 1280, height: 800 } });
+  await boot(page, APP, {
+    "nuage:save": JSON.stringify({
+      v: 4, sheep: { happyUntil: 0, woolFrom: 0 }, care: { fed: 5, shorn: 0 },
+      valley: {
+        at: "riviere", visited: ["pre", "riviere"], unlocked: ["riviere"], solves: {},
+        boards: { riviere: { boat: "sideways", where: { loup: "elsewhere" }, moves: -4 } },
+      },
+      prefs: { sound: false },
+    }),
+  });
+  await page.waitForTimeout(900);
+  const fresh = await page.locator("#live").innerText();
+  check("a board that makes no sense is refused whole", fresh.includes("Rive droite : personne"), fresh);
+  check("and he is simply given a fresh crossing", (await page.locator("#crossMoves").innerText()).startsWith("0"));
   await page.close();
 };

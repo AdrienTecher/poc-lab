@@ -26,6 +26,7 @@ import { release } from "../world/hands.js";
 import * as valley from "../world/valley.js";
 import { HOME } from "../engine/save.js";
 import { POSTS, BALES, OPTIMAL, start, top, refuses, solved } from "../puzzles/meules.js";
+import { history, fanfare } from "../puzzles/board.js";
 import { mount, unmount, enrol } from "./registry.js";
 import { dioramaFor } from "./diorama.js";
 import { signpost } from "./signpost.js";
@@ -50,9 +51,11 @@ const BALE_W = [1.15, 1.62, 2.10];
 const NAME = ["le petit ballot", "le ballot moyen", "le gros ballot"];
 const WHERE = ["premier pieu", "deuxième pieu", "troisième pieu"];
 
+const past = history();
+
 const game = {
   on: false, built: false, phase: "idle", at: 1,
-  stacks: start(), carrying: null, moves: 0, stack: [], bales: [],
+  stacks: start(), carrying: null, moves: 0, bales: [],
 };
 
 S("baleY", 0, 150, 12);   // the lift, when a bale comes up onto his back
@@ -275,7 +278,7 @@ const readout = () => {
 
 const setMoves = () => {
   barnMoves.textContent = `${game.moves} ballot${game.moves > 1 ? "s" : ""} déplacé${game.moves > 1 ? "s" : ""}`;
-  $("#barnUndo").disabled = game.stack.length === 0;
+  $("#barnUndo").disabled = past.depth === 0;
 };
 
 const syncPosts = () => {
@@ -301,13 +304,13 @@ const touchPost = (post) => {
       setHint("Ce pieu est vide", "that post is empty");
       return;
     }
-    game.stack.push({ stacks: game.stacks.map((s) => [...s]), carrying: null, moves: game.moves });
+    past.push({ stacks: game.stacks.map((s) => [...s]), carrying: null, moves: game.moves });
     game.stacks[post].pop();
     game.carrying = bale;
     kick("baleY", -260);
     kick("earL", -140); kick("earR", 140);
     sfx.flutter();
-    draw(); syncPosts(); readout();
+    draw(); syncPosts(); readout(); remember();
     return;
   }
 
@@ -329,17 +332,13 @@ const touchPost = (post) => {
   for (const i of [...Array(4).keys()]) setTimeout(() => tuft(rand(170, 230), rand(210, 250)), i * 70);
   setMoves(); draw(); syncPosts();
   if (solved(game.stacks)) return win();
-  readout();
+  readout(); remember();
 };
 
 const win = () => {
   game.phase = "won";
   syncPosts();
-  sfx.chime();
-  kick("hop", -300);
-  for (const i of [...Array(18).keys()]) setTimeout(() => sparkle(rand(140, 260), rand(170, 250)), 420 + i * 40);
-  setTimeout(() => sfx.bleat(state.mood > 0.5), 900);
-  valley.solve("grange");
+  fanfare("grange");
   const best = game.moves === OPTIMAL ? " C'est la solution optimale." : "";
   announce(`Les trois ballots sont sur le dernier pieu, en ${game.moves} déplacements.${best}`);
   setHint(`Rangé en ${game.moves} déplacements${game.moves === OPTIMAL ? ", le minimum" : ""}`,
@@ -347,29 +346,56 @@ const win = () => {
 };
 
 const undo = () => {
-  if (!game.on || !game.stack.length) return;
-  const prev = game.stack.pop();
+  if (!game.on || !past.depth) return;
+  const prev = past.pop();
   game.stacks = prev.stacks.map((s) => [...s]);
   game.carrying = prev.carrying;
   game.moves = prev.moves;
   game.phase = "idle";
   springs.baleY.v = springs.baleY.target = 0;
-  setMoves(); draw(); syncPosts(); readout();
+  setMoves(); draw(); syncPosts(); readout(); remember();
 };
 
 const resetBoard = (animate = true) => {
   game.stacks = start();
   game.carrying = null;
   game.moves = 0;
-  game.stack = [];
+  past.clear();
   game.phase = "idle";
   game.at = 1;
   springs.walk.v = springs.walk.target = 1;
   springs.baleY.v = springs.baleY.target = 0;
   layers.reset();
   setMoves(); syncPosts(); draw(); measureUI();
+  remember();
   if (animate) readout();
 };
+
+/* ---- the board, written down ---- */
+const serialize = () => ({
+  stacks: game.stacks.map((st) => [...st]), carrying: game.carrying,
+  moves: game.moves, phase: game.phase, at: game.at, past: past.all(),
+});
+
+/** Every bale accounted for exactly once, or the board is refused whole. */
+const deserialize = (blob) => {
+  if (!blob || typeof blob !== "object" || !Array.isArray(blob.stacks)) return false;
+  if (blob.stacks.length !== POSTS) return false;
+  const held = blob.carrying;
+  const seen = [...blob.stacks.flat(), ...(held === null || held === undefined ? [] : [held])].sort();
+  if (seen.join() !== [...Array(BALES).keys()].join()) return false;
+  game.stacks = blob.stacks.map((st) => [...st]);
+  game.carrying = held === undefined ? null : held;
+  game.moves = Number.isFinite(blob.moves) && blob.moves >= 0 ? blob.moves : 0;
+  game.phase = blob.phase === "won" ? "won" : "idle";
+  game.at = Number.isInteger(blob.at) && blob.at >= 0 && blob.at < POSTS ? blob.at : 1;
+  past.load(blob.past);
+  springs.walk.v = springs.walk.target = game.at;
+  springs.baleY.v = springs.baleY.target = 0;
+  return true;
+};
+
+const remember = () => valley.keep("grange", serialize());
 
 /* ---- the three beats of arriving somewhere ---- */
 const wake = () => { buildWorld(); scene.show(true); };
@@ -397,7 +423,7 @@ export const enter = () => {
   release();
   dropShears();
   cancelDrag();
-  if (!game.seen) { game.seen = true; resetBoard(false); }
+  if (!game.seen) { game.seen = true; if (!deserialize(valley.board("grange"))) resetBoard(false); }
   land();
   stage.classList.add("gliding");
   setTimeout(() => stage.classList.remove("gliding"), 1000);
