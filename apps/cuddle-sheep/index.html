@@ -113,7 +113,7 @@
   @keyframes drift{from{transform:translateX(-320px)} to{transform:translateX(1520px)}}
 
   /* meadow: blades, flowers and the clovers you can pick */
-  .meadow{position:absolute; left:0; right:0; bottom:0; width:100%; height:27vh; overflow:visible}
+  .meadow{position:absolute; left:0; right:0; bottom:0; width:100%; height:27vh; overflow:visible; touch-action:none}
   .blade{fill:var(--blade); transform-box:fill-box; transform-origin:50% 100%; animation:sway 4s ease-in-out infinite}
   @keyframes sway{0%,100%{transform:rotate(-3.5deg)}50%{transform:rotate(3.5deg)}}
   .flower{transform-box:fill-box; transform-origin:50% 100%; transform:scale(0); transition:transform .55s cubic-bezier(.2,1.7,.4,1)}
@@ -138,8 +138,13 @@
   .tool-cursor svg{width:100%; height:100%; filter:drop-shadow(0 5px 8px rgba(30,40,56,.35))}
 
   /* ---------------- sheep ---------------- */
-  .stage{position:absolute; left:50%; bottom:11vh; transform:translateX(-50%); width:min(660px, 92vw)}
-  .sheep{display:block; width:100%; height:auto; overflow:visible; touch-action:none}
+  .stage{
+    position:absolute; left:50%; bottom:11vh; transform:translateX(-50%);
+    width:min(720px, 92vw, 95vh - 104px); pointer-events:none;
+  }
+  .sheep{display:block; width:100%; height:auto; overflow:visible; touch-action:none; pointer-events:none}
+  #hit, .bfly{pointer-events:auto}
+  html[data-mode="cross"] .bfly{pointer-events:none}
   .wool{fill:var(--wool)}
   .wool-edge{fill:var(--wool-edge)}
   .face{fill:var(--face)}
@@ -206,8 +211,8 @@
     z-index:3; display:flex; align-items:center; gap:10px; padding:9px 18px;
     background:var(--hud); border:1px solid var(--hud-line); border-radius:999px;
     backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
-    font-size:.86rem; white-space:nowrap; pointer-events:none;
-    transition:opacity .5s, transform .5s;
+    font-size:.86rem; max-width:min(90vw, 880px); text-align:center; line-height:1.4;
+    pointer-events:none; transition:opacity .5s, transform .5s;
   }
   .hint .en{opacity:.58; font-size:.78rem}
   .hint.gone{opacity:0; transform:translate(-50%,12px)}
@@ -227,26 +232,27 @@
   .cross{
     position:absolute; left:0; top:var(--cross-top);
     width:100%; height:calc(100% - var(--cross-top) - var(--cross-bot));
-    opacity:0; pointer-events:none;
-    transition:opacity .5s ease; overflow:visible;
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition:opacity .5s ease, visibility 0s .5s; overflow:visible; touch-action:none;
   }
   #crossBack{z-index:1}
   #crossFront{z-index:3}
   .stage{z-index:2}
-  html[data-mode="cross"] .cross{opacity:1}
+  html[data-mode="cross"] .cross{opacity:1; visibility:visible; transition-delay:0s, 0s}
   html[data-mode="cross"] .tok:not([disabled]), html[data-mode="cross"] #boat{pointer-events:auto; cursor:pointer}
   html[data-mode="cross"] .meadow{opacity:0; transform:translateY(42%); pointer-events:none}
-  .meadow{transition:opacity .52s ease, transform .52s ease}
+  .meadow{transition:opacity .52s ease, transform .52s ease, visibility 0s}
+  html[data-mode="cross"] .meadow{visibility:hidden; transition-delay:0s, 0s, .52s}
   /* 94.35% is his hoof line, so the scale pivots on his feet and nothing drifts */
   html[data-mode="cross"] .stage{
-    left:0; top:0; bottom:auto; transform-origin:50% 94.35%;
+    left:0; top:0; bottom:auto; width:min(720px, 92vw); transform-origin:50% 94.35%;
     transform:translate(var(--x,0px), var(--y,0px)) scale(var(--k,1));
     transition:transform .95s cubic-bezier(.45,.05,.35,1);
   }
   html[data-mode="cross"] .stage{transition:transform .5s cubic-bezier(.2,1.5,.4,1)}
   html[data-mode="cross"] .stage.gliding{transition:transform .95s cubic-bezier(.45,.05,.35,1)}
   html[data-mode="cross"] .stage.riding{transition:none}
-  html[data-mode="cross"] .hint{bottom:calc(var(--cross-bot) - 12px)}
+  html[data-mode="cross"] .hint{bottom:calc(var(--ui-h, 70px) + 12px)}
   .tok{cursor:pointer; outline:none}
   .tok[disabled]{cursor:default; pointer-events:none}
   .tok:focus-visible > *{filter:drop-shadow(0 0 8px #fff)}
@@ -286,22 +292,43 @@
   .sprout.reveal .sprout__halo{animation:halo .9s ease-out}
   @keyframes halo{from{r:0; opacity:.55} to{r:46px; opacity:0}}
 
+  @media (max-height:560px){
+    :root{--cross-top:64px; --cross-bot:62px}
+    .hud{padding:10px 14px}
+    .brand p{display:none}
+    .hint{font-size:.76rem; padding:7px 13px}
+    .hint .en{display:none}
+    .cross-ui button{padding:6px 12px; font-size:.78rem}
+    .cross-ui{bottom:8px}
+  }
   @media (prefers-reduced-motion: reduce){
     .sun__rays,.blade,.cloudbank .puff,.hint__hand{animation:none}
   }
+  @media (max-width:720px){
+    .hud{gap:10px; padding:12px}
+    .chip{padding:6px 12px 6px 7px; gap:8px}
+    .chip__ring{width:28px; height:28px}
+    .hud__right{gap:8px}
+    .icon-btn{width:40px; height:40px}
+  }
+  @media (max-width:430px){
+    .brand p{display:none}
+    .chip--wool .chip__text{display:none}
+    .chip--wool{padding:6px}
+  }
   @media (max-width:600px){
     .brand p .en, .hint .en{display:none}
+    .brand h1{font-size:1.35rem}
     .hint{white-space:normal; max-width:88vw; text-align:center; line-height:1.35}
     .cross-ui button{padding:7px 12px; font-size:.78rem}
     .hint{font-size:.78rem; padding:8px 14px}
-    html[data-mode="cross"] .hint{bottom:142px}
     .cross-ui .moves{width:100%; text-align:center; order:9}
     .chip--wool .chip__state{display:none}
     .chip--wool{padding-right:12px}
   }
   /* portrait: he takes the room the sky isn't using */
   @media (max-aspect-ratio: 4/5){
-    .stage{width:min(660px, 116vw); bottom:26vh}
+    .stage{width:min(660px, 116vw, 80vh - 104px); bottom:26vh}
     .meadow{height:22vh}
   }
 </style>
@@ -731,19 +758,31 @@
     props.push({ node, x, y, k });
     return node;
   };
+  const measureUI = () => {
+    const top = crossUI.getBoundingClientRect().top;
+    if (top) document.documentElement.style.setProperty("--ui-h", `${Math.round(innerHeight - top)}px`);
+  };
+
   const layoutProps = () => {
     const box = meadow.getBoundingClientRect();
     const sx = (box.width || 1200) / 1200, sy = (box.height || 260) / 260;
+    // props hold a fixed on-screen size, which crowds them together on a narrow
+    // meadow — so they shrink with the width once there is no room to spare
+    const fit = clamp(box.width / 900, 0.6, 1);
     for (const p of props) {
-      p.node.setAttribute("transform", `translate(${p.x} ${p.y}) scale(${(p.k * sy / sx).toFixed(4)} ${p.k})`);
+      const k = p.k * fit;
+      p.node.setAttribute("transform", `translate(${p.x} ${p.y}) scale(${(k * sy / sx).toFixed(4)} ${k})`);
     }
   };
 
   // clovers are the treat: pick one out of the grass and offer it to him
   const CLOVER_X = [140, 355, 890, 560, 250, 760];
+  const tapTarget = (g, w, h, y) => g.appendChild(el("rect", { x: -w / 2, y, width: w, height: h, fill: "transparent" }));
+
   const addClover = (x) => {
     const g = el("g", { class: "clover", tabindex: "0", role: "button" });
     g.setAttribute("aria-label", "Offrir un trèfle — give him a clover");
+    tapTarget(g, 46, 62, -26);
     g.appendChild(el("path", { d: "M0,2 L0,28", stroke: "#3f8a36", "stroke-width": 3, "stroke-linecap": "round", fill: "none" }));
     const leaves = el("g", { class: "clover__leaves" });
     leaves.appendChild(el("use", { href: "#cloverLeaves", fill: "#4ea343" }));
@@ -760,9 +799,10 @@
   // the shears wait in the grass on the other side of the meadow
   const shearsNode = el("g", { class: "shears", tabindex: "0", role: "button" });
   shearsNode.setAttribute("aria-label", "Prendre les ciseaux pour la tonte — pick up the shears");
+  tapTarget(shearsNode, 42, 68, -34);
   shearsNode.appendChild(el("use", { href: "#shearsShape" }));
   meadow.appendChild(shearsNode);
-  placeProp(shearsNode, 1075, 206, 2);
+  placeProp(shearsNode, 1145, 206, 2);
 
   // A shorn fleece floats off and joins the cloud bank — he is named after one.
   const fleeceToCloud = () => {
@@ -788,7 +828,7 @@
   const butterflies = [];
   const TINT = ["#ffd9f0", "#fff3b8", "#dbeaff"];
   for (const i of [...Array(3).keys()]) {
-    const g = el("g", { cursor: "pointer" });
+    const g = el("g", { class: "bfly", cursor: "pointer" });
     const wing = (sx) => {
       const w = el("g", { fill: TINT[i], opacity: ".95" });
       w.append(
@@ -1022,6 +1062,7 @@
 
   svg.addEventListener("pointerdown", (e) => {
     const p = toSvg(e);
+    if (state.tool) grabTool(e);
     if (!onSheep(p)) { if (state.tool) dropShears(); return; }
     svg.setPointerCapture?.(e.pointerId);
     poke();
@@ -1182,6 +1223,8 @@
     toolCursor.style.transform = `translate(${x}px, ${y}px) rotate(${tilt.toFixed(1)}deg)`;
   };
 
+  const grabTool = (e) => { lastClient.x = e.clientX; lastClient.y = e.clientY; moveTool(e.clientX, e.clientY); };
+
   const takeShears = () => {
     if (state.tool === "shears") return;
     if (state.wool < SHEAR_MIN) {
@@ -1296,7 +1339,7 @@
   const pt = (gx, gy, gz) => `${isoX(gx, gy).toFixed(1)},${isoY(gx, gy, gz).toFixed(1)}`;
 
   const crossBack = $("#crossBack"), crossFront = $("#crossFront"), decor = $("#isoDecor");
-  const crossMoves = $("#crossMoves");
+  const crossUI = $("#crossUI"), crossMoves = $("#crossMoves");
   const SLOTS = {
     L: { loup: [2.6, 0.4], mouton: [1.4, 2.2], chou: [0.4, 4.0] },
     R: { loup: [8.6, 0.4], mouton: [7.4, 2.2], chou: [6.4, 4.0] },
@@ -1515,6 +1558,7 @@
     buildWorld();
     game.on = true;
     game.phase = "idle";
+    poke();
     document.documentElement.dataset.mode = "cross";
     state.petting = false; petPrev = null; keyPetting = false;
     stage.classList.remove("cuddling");
@@ -1525,7 +1569,7 @@
     setTimeout(() => stage.classList.remove("gliding"), 1000);
     setHint("Le loup mange le mouton, le mouton mange le chou — une seule place dans la barque",
       "wolf eats sheep, sheep eats cabbage — one seat in the boat");
-    setTimeout(() => { refreshCTM(); drawActors(); }, 20);
+    setTimeout(() => { refreshCTM(); drawActors(); measureUI(); }, 20);
     setTimeout(refreshCTM, 1000);
     readout();
   };
@@ -1557,7 +1601,7 @@
     game.tok.chou.style.transform = "";
     if (game.tok.chou.parentNode !== crossFront) crossFront.appendChild(game.tok.chou);
     $("#pennant").classList.remove("up");
-    setMoves(); syncTokens(); drawActors();
+    setMoves(); syncTokens(); drawActors(); measureUI();
     if (animate) { readout(); }
   };
 
@@ -1698,13 +1742,14 @@
     <circle class="sprout__halo" cx="0" cy="-8" r="0" fill="#fff8d8"/>
     <path class="sprout__stem" d="M0,2 L0,36" stroke="#3f8a36" stroke-width="3" stroke-linecap="round"
           fill="none" stroke-dasharray="34" stroke-dashoffset="34"/>
+    <rect x="-26" y="-30" width="52" height="72" fill="transparent"/>
     <g class="sprout__leaves">
       <use class="sprout__rim" href="#cloverLeaves" fill="var(--fourleaf-rim)" transform="scale(1.24)"/>
       <use href="#cloverLeaves" fill="#4ea343"/>
       <use href="#cloverLeaves" fill="#69c257" transform="scale(.82)"/>
     </g>`;
   meadow.appendChild(sprout);
-  placeProp(sprout, 1000, 208, 1.55);
+  placeProp(sprout, 975, 208, 1.55);
   const sproutStem = sprout.querySelector(".sprout__stem");
   const sproutLeaves = sprout.querySelector(".sprout__leaves");
   const NOTCH_DASH = [34, 25, 16, 8, 0], NOTCH_SCALE = [0, 0, 0.45, 0.72, 1];
@@ -1780,6 +1825,8 @@
 
   updateSprout();
   growReward();
+  measureUI();
+  addEventListener("resize", measureUI);
 
   /* ---- per-frame: crests, hull, oars, actors ---- */
   const gameFrame = (dt, t) => {
