@@ -454,6 +454,62 @@
   .pennant{transform-box:fill-box; transform-origin:0% 50%; transform:scale(0); transition:transform .52s cubic-bezier(.2,1.7,.4,1)}
   .pennant.up{transform:scale(1)}
 
+  /* ---- the crossing ------------------------------------------------------
+     A drift of fleece closes over the world and opens on somewhere else. Made of
+     --wool, so it is the same stuff he is and it warms with his mood like
+     everything else; the shading is a radial so each puff reads as wool rather
+     than as a white circle.
+
+     The ::after is load bearing and is not decoration: nine blobs cannot be
+     trusted to leave no gap at every aspect ratio, so a flat backing fills behind
+     them while they are at their widest. The blobs are the soft edge of the cloud;
+     the backing is the cloud.
+
+     Timing is tied to the crossfade underneath it. .meadow takes 520ms to drop
+     away and the layers 500ms to come up, so the cover has to be complete before
+     that finishes and hold until after: full at ~300ms, holds to ~640ms, gone by
+     980ms. Move one and move the other. */
+  /* fixed and above every layer, including the HUD — and overflow:hidden because
+     it no longer sits inside .scene, so nothing else is clipping the blobs and a
+     46vmax circle parked at left:106% would otherwise scroll the page sideways */
+  .puffs{
+    position:fixed; inset:0; z-index:9; pointer-events:none;
+    visibility:hidden; overflow:hidden;
+  }
+  .puffs.sweeping{visibility:visible}
+  .puffs::after{
+    content:""; position:absolute; inset:-2px; background:var(--wool); opacity:0;
+  }
+  .puff{
+    position:absolute; display:block; transform:translate(-50%,-50%) scale(0);
+    background:radial-gradient(circle at 38% 32%, var(--wool) 56%, var(--wool-edge));
+    /* not quite circles: a blob reads as fleece, a circle reads as a loading spinner */
+    border-radius:48% 52% 55% 45% / 50% 46% 54% 50%;
+  }
+  .puff:nth-child(even){border-radius:54% 46% 47% 53% / 45% 55% 45% 55%}
+  .puff:nth-child(3n){border-radius:45% 55% 52% 48% / 55% 48% 52% 45%}
+
+  /* closing: quick, and near enough together. The backing comes in LAST and fast,
+     so the blobs are still legible as blobs while they meet. */
+  .puffs.crossing .puff{
+    animation:puff-in 300ms cubic-bezier(.34,1.56,.64,1) both;
+    animation-delay:calc(var(--d) * .3);
+  }
+  .puffs.crossing::after{animation:fleece-in 380ms ease-in both}
+  /* opening: slower, staggered left to right, and the backing leaves first so what
+     you watch is a cloud parting rather than a rectangle fading */
+  .puffs.parting .puff{
+    animation:puff-out 450ms cubic-bezier(.55,-0.28,.72,.42) both;
+    animation-delay:var(--d);
+  }
+  .puffs.parting::after{animation:fleece-out 300ms ease-out both}
+  @keyframes puff-in{from{transform:translate(-50%,-50%) scale(0)}
+    to{transform:translate(-50%,-50%) scale(1.06)}}
+  @keyframes puff-out{from{transform:translate(-50%,-50%) scale(1.06)}
+    to{transform:translate(-50%,-50%) scale(0)}}
+  @keyframes fleece-in{0%,52%{opacity:0} 100%{opacity:1}}
+  @keyframes fleece-out{from{opacity:1} to{opacity:0}}
+
   .place-ui{
     position:absolute; left:50%; bottom:clamp(14px,3.2vh,30px); transform:translateX(-50%);
     z-index:4; display:none; gap:8px; align-items:center; justify-content:center;

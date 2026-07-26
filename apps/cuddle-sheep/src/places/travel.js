@@ -89,7 +89,7 @@ const arrive = () => {
   const { place, left } = trip;
   trip = null;
   springs.trip.v = springs.trip.target = 1;
-  mount(place);
+  mount(place, true);              // quiet: no curtain over a walk you are meant to watch
   panTo(place.road);               // g(1) is exactly 1, but say so rather than imply it
   valley.arrive(place.id);
   left.sleep();                    // only now: it was on screen the whole way

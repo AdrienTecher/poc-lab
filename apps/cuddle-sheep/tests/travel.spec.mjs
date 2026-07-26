@@ -130,4 +130,53 @@ export default async ({ newPage, check, APP }) => {
   check("and the barn gate is not in the meadow either",
     await shut.locator(".gate").evaluate((n) => getComputedStyle(n).display === "none"));
   await shut.close();
+
+  /* ---- the crossing: fleece over a change of place, never over a walk ---- */
+  // This is the one that matters. The whole design of travel is that HE crosses
+  // ground and you watch him do it — so a curtain over that would hide the thing
+  // it took a camera derived from trip progress to make watchable in the first
+  // place. Covering the meadow↔place step is welcome; covering a walk is not.
+  const swept = async (p, samples, gap = 65) => {
+    let seen = false;
+    for (const i of [...Array(samples).keys()]) {
+      if (await p.evaluate(() => document.querySelector(".puffs")?.classList.contains("crossing"))) seen = true;
+      await p.waitForTimeout(gap);
+    }
+    return seen;
+  };
+
+  const cross = await newPage({ viewport: { width: 1280, height: 800 } });
+  await seed(cross, { ...VALLEY, valley: { ...VALLEY.valley, at: "riviere", visited: ["pre", "riviere"] } });
+  await cross.goto(APP);
+  await cross.waitForTimeout(1700);
+  check("the fleece curtain is built", (await cross.locator(".puff").count()) > 0);
+  check("and he is at the river to start", (await mode2(cross)) === "cross", await mode2(cross));
+
+  const b = await cross.locator(".way__plank").first().boundingBox();
+  await cross.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
+  const duringWalk = await swept(cross, 45, 70);
+  check("walking the valley is never curtained", !duringWalk,
+    "you are meant to watch him cross the ground");
+  check("and the walk still arrives", (await mode2(cross)) === "barn", await mode2(cross));
+
+  await cross.keyboard.press("Escape");
+  check("but leaving for the meadow is", await swept(cross, 14));
+  await cross.waitForTimeout(1200);
+  check("and the curtain clears itself afterwards",
+    await cross.evaluate(() => getComputedStyle(document.querySelector(".puffs")).visibility === "hidden"));
+  await cross.close();
+
+  // motion is delight here, not information: with it turned down there is no
+  // curtain at all rather than a still one, and everything still works
+  const calm = await newPage({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" });
+  await seed(calm, VALLEY);
+  await calm.goto(APP);
+  await calm.waitForTimeout(1000);
+  check("reduced motion builds no curtain at all", (await calm.locator(".puffs").count()) === 0);
+  await calm.keyboard.press("j");
+  await calm.waitForTimeout(1500);
+  check("and you still get where you are going", (await mode2(calm)) === "cross", await mode2(calm));
+  await calm.close();
 };
+
+const mode2 = (p) => p.evaluate(() => document.documentElement.dataset.mode ?? "none");

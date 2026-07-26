@@ -16,18 +16,31 @@ export const roster = () => [...places.values()];
 
 export const active = () => mounted;
 
+/** Anyone who wants to know that the world just changed underfoot. Subscribers
+ *  rather than an import, because this module imports nothing on purpose and the
+ *  curtain that sweeps over a swap must not become a thing places depend on. */
+const swaps = [];
+export const onSwap = (fn) => { swaps.push(fn); };
+const swapped = () => { for (const fn of swaps) fn(); };
+
 // data-place is "he is somewhere" and every diorama shares its rules; data-mode
 // is which one, and only genuinely per-place chrome keys on it.
-export const mount = (place) => {
+//
+// `quiet` is for arriving on foot. Walking the valley is the one swap that must
+// NOT be covered up: he crosses ground on screen and you watch him do it, so a
+// curtain over that would hide the whole point of travel.
+export const mount = (place, quiet = false) => {
   mounted = place;
   document.documentElement.dataset.place = place.id;
   document.documentElement.dataset.mode = place.mode;
+  if (!quiet) swapped();
 };
 
 export const unmount = () => {
   mounted = null;
   delete document.documentElement.dataset.place;
   delete document.documentElement.dataset.mode;
+  swapped();
 };
 
 /** He has set off for somewhere else. Nothing is mounted — so no place will

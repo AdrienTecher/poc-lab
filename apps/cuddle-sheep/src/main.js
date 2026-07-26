@@ -7,6 +7,7 @@
 import { $ } from "./engine/svg.js";
 import { attachParticles, stepParticles } from "./engine/particles.js";
 import * as hud from "./ui/hud.js";
+import * as curtain from "./ui/curtain.js";
 import * as scenery from "./world/scenery.js";
 import * as sheep from "./world/sheep.js";
 import * as clovers from "./world/clovers.js";
@@ -45,6 +46,7 @@ pelote.build();
 chien.build();      // a meadow prop: DOM order here IS paint order, so he goes in the grass
 butterflies.build();
 hud.build();
+curtain.build();    // last in the scene, so the fleece closes over everything in it
 hands.build();
 riviere.build();    // after hands: Escape drops the shears before it leaves a place
 grange.build();
