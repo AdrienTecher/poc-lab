@@ -16,6 +16,7 @@ import * as butterflies from "./world/butterflies.js";
 import * as hands from "./world/hands.js";
 import * as mood from "./world/mood.js";
 import * as riviere from "./places/riviere.js";
+import * as camera from "./engine/camera.js";
 import { refreshCTM } from "./world/pointer.js";
 import { active } from "./places/registry.js";
 
@@ -47,7 +48,8 @@ const frame = (ms) => {
 
   const m = mood.step(dt);
   const w = wool.step(dt);
-  sheep.step(dt, t, m);
+  sheep.step(dt, t, m);          // steps every spring, the camera's included
+  camera.paint();                // ...so the layers are framed before he is placed in them
   butterflies.step(dt, t, m);
   if (place) place.frame(dt, t);
   stepParticles(dt);

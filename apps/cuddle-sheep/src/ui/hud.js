@@ -11,15 +11,22 @@ import { remaining } from "../world/mood.js";
 
 const ring = $("#ring"), chipState = $("#chipState"), chipTime = $("#chipTime");
 const woolChip = $("#woolChip"), woolRing = $("#woolRing"), woolState = $("#woolState"), woolPct = $("#woolPct");
-const soundBtn = $("#sound"), crossUI = $("#crossUI");
+const soundBtn = $("#sound");
 
 const RING_LEN = 2 * Math.PI * 13.6;
 
-/** The control bar's height, published to CSS so the scene can keep clear of
- *  it — measured rather than assumed, because its content wraps. */
+/** The height of whichever place's control bar is on screen, published to CSS
+ *  so the hint can keep clear of it — measured rather than assumed, because its
+ *  content wraps. Every bar but the mounted one is display:none, and so reports
+ *  a top of 0. */
 export const measureUI = () => {
-  const top = crossUI.getBoundingClientRect().top;
-  if (top) document.documentElement.style.setProperty("--ui-h", `${Math.round(innerHeight - top)}px`);
+  for (const bar of document.querySelectorAll(".place-ui")) {
+    const top = bar.getBoundingClientRect().top;
+    if (top) {
+      document.documentElement.style.setProperty("--ui-h", `${Math.round(innerHeight - top)}px`);
+      return;
+    }
+  }
 };
 
 const paintSound = () => {

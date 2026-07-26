@@ -53,24 +53,27 @@ export default async ({ newPage, check, APP }) => {
 
   // painter order is computed, not hand-wired: a piece nearer the camera than
   // Nuage must be drawn in the layer in front of him, and behind when it is not
-  const layerOfChou = () => page.evaluate(() => document.querySelector("#tokChou").parentElement.id);
-  check("the cabbage starts in front of him", (await layerOfChou()) === "crossFront");
+  // ask which BAND it was filed into, not which element — the sandwich is the
+  // rule, and the names of the layers holding it are not the test's business
+  const layerOfChou = () => page.evaluate(() =>
+    document.querySelector("#tokChou").closest("[data-layer]")?.dataset.layer ?? "nowhere");
+  check("the cabbage starts in front of him", (await layerOfChou()) === "front");
 
   // The case that separates the computed rule from the hand-wired one it replaced:
   // the old code moved the cabbage behind him whenever it was aboard. Aboard the
   // boat with Nuage still on the NEAR bank, the boat is closer to the camera, so
   // the cabbage belongs in front. The old rule got this wrong.
   await clickMid(page, "#tokChou");
-  check("aboard, with him on the near bank, it stays in front", (await layerOfChou()) === "crossFront");
+  check("aboard, with him on the near bank, it stays in front", (await layerOfChou()) === "front");
   await clickMid(page, "#tokChou");     // put it back ashore
   await tapSheep(page);                 // Nuage crosses, so he becomes the far piece
   await row(page);
   await row(page);                      // the boat comes back empty
   await clickMid(page, "#tokChou");     // and the cabbage boards
-  check("aboard, with him on the far bank, it moves behind him", (await layerOfChou()) === "crossBack");
+  check("aboard, with him on the far bank, it moves behind him", (await layerOfChou()) === "back");
   await page.locator("#crossReset").click();
   await page.waitForTimeout(600);
-  check("a reset puts it back in front", (await layerOfChou()) === "crossFront");
+  check("a reset puts it back in front", (await layerOfChou()) === "front");
 
   // the optimal seven
   for (const step of ["sheep", null, "#tokLoup", "sheep", "#tokChou", null, "sheep"]) {

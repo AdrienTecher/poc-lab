@@ -14,22 +14,26 @@ import { springs, S, set, v, kick } from "../engine/spring.js";
 import { sfx } from "../engine/audio.js";
 import { crumb, sparkle } from "../engine/particles.js";
 import { isoX, isoY, pt, poly, boxAt, pine } from "../engine/iso.js";
-import { depthLayers } from "../engine/depth.js";
 import { state } from "../state.js";
 import { announce, setHint } from "../ui/hint.js";
 import { measureUI } from "../ui/hud.js";
 import { refreshCTM, poke } from "../world/pointer.js";
+import { unhost } from "../world/host.js";
 import { dropShears } from "../world/wool.js";
 import { cancelDrag } from "../world/clovers.js";
 import { release } from "../world/hands.js";
 import * as valley from "../world/valley.js";
 import { PIECES, OPTIMAL, unsafe, solved } from "../puzzles/traversee.js";
 import { mount, unmount } from "./registry.js";
+import { dioramaFor } from "./diorama.js";
 
 const stage = $("#stage");
-const crossBack = $("#crossBack"), crossFront = $("#crossFront"), decor = $("#isoDecor");
 const crossMoves = $("#crossMoves");
-const layers = depthLayers(crossBack, crossFront);
+
+// frame 0 of the filmstrip: la rivière is where the road starts, so every
+// coordinate below is authored from tile zero and shifted by nobody
+const scene = dioramaFor("riviere", 0);
+const { decor, layers } = scene;
 
 const SLOTS = {
   L: { loup: [2.6, 0.4], mouton: [1.4, 2.2], chou: [0.4, 4.0] },
@@ -159,20 +163,6 @@ const buildWorld = () => {
 };
 
 /* ---- placement: one rail for all three actors, so they never drift apart ---- */
-const VB_X = 196, VB_Y = 44, VB_W = 728, VB_H = 452;   // must match the two .cross viewBoxes
-const MOUTON_W = 186;   // Nuage's worn width in board units; wolf and cabbage hang off this
-const isoRect = () => {
-  const r = crossBack.getBoundingClientRect();
-  const sc = Math.min(r.width / VB_W, r.height / VB_H);
-  return { sc, ox: r.left + (r.width - VB_W * sc) / 2 - VB_X * sc, oy: r.top + (r.height - VB_H * sc) / 2 - VB_Y * sc };
-};
-const placeSheepAt = (ux, uy) => {
-  const { sc, ox, oy } = isoRect();
-  const w = stage.offsetWidth || 1, h = w * 372 / 400;
-  stage.style.setProperty("--k", (MOUTON_W * sc / w).toFixed(4));
-  stage.style.setProperty("--x", `${(ox + ux * sc - w / 2).toFixed(1)}px`);
-  stage.style.setProperty("--y", `${(oy + uy * sc - h * 0.9435).toFixed(1)}px`);
-};
 const placeTok = (id, ux, uy, scale) => {
   game.tok[id].setAttribute("transform", `translate(${ux.toFixed(1)} ${uy.toFixed(1)}) scale(${scale})`);
 };
@@ -196,7 +186,7 @@ const drawActors = () => {
   // a choreography may pin a piece somewhere the board model does not know about
   for (const id of CARGO) placeTok(id, ...(game.pose[id] ?? spot(id)), TOK_SCALE[id]);
   const [mx, my] = game.pose.mouton ?? spot("mouton");
-  placeSheepAt(mx, my);
+  scene.host(mx, my);
   layers.sort(depthOf("mouton"));
 };
 
@@ -248,9 +238,7 @@ export const exit = () => {
   game.on = false;
   game.phase = "idle";
   unmount();
-  stage.style.removeProperty("--x");
-  stage.style.removeProperty("--y");
-  stage.style.removeProperty("--k");
+  unhost();
   stage.classList.remove("riding", "gliding");
   setTimeout(refreshCTM, 60);
   setTimeout(refreshCTM, 700);
@@ -347,7 +335,7 @@ const fail = (pair) => {
         setTimeout(() => {
           const [px, py] = spot("mouton");
           const puff = el("ellipse", { cx: px + rand(-30, 30), cy: py - rand(10, 40), rx: 16, ry: 11, fill: "#8b94a5", opacity: ".7" });
-          crossFront.appendChild(puff);
+          scene.front.appendChild(puff);
           setTimeout(() => puff.remove(), 900);
         }, i * 120);
       }

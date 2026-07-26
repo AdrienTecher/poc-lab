@@ -8,12 +8,16 @@ let mounted = null;
 
 export const active = () => mounted;
 
+// data-place is "he is somewhere" and every diorama shares its rules; data-mode
+// is which one, and only genuinely per-place chrome keys on it.
 export const mount = (place) => {
   mounted = place;
+  document.documentElement.dataset.place = place.id;
   document.documentElement.dataset.mode = place.mode;
 };
 
 export const unmount = () => {
   mounted = null;
+  delete document.documentElement.dataset.place;
   delete document.documentElement.dataset.mode;
 };

@@ -167,12 +167,13 @@
     </svg>
   </div>
 
-  <svg class="cross" id="crossBack" viewBox="196 44 728 452" preserveAspectRatio="xMidYMid meet" role="presentation">
-    <g id="isoDecor" aria-hidden="true"></g>
-  </svg>
-  <svg class="cross" id="crossFront" viewBox="196 44 728 452" preserveAspectRatio="xMidYMid meet" role="presentation"></svg>
+  <!-- The valley: one pair of layers for every diorama there will ever be, with
+       Nuage between them. Each place fills a band of this shared coordinate
+       space, and the camera is the viewBox min-x the two share. -->
+  <svg class="valley-layer" id="valleyBack" viewBox="196 44 728 452" preserveAspectRatio="xMidYMid meet" role="presentation"></svg>
+  <svg class="valley-layer" id="valleyFront" viewBox="196 44 728 452" preserveAspectRatio="xMidYMid meet" role="presentation"></svg>
 
-  <div class="cross-ui" id="crossUI">
+  <div class="place-ui" id="crossUI">
     <button id="crossRow" class="primary" type="button" title="Traverser la rivière (flèches ← →)">Traverser</button>
     <button id="crossUndo" type="button" title="Annuler le dernier passage">Annuler</button>
     <span class="moves" id="crossMoves">0 passage</span>

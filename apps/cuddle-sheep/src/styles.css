@@ -131,7 +131,7 @@
   }
   .sheep{display:block; width:100%; height:auto; overflow:visible; touch-action:none; pointer-events:none}
   #hit, .bfly{pointer-events:auto}
-  html[data-mode="cross"] .bfly{pointer-events:none}
+  html[data-place] .bfly{pointer-events:none}
   .wool{fill:var(--wool)}
   .wool-edge{fill:var(--wool-edge)}
   .face{fill:var(--face)}
@@ -212,36 +212,39 @@
   .sr{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0}
 
 
-  /* ---------------- la traversée ---------------- */
+  /* ---------------- the valley ---------------- */
   /* Two layers share one projection, with Nuage between them: pieces further from
-     the camera than he is are painted in #crossBack, nearer ones in #crossFront.
+     the camera than he is are painted in #valleyBack, nearer ones in #valleyFront.
      Which is which is decided by engine/depth.js from each piece's own gx+gy, so
      adding an actor needs no change here. Scenery is static and stays in the
-     decor group behind everything. */
-  .cross{
+     decor group behind everything.
+
+     Everything below keys on html[data-place] — "he is somewhere" — because it
+     is true of every diorama. Only genuinely per-place chrome keys on the
+     narrower html[data-mode]. */
+  .valley-layer{
     position:absolute; left:0; top:var(--cross-top);
     width:100%; height:calc(100% - var(--cross-top) - var(--cross-bot));
     opacity:0; visibility:hidden; pointer-events:none;
-    transition:opacity .5s ease, visibility 0s .5s; overflow:visible; touch-action:none;
+    transition:opacity .5s ease, visibility 0s .5s; overflow:hidden; touch-action:none;
   }
-  #crossBack{z-index:1}
-  #crossFront{z-index:3}
+  #valleyBack{z-index:1}
+  #valleyFront{z-index:3}
   .stage{z-index:2}
-  html[data-mode="cross"] .cross{opacity:1; visibility:visible; transition-delay:0s, 0s}
-  html[data-mode="cross"] .tok:not([disabled]), html[data-mode="cross"] #boat{pointer-events:auto; cursor:pointer}
-  html[data-mode="cross"] .meadow{opacity:0; transform:translateY(42%); pointer-events:none}
+  html[data-place] .valley-layer{opacity:1; visibility:visible; transition-delay:0s, 0s}
+  html[data-place] .tok:not([disabled]), html[data-place] #boat{pointer-events:auto; cursor:pointer}
+  html[data-place] .meadow{opacity:0; transform:translateY(42%); pointer-events:none}
   .meadow{transition:opacity .52s ease, transform .52s ease, visibility 0s}
-  html[data-mode="cross"] .meadow{visibility:hidden; transition-delay:0s, 0s, .52s}
+  html[data-place] .meadow{visibility:hidden; transition-delay:0s, 0s, .52s}
   /* 94.35% is his hoof line, so the scale pivots on his feet and nothing drifts */
-  html[data-mode="cross"] .stage{
+  html[data-place] .stage{
     left:0; top:0; bottom:auto; width:min(720px, 92vw); transform-origin:50% 94.35%;
     transform:translate(var(--x,0px), var(--y,0px)) scale(var(--k,1));
-    transition:transform .95s cubic-bezier(.45,.05,.35,1);
+    transition:transform .5s cubic-bezier(.2,1.5,.4,1);
   }
-  html[data-mode="cross"] .stage{transition:transform .5s cubic-bezier(.2,1.5,.4,1)}
-  html[data-mode="cross"] .stage.gliding{transition:transform .95s cubic-bezier(.45,.05,.35,1)}
-  html[data-mode="cross"] .stage.riding{transition:none}
-  html[data-mode="cross"] .hint{bottom:calc(var(--ui-h, 70px) + 12px)}
+  html[data-place] .stage.gliding{transition:transform .95s cubic-bezier(.45,.05,.35,1)}
+  html[data-place] .stage.riding{transition:none}
+  html[data-place] .hint{bottom:calc(var(--ui-h, 70px) + 12px)}
   .tok{cursor:pointer; outline:none}
   .tok[disabled]{cursor:default; pointer-events:none}
   .tok:focus-visible > *{filter:drop-shadow(0 0 8px #fff)}
@@ -252,23 +255,24 @@
   .pennant{transform-box:fill-box; transform-origin:0% 50%; transform:scale(0); transition:transform .52s cubic-bezier(.2,1.7,.4,1)}
   .pennant.up{transform:scale(1)}
 
-  .cross-ui{
+  .place-ui{
     position:absolute; left:50%; bottom:clamp(14px,3.2vh,30px); transform:translateX(-50%);
     z-index:4; display:none; gap:8px; align-items:center; justify-content:center;
     flex-wrap:wrap; max-width:96vw;
   }
-  html[data-mode="cross"] .cross-ui{display:flex}
-  .cross-ui button{
+  /* every place gets the same bar; only its own is shown */
+  html[data-mode="cross"] #crossUI{display:flex}
+  .place-ui button{
     padding:8px 16px; border-radius:999px; font-size:.84rem; font-weight:500;
     background:var(--hud); border:1px solid var(--hud-line); color:#fff;
     backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
     transition:background .2s, transform .2s, opacity .2s;
   }
-  .cross-ui button:hover:not(:disabled){background:rgba(255,255,255,.26); transform:translateY(-1px)}
-  .cross-ui button:disabled{opacity:.4}
-  .cross-ui button.primary{background:rgba(255,255,255,.30); border-color:rgba(255,255,255,.5); font-weight:600}
-  .cross-ui button.primary:hover:not(:disabled){background:rgba(255,255,255,.42)}
-  .cross-ui .moves{font-family:var(--mono); font-size:.74rem; opacity:.75; padding:0 6px; white-space:nowrap}
+  .place-ui button:hover:not(:disabled){background:rgba(255,255,255,.26); transform:translateY(-1px)}
+  .place-ui button:disabled{opacity:.4}
+  .place-ui button.primary{background:rgba(255,255,255,.30); border-color:rgba(255,255,255,.5); font-weight:600}
+  .place-ui button.primary:hover:not(:disabled){background:rgba(255,255,255,.42)}
+  .place-ui .moves{font-family:var(--mono); font-size:.74rem; opacity:.75; padding:0 6px; white-space:nowrap}
   /* the door: one member of the clover family, promoted */
   .sprout{outline:none; transition:filter .3s}
   .sprout:hover, .sprout:focus-visible{filter:drop-shadow(0 0 8px #fff)}
@@ -287,8 +291,8 @@
     .brand p{display:none}
     .hint{font-size:.76rem; padding:7px 13px}
     .hint .en{display:none}
-    .cross-ui button{padding:6px 12px; font-size:.78rem}
-    .cross-ui{bottom:8px}
+    .place-ui button{padding:6px 12px; font-size:.78rem}
+    .place-ui{bottom:8px}
   }
   @media (prefers-reduced-motion: reduce){
     .sun__rays,.blade,.cloudbank .puff,.hint__hand{animation:none}
@@ -309,9 +313,9 @@
     .brand p .en, .hint .en{display:none}
     .brand h1{font-size:1.35rem}
     .hint{white-space:normal; max-width:88vw; text-align:center; line-height:1.35}
-    .cross-ui button{padding:7px 12px; font-size:.78rem}
+    .place-ui button{padding:7px 12px; font-size:.78rem}
     .hint{font-size:.78rem; padding:8px 14px}
-    .cross-ui .moves{width:100%; text-align:center; order:9}
+    .place-ui .moves{width:100%; text-align:center; order:9}
     .chip--wool .chip__state{display:none}
     .chip--wool{padding-right:12px}
   }
