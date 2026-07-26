@@ -4,7 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lexicon — a word you probably don't know</title>
-<meta name="description" content="Draws a word you probably don't know: five levels of erudition, toggleable domains, and a printable memory card.">
+<meta name="description" content="Draws a word you probably don't know, in English or French: five levels of erudition, toggleable domains, and a printable memory card.">
+<!-- Static, so a shared word link previews as the app rather than the word: the
+     card is drawn in the browser and there is no server to render an image per
+     entry. The link still reopens the exact word. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="poc-lab">
+<meta property="og:title" content="Lexicon — a word you probably don't know">
+<meta property="og:description" content="A rare word per draw, in English or French, with its transcription, definition and root — and a memory card to take away.">
+<meta name="twitter:card" content="summary">
 <style>
   /* Self-hosted, subsetted to Latin + IPA + the Greek letters phonetics needs.
      Newsreader carries no IPA glyphs at all, so transcriptions are set in Inter —
@@ -177,6 +185,28 @@
   .btn.primary{background:var(--accent);border-color:var(--accent);color:#fffdf8;}
   .btn.primary:hover{filter:brightness(1.08);}
   .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .sheet{
+    margin-top:.85rem;padding:1rem 1.1rem 1.1rem;
+    background:var(--panel);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);
+    max-width:34rem;
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .sheet{animation:sheetIn .26s cubic-bezier(.2,.7,.2,1) both;}
+    @keyframes sheetIn{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:none;}}
+  }
+  .sheet__t{
+    margin:0 0 .7rem;font-family:var(--mono);font-size:.64rem;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--muted);
+  }
+  .sheet__row{display:flex;flex-wrap:wrap;gap:.4rem;}
+  .sheet__row + .sheet__row{margin-top:.45rem;}
+  .sheet__b{
+    font-family:var(--sans);font-size:.82rem;color:var(--soft);text-decoration:none;
+    background:transparent;border:1px solid var(--rule);border-radius:999px;
+    padding:.34rem .8rem;cursor:pointer;transition:all .18s ease;
+  }
+  .sheet__b:hover{color:var(--ink);border-color:var(--muted);transform:translateY(-1px);}
+  .sheet__n{margin:.75rem 0 0;font-size:.72rem;color:var(--muted);line-height:1.5;}
   .hint{margin:.9rem 0 0;font-size:.76rem;color:var(--muted);}
   kbd{
     font-family:var(--mono);font-size:.7rem;border:1px solid var(--rule);border-bottom-width:2px;
@@ -264,6 +294,17 @@
   <div class="actions">
     <button class="btn primary" id="next" type="button">New word</button>
     <button class="btn" id="dl" type="button">Download card</button>
+    <button class="btn" id="share" type="button" aria-expanded="false" aria-controls="sheet">Share</button>
+  </div>
+
+  <div class="sheet" id="sheet" hidden role="group" aria-labelledby="sheetTitle">
+    <p class="sheet__t" id="sheetTitle">Share this card</p>
+    <div class="sheet__row">
+      <button class="sheet__b" id="copyLink" type="button">Copy link</button>
+      <button class="sheet__b" id="copyImage" type="button">Copy image</button>
+    </div>
+    <div class="sheet__row" id="socials"></div>
+    <p class="sheet__n" id="sheetNote"></p>
   </div>
   <p class="hint" id="hint"><kbd>Space</kbd> new word &nbsp;·&nbsp; <kbd>D</kbd> download card</p>
 
@@ -308,9 +349,12 @@ const L10N = {
     domainLabel: "Domains",
     inPlay: (n) => (n === 1 ? "1 word in play" : `${n} words in play`),
     all: "All", none: "None",
-    next: "New word", download: "Download card",
+    next: "New word", download: "Download card", share: "Share",
+    shareTitle: "Share this card", copyLink: "Copy link", copyImage: "Copy image",
+    copied: "Copied", shareOn: (n) => `Share on ${n}`,
+    shareNote: "Links reopen the word. To post the card itself, download it and attach it.",
     drawing: "Drawing…", saved: "Saved", failed: "Card failed",
-    hint: "<kbd>Space</kbd> new word &nbsp;·&nbsp; <kbd>D</kbd> download card",
+    hint: "<kbd>Space</kbd> new word &nbsp;·&nbsp; <kbd>D</kbd> download &nbsp;·&nbsp; <kbd>S</kbd> share",
     emptyTag: "No pool", emptyWord: "Nothing at this level",
     emptyDef: "Turn on another domain, or move to a different level — this combination is empty.",
     rootLabel: "Root", defLabel: "Definition",
@@ -341,9 +385,12 @@ const L10N = {
     domainLabel: "Domaines",
     inPlay: (n) => (n === 1 ? "1 mot en jeu" : `${n} mots en jeu`),
     all: "Tous", none: "Aucun",
-    next: "Nouveau mot", download: "Télécharger la fiche",
+    next: "Nouveau mot", download: "Télécharger la fiche", share: "Partager",
+    shareTitle: "Partager cette fiche", copyLink: "Copier le lien", copyImage: "Copier l'image",
+    copied: "Copié", shareOn: (n) => `Partager sur ${n}`,
+    shareNote: "Les liens rouvrent le mot. Pour publier la fiche elle-même, téléchargez-la et joignez-la.",
     drawing: "Tirage…", saved: "Enregistrée", failed: "Échec",
-    hint: "<kbd>Espace</kbd> nouveau mot &nbsp;·&nbsp; <kbd>D</kbd> télécharger la fiche",
+    hint: "<kbd>Espace</kbd> nouveau mot &nbsp;·&nbsp; <kbd>D</kbd> télécharger &nbsp;·&nbsp; <kbd>S</kbd> partager",
     emptyTag: "Aucun tirage", emptyWord: "Rien à ce niveau",
     emptyDef: "Activez un autre domaine, ou changez de niveau — cette combinaison est vide.",
     rootLabel: "Racine", defLabel: "Définition",
@@ -574,220 +621,536 @@ const RAW_EN = [
 
 const RAW_FR = [
   // ── Langue & Rhétorique ──
-  ["language",1,"amphigouri","/ɑ̃figuʁi/","nm","Écrit ou discours si embrouillé qu'on n'en tire aucun sens.","Origine obscure ; on y reconnaît peut-être le grec amphi (autour) croisé avec un radical burlesque."],
-  ["language",1,"pléonasme","/pleɔnasm/","nm","Répétition d'une idée déjà contenue dans ce qui précède, comme « monter en haut ».","Du grec pleonasmos, « excès »."],
-  ["language",1,"barbarisme","/baʁbaʁism/","nm","Faute qui consiste à employer un mot déformé ou qui n'existe pas.","Du grec barbaros, « étranger » — celui dont on n'entend que du charabia."],
-  ["language",1,"périphrase","/peʁifʁaz/","nf","Tour qui dit en plusieurs mots ce qu'un seul nommerait.","Du grec periphrasis, « expression par un détour »."],
-  ["language",1,"laconique","/lakɔnik/","adj","Qui s'exprime en très peu de mots, jusqu'à en paraître sec.","Du grec Lakōnikos, « de Laconie » — le pays de Sparte, où l'on ne parlait pas pour rien."],
-  ["language",2,"paronyme","/paʁɔnim/","nm","Mot assez proche d'un autre par la forme pour qu'on les confonde, comme « conjecture » et « conjoncture ».","Du grec para (à côté) + onoma (nom)."],
-  ["language",2,"prétérition","/pʁeteʁisjɔ̃/","nf","Figure par laquelle on annonce qu'on passera sous silence ce qu'on est précisément en train de dire.","Du latin praeteritio, « action d'omettre »."],
+  ["language",1,"amphigouri","/ɑ̃figuʁi/","nm","Écrit ou discours si embrouillé qu’on n’en tire aucun sens.","Origine obscure ; on y reconnaît peut-être le grec amphi (autour) croisé avec un radical burlesque."],
+  ["language",1,"pléonasme","/pleɔnasm/","nm","Répétition d’une idée déjà contenue dans ce qui précède, comme « monter en haut ».","Du grec pleonasmos, « excès »."],
+  ["language",1,"barbarisme","/baʁbaʁism/","nm","Faute qui consiste à employer un mot déformé ou qui n’existe pas.","Du grec barbaros, « étranger » — celui dont on n’entend que du charabia."],
+  ["language",1,"périphrase","/peʁifʁaz/","nf","Tour qui dit en plusieurs mots ce qu’un seul nommerait.","Du grec periphrasis, « expression par un détour »."],
+  ["language",1,"laconique","/lakɔnik/","adj","Qui s’exprime en très peu de mots, jusqu’à en paraître sec.","Du grec Lakōnikos, « de Laconie » — le pays de Sparte, où l’on ne parlait pas pour rien."],
+  ["language",2,"paronyme","/paʁɔnim/","nm","Mot assez proche d’un autre par la forme pour qu’on les confonde, comme « conjecture » et « conjoncture ».","Du grec para (à côté) + onoma (nom)."],
+  ["language",2,"prétérition","/pʁeteʁisjɔ̃/","nf","Figure par laquelle on annonce qu’on passera sous silence ce qu’on est précisément en train de dire.","Du latin praeteritio, « action d’omettre »."],
   ["language",2,"hypallage","/ipalaʒ/","nf","Figure qui rapporte à un mot ce qui conviendrait à un autre : « ce marchand accoudé sur son comptoir avide ».","Du grec hypallagē, « échange »."],
   ["language",2,"syllepse","/silɛps/","nf","Accord commandé par le sens plutôt que par la grammaire.","Du grec syllēpsis, « action de prendre ensemble »."],
-  ["language",2,"zeugme","/zøgm/","nm","Construction où un même mot régit deux termes qui ne s'y rattachent pas de la même façon : « vêtu de probité candide et de lin blanc ».","Du grec zeugma, « joug »."],
-  ["language",3,"anacoluthe","/anakɔlyt/","nf","Phrase qui abandonne en chemin la construction qu'elle avait commencée.","Du grec anakolouthon, « qui ne suit pas »."],
-  ["language",3,"épanorthose","/epanɔʁtoz/","nf","Retour immédiat sur ce qu'on vient de dire, pour le corriger ou le renchérir : « c'est bien, non, c'est admirable ».","Du grec epanorthōsis, « redressement »."],
-  ["language",3,"catachrèse","/katakʁɛz/","nf","Emploi détourné d'un mot faute d'en avoir un propre : les « pieds » d'une table.","Du grec katachrēsis, « usage abusif »."],
-  ["language",3,"diérèse","/djeʁɛz/","nf","Prononciation en deux syllabes d'un groupe de voyelles qu'on unit d'ordinaire : « li-on ».","Du grec diairesis, « division »."],
-  ["language",3,"apocope","/apɔkɔp/","nf","Chute de la fin d'un mot : « ciné » pour cinéma.","Du grec apokopē, « retranchement »."],
-  ["language",4,"épenthèse","/epɑ̃tɛz/","nf","Apparition d'un son à l'intérieur d'un mot : le b de « chambre », absent du latin camera.","Du grec epenthesis, « insertion »."],
-  ["language",4,"aphérèse","/afeʁɛz/","nf","Chute du début d'un mot : « bus » pour autobus.","Du grec aphairesis, « retranchement »."],
-  ["language",4,"antanaclase","/ɑ̃tanaklaz/","nf","Reprise d'un mot dans deux sens différents : « le cœur a ses raisons que la raison ne connaît point ».","Du grec antanaklasis, « réverbération »."],
-  ["language",4,"polyptote","/pɔliptɔt/","nf","Reprise d'un même mot sous des formes fléchies différentes.","Du grec polyptōton, « à plusieurs cas »."],
-  ["language",4,"énallage","/enalaʒ/","nf","Substitution d'une forme grammaticale à une autre : un temps pour un autre, un nombre pour un autre.","Du grec enallagē, « échange »."],
-  ["language",5,"tmèse","/tmɛz/","nf","Insertion d'un mot à l'intérieur d'un autre.","Du grec tmēsis, « coupure »."],
+  ["language",2,"zeugme","/zøgm/","nm","Construction où un même mot régit deux termes qui ne s’y rattachent pas de la même façon : « vêtu de probité candide et de lin blanc ».","Du grec zeugma, « joug »."],
+  ["language",3,"anacoluthe","/anakɔlyt/","nf","Phrase qui abandonne en chemin la construction qu’elle avait commencée.","Du grec anakolouthon, « qui ne suit pas »."],
+  ["language",3,"épanorthose","/epanɔʁtoz/","nf","Retour immédiat sur ce qu’on vient de dire, pour le corriger ou le renchérir : « c’est bien, non, c’est admirable ».","Du grec epanorthōsis, « redressement »."],
+  ["language",3,"catachrèse","/katakʁɛz/","nf","Emploi détourné d’un mot faute d’en avoir un propre : les « pieds » d’une table.","Du grec katachrēsis, « usage abusif »."],
+  ["language",3,"diérèse","/djeʁɛz/","nf","Prononciation en deux syllabes d’un groupe de voyelles qu’on unit d’ordinaire : « li-on ».","Du grec diairesis, « division »."],
+  ["language",3,"apocope","/apɔkɔp/","nf","Chute de la fin d’un mot : « ciné » pour cinéma.","Du grec apokopē, « retranchement »."],
+  ["language",4,"épenthèse","/epɑ̃tɛz/","nf","Apparition d’un son à l’intérieur d’un mot : le b de « chambre », absent du latin camera.","Du grec epenthesis, « insertion »."],
+  ["language",4,"aphérèse","/afeʁɛz/","nf","Chute du début d’un mot : « bus » pour autobus.","Du grec aphairesis, « retranchement »."],
+  ["language",4,"antanaclase","/ɑ̃tanaklaz/","nf","Reprise d’un mot dans deux sens différents : « le cœur a ses raisons que la raison ne connaît point ».","Du grec antanaklasis, « réverbération »."],
+  ["language",4,"polyptote","/pɔliptɔt/","nf","Reprise d’un même mot sous des formes fléchies différentes.","Du grec polyptōton, « à plusieurs cas »."],
+  ["language",4,"énallage","/enalaʒ/","nf","Substitution d’une forme grammaticale à une autre : un temps pour un autre, un nombre pour un autre.","Du grec enallagē, « échange »."],
+  ["language",5,"tmèse","/tmɛz/","nf","Insertion d’un mot à l’intérieur d’un autre.","Du grec tmēsis, « coupure »."],
   ["language",5,"antimétabole","/ɑ̃timetabɔl/","nf","Reprise inversée de deux termes : « il faut manger pour vivre et non vivre pour manger ».","Du grec antimetabolē, « renversement »."],
-  ["language",5,"métalepse","/metalɛps/","nf","Figure qui franchit les plans du récit, ou prend l'antécédent pour le conséquent.","Du grec metalēpsis, « substitution »."],
-  ["language",5,"hapax","/apaks/","nm","Mot dont on ne connaît qu'une seule attestation dans tout un corpus.","Du grec hapax legomenon, « dit une seule fois »."],
-  ["language",5,"épizeuxe","/epizøks/","nf","Répétition immédiate d'un mot, sans rien qui s'interpose.","Du grec epizeuxis, « liaison »."],
+  ["language",5,"métalepse","/metalɛps/","nf","Figure qui franchit les plans du récit, ou prend l’antécédent pour le conséquent.","Du grec metalēpsis, « substitution »."],
+  ["language",5,"hapax","/apaks/","nm","Mot dont on ne connaît qu’une seule attestation dans tout un corpus.","Du grec hapax legomenon, « dit une seule fois »."],
+  ["language",5,"épizeuxe","/epizøks/","nf","Répétition immédiate d’un mot, sans rien qui s’interpose.","Du grec epizeuxis, « liaison »."],
 
   // ── Esprit & Philosophie ──
-  ["mind",1,"solipsisme","/sɔlipsism/","nm","Doctrine selon laquelle rien n'est assuré d'exister hors de sa propre pensée.","Du latin solus (seul) + ipse (soi-même)."],
-  ["mind",1,"déréliction","/deʁeliksjɔ̃/","nf","Sentiment d'abandon absolu, sans recours ni témoin.","Du latin derelictio, « délaissement »."],
-  ["mind",1,"velléité","/veleite/","nf","Intention trop faible pour jamais passer à l'acte.","Du latin velle, « vouloir »."],
-  ["mind",1,"sophisme","/sɔfism/","nm","Raisonnement faux bâti pour convaincre, et qui a l'apparence de la rigueur.","Du grec sophisma, « artifice habile »."],
+  ["mind",1,"solipsisme","/sɔlipsism/","nm","Doctrine selon laquelle rien n’est assuré d’exister hors de sa propre pensée.","Du latin solus (seul) + ipse (soi-même)."],
+  ["mind",1,"déréliction","/deʁeliksjɔ̃/","nf","Sentiment d’abandon absolu, sans recours ni témoin.","Du latin derelictio, « délaissement »."],
+  ["mind",1,"velléité","/veleite/","nf","Intention trop faible pour jamais passer à l’acte.","Du latin velle, « vouloir »."],
+  ["mind",1,"sophisme","/sɔfism/","nm","Raisonnement faux bâti pour convaincre, et qui a l’apparence de la rigueur.","Du grec sophisma, « artifice habile »."],
   ["mind",1,"aporie","/apɔʁi/","nf","Impasse où mènent deux raisonnements également recevables.","Du grec aporia, « absence de passage »."],
   ["mind",2,"eudémonisme","/ødemɔnism/","nm","Morale qui fait du bonheur la fin de toute action.","Du grec eudaimonia, « bonne fortune »."],
   ["mind",2,"téléologie","/teleɔlɔʒi/","nf","Explication par la fin visée plutôt que par la cause antérieure.","Du grec telos, « but »."],
-  ["mind",2,"réification","/ʁeifikasjɔ̃/","nf","Fait de traiter une abstraction comme une chose douée d'existence propre.","Du latin res (chose) + facere (faire)."],
-  ["mind",2,"herméneutique","/ɛʁmenøtik/","nf","Art et théorie de l'interprétation, d'abord des textes sacrés, puis de tout texte.","Du grec hermēneuein, « interpréter »."],
-  ["mind",2,"acrasie","/akʁazi/","nf","Fait d'agir contre son propre jugement ; faiblesse de la volonté.","Du grec akrasia, « manque d'empire sur soi »."],
-  ["mind",3,"nominalisme","/nɔminalism/","nm","Doctrine pour laquelle les universaux ne sont que des noms : il n'y a pas de rougeur, seulement des choses rouges.","Du latin nomen, « nom »."],
-  ["mind",3,"quiddité","/kɥidite/","nf","Ce qui fait qu'une chose est l'espèce de chose qu'elle est.","Du latin scolastique quidditas, de quid, « quoi »."],
-  ["mind",3,"apodictique","/apɔdiktik/","adj","Se dit d'une proposition nécessaire, qui ne souffre pas d'être contestée.","Du grec apodeiktikos, « démonstratif »."],
-  ["mind",3,"eidétique","/edetik/","adj","Qui touche à l'essence saisie par l'intuition, dans le vocabulaire de Husserl.","Du grec eidos, « forme, essence »."],
+  ["mind",2,"réification","/ʁeifikasjɔ̃/","nf","Fait de traiter une abstraction comme une chose douée d’existence propre.","Du latin res (chose) + facere (faire)."],
+  ["mind",2,"herméneutique","/ɛʁmenøtik/","nf","Art et théorie de l’interprétation, d’abord des textes sacrés, puis de tout texte.","Du grec hermēneuein, « interpréter »."],
+  ["mind",2,"acrasie","/akʁazi/","nf","Fait d’agir contre son propre jugement ; faiblesse de la volonté.","Du grec akrasia, « manque d’empire sur soi »."],
+  ["mind",3,"nominalisme","/nɔminalism/","nm","Doctrine pour laquelle les universaux ne sont que des noms : il n’y a pas de rougeur, seulement des choses rouges.","Du latin nomen, « nom »."],
+  ["mind",3,"quiddité","/kɥidite/","nf","Ce qui fait qu’une chose est l’espèce de chose qu’elle est.","Du latin scolastique quidditas, de quid, « quoi »."],
+  ["mind",3,"apodictique","/apɔdiktik/","adj","Se dit d’une proposition nécessaire, qui ne souffre pas d’être contestée.","Du grec apodeiktikos, « démonstratif »."],
+  ["mind",3,"eidétique","/edetik/","adj","Qui touche à l’essence saisie par l’intuition, dans le vocabulaire de Husserl.","Du grec eidos, « forme, essence »."],
   ["mind",3,"hypostase","/ipɔstaz/","nf","Réalité substantielle sous les apparences ; en théologie, chacune des personnes de la Trinité.","Du grec hypostasis, « ce qui se tient dessous »."],
-  ["mind",4,"hylémorphisme","/ilemɔʁfism/","nm","Doctrine d'Aristote selon laquelle toute substance unit une matière et une forme, dont aucune n'existe seule.","Du grec hylē (matière) + morphē (forme)."],
-  ["mind",4,"entéléchie","/ɑ̃teleʃi/","nf","Chez Aristote, l'acte achevé par lequel une chose devient pleinement ce pour quoi elle était faite.","Du grec entelecheia, « qui a sa fin en soi »."],
-  ["mind",4,"apophatique","/apɔfatik/","adj","Qui ne parle du divin que par négation, en disant ce qu'il n'est pas.","Du grec apophasis, « négation »."],
-  ["mind",4,"anamnèse","/anamnɛz/","nf","Chez Platon, réminiscence par laquelle l'âme retrouve ce qu'elle savait avant de naître.","Du grec anamnēsis, « rappel »."],
-  ["mind",4,"survenance","/syʁvənɑ̃s/","nf","Dépendance telle que rien ne peut changer à un niveau sans changer à l'autre.","Du latin supervenire, « survenir »."],
-  ["mind",5,"heccéité","/ɛkseite/","nf","Ce qui fait d'un individu cet individu-ci et nul autre, au-delà de tout ce qu'il partage.","Du latin scolastique haecceitas, de haec (celle-ci), forgé par Duns Scot."],
+  ["mind",4,"hylémorphisme","/ilemɔʁfism/","nm","Doctrine d’Aristote selon laquelle toute substance unit une matière et une forme, dont aucune n’existe seule.","Du grec hylē (matière) + morphē (forme)."],
+  ["mind",4,"entéléchie","/ɑ̃teleʃi/","nf","Chez Aristote, l’acte achevé par lequel une chose devient pleinement ce pour quoi elle était faite.","Du grec entelecheia, « qui a sa fin en soi »."],
+  ["mind",4,"apophatique","/apɔfatik/","adj","Qui ne parle du divin que par négation, en disant ce qu’il n’est pas.","Du grec apophasis, « négation »."],
+  ["mind",4,"anamnèse","/anamnɛz/","nf","Chez Platon, réminiscence par laquelle l’âme retrouve ce qu’elle savait avant de naître.","Du grec anamnēsis, « rappel »."],
+  ["mind",4,"survenance","/syʁvənɑ̃s/","nf","Dépendance telle que rien ne peut changer à un niveau sans changer à l’autre.","Du latin supervenire, « survenir »."],
+  ["mind",5,"heccéité","/ɛkseite/","nf","Ce qui fait d’un individu cet individu-ci et nul autre, au-delà de tout ce qu’il partage.","Du latin scolastique haecceitas, de haec (celle-ci), forgé par Duns Scot."],
   ["mind",5,"apocatastase","/apɔkatastaz/","nf","Rétablissement final de toutes choses dans leur état premier ; chez Origène, la réconciliation de toute créature.","Du grec apokatastasis, « restauration »."],
-  ["mind",5,"épochè","/epɔke/","nf","Suspension du jugement : d'abord celle des sceptiques, puis la mise entre parenthèses de Husserl.","Du grec epochē, « arrêt »."],
+  ["mind",5,"épochè","/epɔke/","nf","Suspension du jugement : d’abord celle des sceptiques, puis la mise entre parenthèses de Husserl.","Du grec epochē, « arrêt »."],
   ["mind",5,"adiaphore","/adjafɔʁ/","adj","Se dit de ce qui est moralement indifférent, ni bien ni mal.","Du grec adiaphoros, « qui ne fait pas de différence »."],
-  ["mind",5,"ipséité","/ipseite/","nf","Le fait d'être soi, distinct de la simple identité d'une chose avec elle-même.","Du latin ipse, « soi-même »."],
+  ["mind",5,"ipséité","/ipseite/","nf","Le fait d’être soi, distinct de la simple identité d’une chose avec elle-même.","Du latin ipse, « soi-même »."],
 
   // ── Nature & Terre ──
   ["nature",1,"pétrichor","/petʁikɔʁ/","nm","Odeur de terre que libère la pluie tombant sur un sol longtemps sec.","Du grec petra (pierre) + ichōr, le fluide qui coulait dans les veines des dieux ; mot forgé en 1964."],
-  ["nature",1,"crépusculaire","/kʁepyskylɛʁ/","adj","Qui vit et chasse à la tombée du jour, plutôt qu'en plein jour ou en pleine nuit.","Du latin crepusculum, « demi-jour »."],
-  ["nature",1,"estivation","/ɛstivasjɔ̃/","nf","Engourdissement par lequel certains animaux traversent l'été, comme d'autres traversent l'hiver.","Du latin aestas, « été »."],
-  ["nature",1,"frimas","/fʁima/","nm","Brouillard froid qui se dépose en givre sur tout ce qu'il touche.","De l'ancien français frim, « gelée blanche »."],
-  ["nature",1,"résurgence","/ʁezyʁʒɑ̃s/","nf","Réapparition à l'air libre d'une rivière qui s'était perdue sous la roche.","Du latin resurgere, « se relever »."],
-  ["nature",2,"mycorhize","/mikɔʁiz/","nf","Association d'un champignon et d'une racine, par laquelle les deux échangent eau et nourriture.","Du grec mykēs (champignon) + rhiza (racine)."],
-  ["nature",2,"karst","/kaʁst/","nm","Relief de gouffres et de rivières souterraines, creusé par l'eau dans le calcaire.","De l'allemand Karst, le plateau calcaire de l'arrière-pays de Trieste."],
-  ["nature",2,"endémisme","/ɑ̃demism/","nm","Fait pour une espèce de n'exister naturellement que sur un seul territoire.","Du grec en (dans) + dēmos (peuple, contrée)."],
-  ["nature",2,"alluvion","/alyvjɔ̃/","nf","Dépôt de sable et de limon laissé par un cours d'eau là où il ralentit.","Du latin alluvio, « débordement »."],
-  ["nature",2,"anadrome","/anadʁɔm/","adj","Se dit d'un poisson qui remonte les fleuves depuis la mer pour frayer.","Du grec ana (en remontant) + dromos (course)."],
-  ["nature",3,"allélopathie","/alelɔpati/","nf","Guerre chimique entre plantes : les substances que l'une libère empêchent les voisines de germer.","Du grec allēlōn (les uns les autres) + pathos (souffrance)."],
-  ["nature",3,"sclérophylle","/sklerɔfil/","adj","Se dit d'une plante aux feuilles petites, dures et coriaces, taillées pour la sécheresse et le feu.","Du grec sklēros (dur) + phyllon (feuille)."],
-  ["nature",3,"nunatak","/nynatak/","nm","Sommet rocheux qui perce la surface d'une calotte glaciaire.","De l'inuit du Groenland nunataq."],
+  ["nature",1,"crépusculaire","/kʁepyskylɛʁ/","adj","Qui vit et chasse à la tombée du jour, plutôt qu’en plein jour ou en pleine nuit.","Du latin crepusculum, « demi-jour »."],
+  ["nature",1,"estivation","/ɛstivasjɔ̃/","nf","Engourdissement par lequel certains animaux traversent l’été, comme d’autres traversent l’hiver.","Du latin aestas, « été »."],
+  ["nature",1,"frimas","/fʁima/","nm","Brouillard froid qui se dépose en givre sur tout ce qu’il touche.","De l’ancien français frim, « gelée blanche »."],
+  ["nature",1,"résurgence","/ʁezyʁʒɑ̃s/","nf","Réapparition à l’air libre d’une rivière qui s’était perdue sous la roche.","Du latin resurgere, « se relever »."],
+  ["nature",2,"mycorhize","/mikɔʁiz/","nf","Association d’un champignon et d’une racine, par laquelle les deux échangent eau et nourriture.","Du grec mykēs (champignon) + rhiza (racine)."],
+  ["nature",2,"karst","/kaʁst/","nm","Relief de gouffres et de rivières souterraines, creusé par l’eau dans le calcaire.","De l’allemand Karst, le plateau calcaire de l’arrière-pays de Trieste."],
+  ["nature",2,"endémisme","/ɑ̃demism/","nm","Fait pour une espèce de n’exister naturellement que sur un seul territoire.","Du grec en (dans) + dēmos (peuple, contrée)."],
+  ["nature",2,"alluvion","/alyvjɔ̃/","nf","Dépôt de sable et de limon laissé par un cours d’eau là où il ralentit.","Du latin alluvio, « débordement »."],
+  ["nature",2,"anadrome","/anadʁɔm/","adj","Se dit d’un poisson qui remonte les fleuves depuis la mer pour frayer.","Du grec ana (en remontant) + dromos (course)."],
+  ["nature",3,"allélopathie","/alelɔpati/","nf","Guerre chimique entre plantes : les substances que l’une libère empêchent les voisines de germer.","Du grec allēlōn (les uns les autres) + pathos (souffrance)."],
+  ["nature",3,"sclérophylle","/sklerɔfil/","adj","Se dit d’une plante aux feuilles petites, dures et coriaces, taillées pour la sécheresse et le feu.","Du grec sklēros (dur) + phyllon (feuille)."],
+  ["nature",3,"nunatak","/nynatak/","nm","Sommet rocheux qui perce la surface d’une calotte glaciaire.","De l’inuit du Groenland nunataq."],
   ["nature",3,"halophyte","/alɔfit/","nf","Plante qui vit, et souvent ne prospère que, dans les sols saturés de sel.","Du grec hals (sel) + phyton (plante)."],
-  ["nature",3,"écotone","/ekɔtɔn/","nm","Bande de transition où deux milieux se rencontrent sans que l'un l'emporte tout à fait.","Du grec oikos (maison) + tonos (tension)."],
-  ["nature",4,"thermokarst","/tɛʁmokaʁst/","nm","Terrain bosselé qui s'affaisse là où le pergélisol dégèle et où le sol se referme sur le vide.","Du grec thermē (chaleur) + karst."],
-  ["nature",4,"éolien","/eɔljɛ̃/","adj","Façonné, transporté ou déposé par le vent.","D'Éole, gardien des vents."],
-  ["nature",4,"inquilin","/ɛ̃kilɛ̃/","nm","Animal qui loge dans le nid ou la galle d'une autre espèce sans la dévorer.","Du latin inquilinus, « locataire »."],
+  ["nature",3,"écotone","/ekɔtɔn/","nm","Bande de transition où deux milieux se rencontrent sans que l’un l’emporte tout à fait.","Du grec oikos (maison) + tonos (tension)."],
+  ["nature",4,"thermokarst","/tɛʁmokaʁst/","nm","Terrain bosselé qui s’affaisse là où le pergélisol dégèle et où le sol se referme sur le vide.","Du grec thermē (chaleur) + karst."],
+  ["nature",4,"éolien","/eɔljɛ̃/","adj","Façonné, transporté ou déposé par le vent.","D’Éole, gardien des vents."],
+  ["nature",4,"inquilin","/ɛ̃kilɛ̃/","nm","Animal qui loge dans le nid ou la galle d’une autre espèce sans la dévorer.","Du latin inquilinus, « locataire »."],
   ["nature",4,"cryoturbation","/kʁijotyʁbasjɔ̃/","nf","Brassage du sol par les gels et dégels répétés, qui finit par trier les pierres en cercles et en bandes.","Du grec kryos (froid) + latin turbare (agiter)."],
   ["nature",4,"vivipare","/vivipaʁ/","adj","Qui met au monde des petits déjà formés ; chez les plantes, dont la graine germe encore attachée au pied.","Du latin vivus (vivant) + parere (enfanter)."],
-  ["nature",5,"myrmécochorie","/miʁmekɔkɔʁi/","nf","Dissémination des graines par les fourmis, payée d'un appendice gras que la graine fabrique pour cela.","Du grec myrmēx (fourmi) + chōrein (se répandre)."],
-  ["nature",5,"thigmotropisme","/tigmɔtʁɔpism/","nm","Croissance orientée par le toucher : la vrille qui rencontre un appui et s'y enroule.","Du grec thigma (contact) + tropos (tour)."],
+  ["nature",5,"myrmécochorie","/miʁmekɔkɔʁi/","nf","Dissémination des graines par les fourmis, payée d’un appendice gras que la graine fabrique pour cela.","Du grec myrmēx (fourmi) + chōrein (se répandre)."],
+  ["nature",5,"thigmotropisme","/tigmɔtʁɔpism/","nm","Croissance orientée par le toucher : la vrille qui rencontre un appui et s’y enroule.","Du grec thigma (contact) + tropos (tour)."],
   ["nature",5,"pédogenèse","/pedɔʒənɛz/","nf","Formation du sol à partir de la roche mère, du climat, du vivant et du temps.","Du grec pedon (sol) + genesis ; à ne pas confondre avec la reproduction par des larves, qui porte le même nom."],
   ["nature",5,"saprophage","/sapʁɔfaʒ/","adj","Qui se nourrit de matière organique en décomposition.","Du grec sapros (pourri) + phagein (manger)."],
   ["nature",5,"lithophyte","/litɔfit/","nf","Plante qui pousse à même la roche nue, sans sol pour la porter.","Du grec lithos (pierre) + phyton (plante)."],
 
   // ── Matière & Cosmos ──
-  ["matter",1,"sublimation","/syblimasjɔ̃/","nf","Passage direct d'un solide à l'état de vapeur, sans étape liquide — la neige carbonique, le givre par un matin clair.","Du latin sublimare, « élever »."],
-  ["matter",1,"pénombre","/penɔ̃bʁ/","nf","Zone de demi-ombre, là où la source de lumière n'est masquée qu'en partie.","Du latin paene (presque) + umbra (ombre)."],
-  ["matter",1,"albédo","/albedo/","nm","Part de la lumière qu'une surface renvoie : proche de un pour la neige fraîche, de zéro pour l'asphalte.","Du latin albus, « blanc »."],
-  ["matter",1,"parallaxe","/paʁalaks/","nf","Déplacement apparent d'un objet proche sur le fond du ciel quand l'observateur se déplace — le premier barreau de l'échelle des distances.","Du grec parallaxis, « changement »."],
-  ["matter",1,"effervescence","/efɛʁvesɑ̃s/","nf","Échappement en bulles d'un gaz dissous dans un liquide.","Du latin effervescere, « entrer en ébullition »."],
-  ["matter",2,"déliquescence","/delikesɑ̃s/","nf","Propriété d'un solide qui prend tant d'eau à l'air ambiant qu'il finit par s'y dissoudre.","Du latin deliquescere, « fondre »."],
-  ["matter",2,"chiralité","/kiʁalite/","nf","Propriété d'une structure qu'on ne peut superposer à son image dans un miroir, comme la main gauche au gant droit.","Du grec cheir, « main »."],
+  ["matter",1,"sublimation","/syblimasjɔ̃/","nf","Passage direct d’un solide à l’état de vapeur, sans étape liquide — la neige carbonique, le givre par un matin clair.","Du latin sublimare, « élever »."],
+  ["matter",1,"pénombre","/penɔ̃bʁ/","nf","Zone de demi-ombre, là où la source de lumière n’est masquée qu’en partie.","Du latin paene (presque) + umbra (ombre)."],
+  ["matter",1,"albédo","/albedo/","nm","Part de la lumière qu’une surface renvoie : proche de un pour la neige fraîche, de zéro pour l’asphalte.","Du latin albus, « blanc »."],
+  ["matter",1,"parallaxe","/paʁalaks/","nf","Déplacement apparent d’un objet proche sur le fond du ciel quand l’observateur se déplace — le premier barreau de l’échelle des distances.","Du grec parallaxis, « changement »."],
+  ["matter",1,"effervescence","/efɛʁvesɑ̃s/","nf","Échappement en bulles d’un gaz dissous dans un liquide.","Du latin effervescere, « entrer en ébullition »."],
+  ["matter",2,"déliquescence","/delikesɑ̃s/","nf","Propriété d’un solide qui prend tant d’eau à l’air ambiant qu’il finit par s’y dissoudre.","Du latin deliquescere, « fondre »."],
+  ["matter",2,"chiralité","/kiʁalite/","nf","Propriété d’une structure qu’on ne peut superposer à son image dans un miroir, comme la main gauche au gant droit.","Du grec cheir, « main »."],
   ["matter",2,"syzygie","/siziʒi/","nf","Alignement de trois corps célestes sur une même droite, comme à chaque éclipse.","Du grec syzygia, « attelage »."],
-  ["matter",2,"allotropie","/alɔtʁɔpi/","nf","Faculté d'un même élément de prendre plusieurs formes : le graphite et le diamant sont tous deux du carbone.","Du grec allos (autre) + tropos (manière)."],
-  ["matter",2,"hystérésis","/isteʁezis/","nf","Retard d'un effet sur sa cause, qui fait dépendre l'état d'un système du chemin qu'il a parcouru.","Du grec hysterēsis, « retard »."],
-  ["matter",3,"enthalpie","/ɑ̃talpi/","nf","Contenu de chaleur d'un système à pression constante — la grandeur qui dit si une réaction donne de la chaleur ou en prend.","Du grec enthalpein, « échauffer »."],
-  ["matter",3,"eutectique","/øtɛktik/","adj","Se dit du mélange dont le point de fusion est le plus bas que ces composants puissent atteindre — d'où la soudure qui fond sous ses deux métaux.","Du grec eutēktos, « qui fond aisément »."],
-  ["matter",3,"biréfringence","/biʁefʁɛ̃ʒɑ̃s/","nf","Dédoublement d'un rayon lumineux par un milieu dont l'indice dépend de la direction : la calcite double le texte posé dessous.","Du latin bis (deux fois) + refringere (briser)."],
-  ["matter",3,"azéotrope","/azeɔtʁɔp/","nm","Mélange dont la vapeur a exactement la composition du liquide, si bien que la distillation n'y peut plus rien.","Du grec a- (sans) + zein (bouillir) + tropos (changement)."],
+  ["matter",2,"allotropie","/alɔtʁɔpi/","nf","Faculté d’un même élément de prendre plusieurs formes : le graphite et le diamant sont tous deux du carbone.","Du grec allos (autre) + tropos (manière)."],
+  ["matter",2,"hystérésis","/isteʁezis/","nf","Retard d’un effet sur sa cause, qui fait dépendre l’état d’un système du chemin qu’il a parcouru.","Du grec hysterēsis, « retard »."],
+  ["matter",3,"enthalpie","/ɑ̃talpi/","nf","Contenu de chaleur d’un système à pression constante — la grandeur qui dit si une réaction donne de la chaleur ou en prend.","Du grec enthalpein, « échauffer »."],
+  ["matter",3,"eutectique","/øtɛktik/","adj","Se dit du mélange dont le point de fusion est le plus bas que ces composants puissent atteindre — d’où la soudure qui fond sous ses deux métaux.","Du grec eutēktos, « qui fond aisément »."],
+  ["matter",3,"biréfringence","/biʁefʁɛ̃ʒɑ̃s/","nf","Dédoublement d’un rayon lumineux par un milieu dont l’indice dépend de la direction : la calcite double le texte posé dessous.","Du latin bis (deux fois) + refringere (briser)."],
+  ["matter",3,"azéotrope","/azeɔtʁɔp/","nm","Mélange dont la vapeur a exactement la composition du liquide, si bien que la distillation n’y peut plus rien.","Du grec a- (sans) + zein (bouillir) + tropos (changement)."],
   ["matter",3,"libration","/libʁasjɔ̃/","nf","Balancement lent de la Lune sur son orbite, qui laisse voir un peu plus que sa moitié.","Du latin librare, « balancer »."],
-  ["matter",4,"thixotropie","/tiksɔtʁɔpi/","nf","Propriété d'un gel qui se liquéfie tant qu'on l'agite et reprend dès qu'on le laisse : le ketchup, la boue de forage, la peinture sans coulure.","Du grec thixis (contact) + tropē (tour)."],
-  ["matter",4,"énantiomère","/enɑ̃tjɔmɛʁ/","nm","Chacune de deux molécules images l'une de l'autre dans un miroir et non superposables.","Du grec enantios (opposé) + meros (partie)."],
-  ["matter",4,"fugacité","/fygasite/","nf","Pression corrigée d'un gaz réel, pour qu'il entre dans les équations écrites pour le gaz parfait.","Du latin fugere, « fuir »."],
-  ["matter",4,"sonoluminescence","/sonolyminesɑ̃s/","nf","Éclair de lumière émis par une bulle qu'une onde sonore fait s'effondrer dans un liquide.","Du latin sonus (son) + lumen (lumière)."],
-  ["matter",4,"clathrate","/klatʁat/","nm","Composé où une molécule se trouve emprisonnée dans la cage cristalline d'une autre : le méthane pris dans la glace des fonds marins.","Du latin clathratus, « grillagé »."],
-  ["matter",5,"spallation","/spalasjɔ̃/","nf","Arrachement d'éclats à un matériau frappé par une particule très énergétique.","De l'anglais spall, « éclat de pierre »."],
-  ["matter",5,"antiferromagnétisme","/ɑ̃tifeʁomaɲetism/","nm","Ordre où les moments magnétiques voisins pointent en sens contraire et s'annulent, ne laissant aucune aimantation.","De anti + latin ferrum (fer) + magnétisme."],
-  ["matter",5,"phonon","/fɔnɔ̃/","nm","Quantum de vibration d'un réseau cristallin, traité comme une particule parce qu'il en transporte l'énergie.","Du grec phōnē (son), sur le modèle de photon."],
+  ["matter",4,"thixotropie","/tiksɔtʁɔpi/","nf","Propriété d’un gel qui se liquéfie tant qu’on l’agite et reprend dès qu’on le laisse : le ketchup, la boue de forage, la peinture sans coulure.","Du grec thixis (contact) + tropē (tour)."],
+  ["matter",4,"énantiomère","/enɑ̃tjɔmɛʁ/","nm","Chacune de deux molécules images l’une de l’autre dans un miroir et non superposables.","Du grec enantios (opposé) + meros (partie)."],
+  ["matter",4,"fugacité","/fygasite/","nf","Pression corrigée d’un gaz réel, pour qu’il entre dans les équations écrites pour le gaz parfait.","Du latin fugere, « fuir »."],
+  ["matter",4,"sonoluminescence","/sonolyminesɑ̃s/","nf","Éclair de lumière émis par une bulle qu’une onde sonore fait s’effondrer dans un liquide.","Du latin sonus (son) + lumen (lumière)."],
+  ["matter",4,"clathrate","/klatʁat/","nm","Composé où une molécule se trouve emprisonnée dans la cage cristalline d’une autre : le méthane pris dans la glace des fonds marins.","Du latin clathratus, « grillagé »."],
+  ["matter",5,"spallation","/spalasjɔ̃/","nf","Arrachement d’éclats à un matériau frappé par une particule très énergétique.","De l’anglais spall, « éclat de pierre »."],
+  ["matter",5,"antiferromagnétisme","/ɑ̃tifeʁomaɲetism/","nm","Ordre où les moments magnétiques voisins pointent en sens contraire et s’annulent, ne laissant aucune aimantation.","De anti + latin ferrum (fer) + magnétisme."],
+  ["matter",5,"phonon","/fɔnɔ̃/","nm","Quantum de vibration d’un réseau cristallin, traité comme une particule parce qu’il en transporte l’énergie.","Du grec phōnē (son), sur le modèle de photon."],
   ["matter",5,"mésophase","/mezofaz/","nf","État de la matière entre le cristal et le liquide : ordonné dans certaines directions, fluide dans les autres, comme les cristaux liquides.","Du grec mesos (milieu) + phase."],
-  ["matter",5,"baryogenèse","/baʁjoʒənɛz/","nf","Processus mal élucidé qui, dans l'univers primitif, laissa un peu plus de matière que d'antimatière — et donc quelque chose plutôt que rien.","Du grec barys (lourd) + genesis."],
+  ["matter",5,"baryogenèse","/baʁjoʒənɛz/","nf","Processus mal élucidé qui, dans l’univers primitif, laissa un peu plus de matière que d’antimatière — et donc quelque chose plutôt que rien.","Du grec barys (lourd) + genesis."],
 
   // ── Corps & Médecine ──
-  ["body",1,"anhédonie","/anedɔni/","nf","Perte de la capacité d'éprouver du plaisir à ce qui en donnait.","Du grec an- (sans) + hēdonē (plaisir)."],
-  ["body",1,"proprioception","/pʁɔpʁijɔsɛpsjɔ̃/","nf","Sens qui renseigne sur la position des membres sans qu'on ait à les regarder.","Du latin proprius (propre) + capere (prendre)."],
-  ["body",1,"borborygme","/bɔʁbɔʁigm/","nm","Gargouillement des gaz et des liquides qui circulent dans l'intestin.","Du grec borborygmos, mot qui imite le bruit lui-même."],
-  ["body",1,"presbytie","/pʁɛsbisi/","nf","Durcissement du cristallin avec l'âge, qui éloigne peu à peu le journal du visage.","Du grec presbys, « vieillard »."],
+  ["body",1,"anhédonie","/anedɔni/","nf","Perte de la capacité d’éprouver du plaisir à ce qui en donnait.","Du grec an- (sans) + hēdonē (plaisir)."],
+  ["body",1,"proprioception","/pʁɔpʁijɔsɛpsjɔ̃/","nf","Sens qui renseigne sur la position des membres sans qu’on ait à les regarder.","Du latin proprius (propre) + capere (prendre)."],
+  ["body",1,"borborygme","/bɔʁbɔʁigm/","nm","Gargouillement des gaz et des liquides qui circulent dans l’intestin.","Du grec borborygmos, mot qui imite le bruit lui-même."],
+  ["body",1,"presbytie","/pʁɛsbisi/","nf","Durcissement du cristallin avec l’âge, qui éloigne peu à peu le journal du visage.","Du grec presbys, « vieillard »."],
   ["body",1,"épistaxis","/epistaksis/","nf","Saignement de nez.","Du grec epistazein, « couler goutte à goutte »."],
-  ["body",2,"nociception","/nɔsisɛpsjɔ̃/","nf","Détection par le système nerveux des stimulus qui abîment les tissus — le signal, qui n'est pas encore la douleur ressentie.","Du latin nocere (nuire) + capere (prendre)."],
-  ["body",2,"intéroception","/ɛ̃teʁɔsɛpsjɔ̃/","nf","Sens de l'état intérieur du corps : la faim, le souffle, le battement du cœur, le besoin de bouger.","Du latin interus, « au-dedans »."],
+  ["body",2,"nociception","/nɔsisɛpsjɔ̃/","nf","Détection par le système nerveux des stimulus qui abîment les tissus — le signal, qui n’est pas encore la douleur ressentie.","Du latin nocere (nuire) + capere (prendre)."],
+  ["body",2,"intéroception","/ɛ̃teʁɔsɛpsjɔ̃/","nf","Sens de l’état intérieur du corps : la faim, le souffle, le battement du cœur, le besoin de bouger.","Du latin interus, « au-dedans »."],
   ["body",2,"péristaltisme","/peʁistaltism/","nm","Onde de contraction musculaire qui pousse le contenu le long du tube digestif.","Du grec peri (autour) + stalsis (resserrement)."],
-  ["body",2,"pétéchie","/petesi/","nf","Petite tache de sang sous la peau, qui ne s'efface pas quand on appuie dessus.","De l'italien petecchia, « petite tache »."],
+  ["body",2,"pétéchie","/petesi/","nf","Petite tache de sang sous la peau, qui ne s’efface pas quand on appuie dessus.","De l’italien petecchia, « petite tache »."],
   ["body",2,"apnée","/apne/","nf","Arrêt momentané de la respiration, le plus souvent remarqué pendant le sommeil.","Du grec a- (sans) + pnoiē (souffle)."],
-  ["body",3,"akathisie","/akatizi/","nf","Impatience intérieure qui rend insupportable de rester en place, souvent provoquée par un médicament.","Du grec a- (ne pas) + kathizein (s'asseoir)."],
-  ["body",3,"anosognosie","/anɔzɔɡnɔzi/","nf","Méconnaissance par le malade de son propre trouble : nier qu'un membre soit paralysé.","Du grec a- (sans) + nosos (maladie) + gnōsis (connaissance)."],
-  ["body",3,"allodynie","/alɔdini/","nf","Douleur déclenchée par ce qui ne devrait pas faire mal, comme le poids d'un drap.","Du grec allos (autre) + odynē (douleur)."],
-  ["body",3,"dysgueusie","/disɡøzi/","nf","Altération durable du goût, souvent métallique, qui recouvre tout ce qu'on mange.","Du grec dys- (mauvais) + geusis (goût)."],
+  ["body",3,"akathisie","/akatizi/","nf","Impatience intérieure qui rend insupportable de rester en place, souvent provoquée par un médicament.","Du grec a- (ne pas) + kathizein (s’asseoir)."],
+  ["body",3,"anosognosie","/anɔzɔɡnɔzi/","nf","Méconnaissance par le malade de son propre trouble : nier qu’un membre soit paralysé.","Du grec a- (sans) + nosos (maladie) + gnōsis (connaissance)."],
+  ["body",3,"allodynie","/alɔdini/","nf","Douleur déclenchée par ce qui ne devrait pas faire mal, comme le poids d’un drap.","Du grec allos (autre) + odynē (douleur)."],
+  ["body",3,"dysgueusie","/disɡøzi/","nf","Altération durable du goût, souvent métallique, qui recouvre tout ce qu’on mange.","Du grec dys- (mauvais) + geusis (goût)."],
   ["body",3,"hémianopsie","/emjanɔpsi/","nf","Perte de la moitié du champ visuel de chaque œil, par lésion située en arrière des yeux.","Du grec hēmi (demi) + an- (sans) + ōps (vue)."],
   ["body",4,"prosopagnosie","/pʁɔzɔpaɡnɔzi/","nf","Incapacité de reconnaître les visages, même familiers, la vue étant par ailleurs intacte.","Du grec prosōpon (visage) + agnōsia (non-connaissance)."],
-  ["body",4,"apraxie","/apʁaksi/","nf","Perte de la capacité d'exécuter sur commande un geste appris, sans déficit de force ni de compréhension.","Du grec a- (sans) + praxis (action)."],
-  ["body",4,"syncinésie","/sɛ̃sinezi/","nf","Mouvement involontaire d'une partie du corps accompagnant le mouvement voulu d'une autre : l'œil qui se ferme quand la bouche sourit.","Du grec syn (avec) + kinēsis (mouvement)."],
-  ["body",4,"formication","/fɔʁmikasjɔ̃/","nf","Sensation de fourmis courant sur la peau ou dessous, sans que rien n'y soit.","Du latin formica, « fourmi »."],
+  ["body",4,"apraxie","/apʁaksi/","nf","Perte de la capacité d’exécuter sur commande un geste appris, sans déficit de force ni de compréhension.","Du grec a- (sans) + praxis (action)."],
+  ["body",4,"syncinésie","/sɛ̃sinezi/","nf","Mouvement involontaire d’une partie du corps accompagnant le mouvement voulu d’une autre : l’œil qui se ferme quand la bouche sourit.","Du grec syn (avec) + kinēsis (mouvement)."],
+  ["body",4,"formication","/fɔʁmikasjɔ̃/","nf","Sensation de fourmis courant sur la peau ou dessous, sans que rien n’y soit.","Du latin formica, « fourmi »."],
   ["body",4,"hypnagogie","/ipnaɡɔʒi/","nf","État de seuil entre la veille et le sommeil, avec ses images flottantes et ses sursauts.","Du grec hypnos (sommeil) + agōgos (qui conduit)."],
-  ["body",5,"astérixis","/asteʁiksis/","nm","Chute brusque du tonus qui fait battre la main tendue — signe d'encéphalopathie métabolique.","Du grec a- (sans) + stērixis (position fixe)."],
-  ["body",5,"palinopsie","/palinɔpsi/","nf","Persistance ou retour d'une image après que l'objet a disparu du champ.","Du grec palin (de nouveau) + opsis (vue)."],
-  ["body",5,"micropsie","/mikʁɔpsi/","nf","Trouble de la perception où les objets paraissent plus petits et plus lointains qu'ils ne sont.","Du grec mikros (petit) + opsis (vue)."],
-  ["body",5,"anosodiaphorie","/anozodjafɔʁi/","nf","Indifférence à un trouble grave qu'on reconnaît pourtant — un pas au-delà de l'anosognosie.","Du grec a- (sans) + nosos (maladie) + diaphora (souci)."],
-  ["body",5,"dysdiadococinésie","/disdjadɔkosinezi/","nf","Impossibilité d'enchaîner des mouvements alternés rapides, signe classique d'une atteinte du cervelet.","Du grec dys- (mal) + diadochos (qui succède) + kinēsis (mouvement)."],
+  ["body",5,"astérixis","/asteʁiksis/","nm","Chute brusque du tonus qui fait battre la main tendue — signe d’encéphalopathie métabolique.","Du grec a- (sans) + stērixis (position fixe)."],
+  ["body",5,"palinopsie","/palinɔpsi/","nf","Persistance ou retour d’une image après que l’objet a disparu du champ.","Du grec palin (de nouveau) + opsis (vue)."],
+  ["body",5,"micropsie","/mikʁɔpsi/","nf","Trouble de la perception où les objets paraissent plus petits et plus lointains qu’ils ne sont.","Du grec mikros (petit) + opsis (vue)."],
+  ["body",5,"anosodiaphorie","/anozodjafɔʁi/","nf","Indifférence à un trouble grave qu’on reconnaît pourtant — un pas au-delà de l’anosognosie.","Du grec a- (sans) + nosos (maladie) + diaphora (souci)."],
+  ["body",5,"dysdiadococinésie","/disdjadɔkosinezi/","nf","Impossibilité d’enchaîner des mouvements alternés rapides, signe classique d’une atteinte du cervelet.","Du grec dys- (mal) + diadochos (qui succède) + kinēsis (mouvement)."],
 
   // ── Arts & Métiers ──
-  ["arts",1,"clair-obscur","/klɛʁɔpskyʁ/","nm","Modelé obtenu par le heurt de la lumière et de l'ombre.","Calque de l'italien chiaroscuro, de chiaro (clair) et oscuro (sombre)."],
-  ["arts",1,"leitmotiv","/lɛtmɔtiv/","nm","Courte phrase musicale attachée à un personnage ou à une idée, et qui revient avec lui.","De l'allemand Leitmotiv, « motif conducteur »."],
-  ["arts",1,"repentir","/ʁəpɑ̃tiʁ/","nm","Trace d'une première version qui reparaît sous la peinture à mesure que les couches s'amincissent.","Du sens ordinaire du mot : le changement d'avis du peintre, rendu visible par le temps."],
+  ["arts",1,"clair-obscur","/klɛʁɔpskyʁ/","nm","Modelé obtenu par le heurt de la lumière et de l’ombre.","Calque de l’italien chiaroscuro, de chiaro (clair) et oscuro (sombre)."],
+  ["arts",1,"leitmotiv","/lɛtmɔtiv/","nm","Courte phrase musicale attachée à un personnage ou à une idée, et qui revient avec lui.","De l’allemand Leitmotiv, « motif conducteur »."],
+  ["arts",1,"repentir","/ʁəpɑ̃tiʁ/","nm","Trace d’une première version qui reparaît sous la peinture à mesure que les couches s’amincissent.","Du sens ordinaire du mot : le changement d’avis du peintre, rendu visible par le temps."],
   ["arts",1,"empâtement","/ɑ̃pɑtmɑ̃/","nm","Pâte posée assez épaisse pour garder le relief de la brosse.","De pâte — le mot nomme la matière autant que le geste qui la dépose."],
-  ["arts",1,"patine","/patin/","nf","Pellicule que l'âge et la main déposent sur le bronze, le bois ou le cuir, et qu'on se garde de nettoyer.","De l'italien patina, « enduit »."],
-  ["arts",2,"sfumato","/sfumato/","nm","Fondu si progressif des valeurs qu'aucun contour ne se laisse trouver.","De l'italien sfumare, « s'évanouir en fumée »."],
-  ["arts",2,"ostinato","/ɔstinato/","nm","Bref motif répété sans relâche sous ce qui change au-dessus.","De l'italien ostinato, « obstiné »."],
-  ["arts",2,"grisaille","/ɡʁizaj/","nf","Peinture exécutée dans les seuls tons de gris, pour préparer une couleur ou pour imiter la sculpture.","De gris ; le mot a d'abord nommé la couleur, puis la manière tout entière."],
-  ["arts",2,"tessiture","/tesityʁ/","nf","Portion de l'étendue où une voix se tient le plus aisément, distincte des extrêmes qu'elle peut atteindre.","De l'italien tessitura, « texture »."],
-  ["arts",2,"repoussé","/ʁəpuse/","nm","Métal mis en relief à coups de marteau donnés depuis l'envers.","De repousser."],
-  ["arts",3,"contrapposto","/kɔ̃tʁaposto/","nm","Attitude où le poids porte sur une seule jambe, opposant l'inclinaison des hanches à celle des épaules.","De l'italien contrapposto, « mis en opposition »."],
+  ["arts",1,"patine","/patin/","nf","Pellicule que l’âge et la main déposent sur le bronze, le bois ou le cuir, et qu’on se garde de nettoyer.","De l’italien patina, « enduit »."],
+  ["arts",2,"sfumato","/sfumato/","nm","Fondu si progressif des valeurs qu’aucun contour ne se laisse trouver.","De l’italien sfumare, « s’évanouir en fumée »."],
+  ["arts",2,"ostinato","/ɔstinato/","nm","Bref motif répété sans relâche sous ce qui change au-dessus.","De l’italien ostinato, « obstiné »."],
+  ["arts",2,"grisaille","/ɡʁizaj/","nf","Peinture exécutée dans les seuls tons de gris, pour préparer une couleur ou pour imiter la sculpture.","De gris ; le mot a d’abord nommé la couleur, puis la manière tout entière."],
+  ["arts",2,"tessiture","/tesityʁ/","nf","Portion de l’étendue où une voix se tient le plus aisément, distincte des extrêmes qu’elle peut atteindre.","De l’italien tessitura, « texture »."],
+  ["arts",2,"repoussé","/ʁəpuse/","nm","Métal mis en relief à coups de marteau donnés depuis l’envers.","De repousser."],
+  ["arts",3,"contrapposto","/kɔ̃tʁaposto/","nm","Attitude où le poids porte sur une seule jambe, opposant l’inclinaison des hanches à celle des épaules.","De l’italien contrapposto, « mis en opposition »."],
   ["arts",3,"mélisme","/melism/","nm","Groupe de notes chantées sur une seule syllabe.","Du grec melisma, « chant »."],
   ["arts",3,"craquelure","/kʁaklyʁ/","nf","Fin réseau de fentes qui gagne une surface peinte en vieillissant, et dont le dessin aide à la dater.","De craqueler."],
-  ["arts",3,"ekphrasis","/ɛkfʁazis/","nf","Description d'une œuvre plastique assez vive pour valoir œuvre à son tour — le bouclier d'Achille.","Du grec ekphrasis, « exposition »."],
-  ["arts",3,"entasis","/ɑ̃tazis/","nf","Léger renflement donné au fût d'une colonne pour corriger l'œil, qui verrait creux un profil parfaitement droit.","Du grec entasis, « tension »."],
-  ["arts",4,"ténébrisme","/tenebʁism/","nm","Manière où l'ombre occupe le tableau et la lumière ne tombe violemment que sur quelques passages.","Du latin tenebrae, « ténèbres »."],
-  ["arts",4,"hémiole","/emjɔl/","nf","Déplacement rythmique qui loge trois temps dans la durée de deux, ou l'inverse.","Du grec hēmiolios, « un et demi »."],
-  ["arts",4,"mordant","/mɔʁdɑ̃/","nm","Ornement où la note est mordue par une alternance rapide avec sa voisine.","De mordre, d'après l'italien mordente."],
+  ["arts",3,"ekphrasis","/ɛkfʁazis/","nf","Description d’une œuvre plastique assez vive pour valoir œuvre à son tour — le bouclier d’Achille.","Du grec ekphrasis, « exposition »."],
+  ["arts",3,"entasis","/ɑ̃tazis/","nf","Léger renflement donné au fût d’une colonne pour corriger l’œil, qui verrait creux un profil parfaitement droit.","Du grec entasis, « tension »."],
+  ["arts",4,"ténébrisme","/tenebʁism/","nm","Manière où l’ombre occupe le tableau et la lumière ne tombe violemment que sur quelques passages.","Du latin tenebrae, « ténèbres »."],
+  ["arts",4,"hémiole","/emjɔl/","nf","Déplacement rythmique qui loge trois temps dans la durée de deux, ou l’inverse.","Du grec hēmiolios, « un et demi »."],
+  ["arts",4,"mordant","/mɔʁdɑ̃/","nm","Ornement où la note est mordue par une alternance rapide avec sa voisine.","De mordre, d’après l’italien mordente."],
   ["arts",4,"sprezzatura","/spʁɛdzatuʁa/","nf","Négligence étudiée qui fait paraître aisé ce qui a coûté.","Forgé par Castiglione dans Le Livre du courtisan, 1528."],
-  ["arts",4,"anastylose","/anastiloz/","nf","Relèvement d'une ruine avec ses propres éléments tombés, tout ajout restant reconnaissable.","Du grec ana (de nouveau) + stylos (colonne)."],
+  ["arts",4,"anastylose","/anastiloz/","nf","Relèvement d’une ruine avec ses propres éléments tombés, tout ajout restant reconnaissable.","Du grec ana (de nouveau) + stylos (colonne)."],
   ["arts",5,"isocéphalie","/izosefali/","nf","Convention qui aligne toutes les têtes à la même hauteur, quelle que soit la posture des figures.","Du grec isos (égal) + kephalē (tête)."],
-  ["arts",5,"cangiante","/kandʒɑ̃te/","nm","Mode de peinture où une couleur change de teinte, et non seulement de valeur, en passant dans l'ombre.","De l'italien cangiante, « changeant »."],
+  ["arts",5,"cangiante","/kandʒɑ̃te/","nm","Mode de peinture où une couleur change de teinte, et non seulement de valeur, en passant dans l’ombre.","De l’italien cangiante, « changeant »."],
   ["arts",5,"repoussoir","/ʁəpuswaʁ/","nm","Figure ou masse placée au premier plan sur un côté, pour renvoyer le regard vers le fond.","De repousser."],
   ["arts",5,"prolation","/pʁɔlasjɔ̃/","nf","Dans la notation mesurée, division de la semi-brève en deux ou en trois minimes.","Du latin prolatio, « extension »."],
   ["arts",5,"glacis","/ɡlasi/","nm","Couche de couleur transparente passée sur une couche sèche pour en modifier le ton sans le couvrir.","De glacer."],
 
   // ── Société & Droit ──
-  ["society",1,"usufruit","/yzyfʁɥi/","nm","Droit d'user d'un bien d'autrui et d'en percevoir les fruits, à charge de le rendre intact.","Du latin usus (usage) + fructus (jouissance)."],
-  ["society",1,"interrègne","/ɛ̃tɛʁʁɛɲ/","nm","Intervalle entre deux règnes ou deux gouvernements, où l'autorité reste suspendue.","Du latin inter (entre) + regnum (règne)."],
-  ["society",1,"sinécure","/sinekyʁ/","nf","Charge qui rapporte sans presque rien exiger.","Du latin sine cura, « sans souci » — d'abord un bénéfice sans charge d'âmes."],
-  ["society",1,"hégémonie","/eʒemɔni/","nf","Domination qui s'exerce autant par le consentement que par la force.","Du grec hēgemonia, « commandement »."],
+  ["society",1,"usufruit","/yzyfʁɥi/","nm","Droit d’user d’un bien d’autrui et d’en percevoir les fruits, à charge de le rendre intact.","Du latin usus (usage) + fructus (jouissance)."],
+  ["society",1,"interrègne","/ɛ̃tɛʁʁɛɲ/","nm","Intervalle entre deux règnes ou deux gouvernements, où l’autorité reste suspendue.","Du latin inter (entre) + regnum (règne)."],
+  ["society",1,"sinécure","/sinekyʁ/","nf","Charge qui rapporte sans presque rien exiger.","Du latin sine cura, « sans souci » — d’abord un bénéfice sans charge d’âmes."],
+  ["society",1,"hégémonie","/eʒemɔni/","nf","Domination qui s’exerce autant par le consentement que par la force.","Du grec hēgemonia, « commandement »."],
   ["society",1,"plébiscite","/plebisit/","nm","Vote direct de tout le corps électoral sur une seule question, souvent sur la souveraineté elle-même.","Du latin plebs (peuple) + scitum (décret)."],
-  ["society",2,"corvée","/kɔʁve/","nf","Travail non payé dû par le tenancier à son seigneur ou à l'État : des journées de route au lieu d'argent.","Du latin corrogare, « requérir »."],
+  ["society",2,"corvée","/kɔʁve/","nf","Travail non payé dû par le tenancier à son seigneur ou à l’État : des journées de route au lieu d’argent.","Du latin corrogare, « requérir »."],
   ["society",2,"affranchissement","/afʁɑ̃ʃismɑ̃/","nm","Acte par lequel un maître rendait la liberté à son esclave.","De franc, « libre »."],
-  ["society",2,"irrédentisme","/iʁedɑ̃tism/","nm","Revendication par un État de terres tenues par un autre, au nom de la langue, de l'histoire ou du sang.","De l'italien Italia irredenta, « Italie non rachetée »."],
+  ["society",2,"irrédentisme","/iʁedɑ̃tism/","nm","Revendication par un État de terres tenues par un autre, au nom de la langue, de l’histoire ou du sang.","De l’italien Italia irredenta, « Italie non rachetée »."],
   ["society",2,"subsidiarité","/sybsidjaʁite/","nf","Principe voulant que la décision revienne au plus petit échelon capable de la prendre.","Du latin subsidium, « réserve, secours »."],
   ["society",2,"alleu","/alø/","nm","Terre possédée en pleine propriété, sans redevance ni service dus à aucun seigneur.","Du francique al-ôd, « bien complet »."],
-  ["society",3,"autochtone","/otɔktɔn/","adj","Issu du sol même où on le trouve, sans récit d'arrivée.","Du grec autos (soi-même) + chthōn (terre)."],
-  ["society",3,"prébende","/pʁebɑ̃d/","nf","Revenu attaché à une stalle de chanoine et tiré d'un domaine réservé à cet office.","Du latin praebenda, « ce qui doit être fourni »."],
-  ["society",3,"amphictyonie","/ɑ̃fiktjɔni/","nf","Ligue de cités voisines unies par la garde commune d'un sanctuaire.","Du grec amphiktyones, « ceux qui habitent alentour »."],
+  ["society",3,"autochtone","/otɔktɔn/","adj","Issu du sol même où on le trouve, sans récit d’arrivée.","Du grec autos (soi-même) + chthōn (terre)."],
+  ["society",3,"prébende","/pʁebɑ̃d/","nf","Revenu attaché à une stalle de chanoine et tiré d’un domaine réservé à cet office.","Du latin praebenda, « ce qui doit être fourni »."],
+  ["society",3,"amphictyonie","/ɑ̃fiktjɔni/","nf","Ligue de cités voisines unies par la garde commune d’un sanctuaire.","Du grec amphiktyones, « ceux qui habitent alentour »."],
   ["society",3,"mainmorte","/mɛ̃mɔʁt/","nf","Condition des biens détenus par une communauté qui ne meurt pas, et qui échappent donc aux successions.","De main et morte."],
-  ["society",3,"tontine","/tɔ̃tin/","nf","Association où les parts des membres qui meurent viennent grossir celles des survivants.","De Lorenzo Tonti, banquier napolitain qui l'imagina au XVIIe siècle."],
-  ["society",4,"apanage","/apanaʒ/","nm","Terres ou revenus assignés aux cadets d'un souverain pour qu'ils vivent sans régner.","De l'ancien français apaner, du latin ad panem, « pour le pain »."],
-  ["society",4,"wergeld","/vɛʁɡɛld/","nm","Prix mis sur la vie d'un homme dans les droits germaniques, versé à sa parenté pour éteindre la vengeance.","Du vieux haut allemand wer (homme) + geld (paiement)."],
+  ["society",3,"tontine","/tɔ̃tin/","nf","Association où les parts des membres qui meurent viennent grossir celles des survivants.","De Lorenzo Tonti, banquier napolitain qui l’imagina au XVIIe siècle."],
+  ["society",4,"apanage","/apanaʒ/","nm","Terres ou revenus assignés aux cadets d’un souverain pour qu’ils vivent sans régner.","De l’ancien français apaner, du latin ad panem, « pour le pain »."],
+  ["society",4,"wergeld","/vɛʁɡɛld/","nm","Prix mis sur la vie d’un homme dans les droits germaniques, versé à sa parenté pour éteindre la vengeance.","Du vieux haut allemand wer (homme) + geld (paiement)."],
   ["society",4,"synœcisme","/sinesism/","nm","Réunion de plusieurs villages en une seule cité, en droit sinon toujours en fait.","Du grec synoikismos, « habitation commune »."],
-  ["society",4,"ultra vires","/yltʁa viʁɛs/","phr","Au-delà des pouvoirs de l'organe qui a agi, et nul pour ce seul motif.","Du latin, « au-delà des forces »."],
-  ["society",4,"latifundium","/latifɔ̃djɔm/","nm","Très grand domaine exploité par une main-d'œuvre dépendante, dont l'extension vida la petite paysannerie romaine.","Du latin latus (large) + fundus (domaine)."],
-  ["society",5,"anacyclose","/anasikloz/","nf","Cycle des constitutions selon Polybe : la monarchie tourne en tyrannie, l'aristocratie en oligarchie, la démocratie en règne de la foule, et l'on recommence.","Du grec anakyklōsis, « retour périodique »."],
-  ["society",5,"proskynèse","/pʁɔskinɛz/","nf","Prosternation rituelle devant un supérieur — usage perse dont Alexandre scandalisa ses Macédoniens en l'exigeant.","Du grec proskynēsis, « baiser vers »."],
-  ["society",5,"déshérence","/dezeʁɑ̃s/","nf","État d'une succession que nul héritier ne réclame et qui revient à l'État.","De l'ancien français deseriter, « déshériter »."],
+  ["society",4,"ultra vires","/yltʁa viʁɛs/","phr","Au-delà des pouvoirs de l’organe qui a agi, et nul pour ce seul motif.","Du latin, « au-delà des forces »."],
+  ["society",4,"latifundium","/latifɔ̃djɔm/","nm","Très grand domaine exploité par une main-d’œuvre dépendante, dont l’extension vida la petite paysannerie romaine.","Du latin latus (large) + fundus (domaine)."],
+  ["society",5,"anacyclose","/anasikloz/","nf","Cycle des constitutions selon Polybe : la monarchie tourne en tyrannie, l’aristocratie en oligarchie, la démocratie en règne de la foule, et l’on recommence.","Du grec anakyklōsis, « retour périodique »."],
+  ["society",5,"proskynèse","/pʁɔskinɛz/","nf","Prosternation rituelle devant un supérieur — usage perse dont Alexandre scandalisa ses Macédoniens en l’exigeant.","Du grec proskynēsis, « baiser vers »."],
+  ["society",5,"déshérence","/dezeʁɑ̃s/","nf","État d’une succession que nul héritier ne réclame et qui revient à l’État.","De l’ancien français deseriter, « déshériter »."],
   ["society",5,"champart","/ʃɑ̃paʁ/","nm","Redevance seigneuriale prélevée en nature sur une part de la récolte, dans le champ même.","De champ et part."],
-  ["society",5,"vidamé","/vidame/","nm","Dignité du vidame, laïc qui tenait le temporel d'un évêché et en portait les armes.","Du latin vice dominus, « à la place du seigneur »."],
+  ["society",5,"vidamé","/vidame/","nm","Dignité du vidame, laïc qui tenait le temporel d’un évêché et en portait les armes.","Du latin vice dominus, « à la place du seigneur »."],
 
   // ── Nombre & Systèmes ──
   ["systems",1,"heuristique","/øʁistik/","nf","Règle empirique qui donne vite une réponse acceptable, sans garantir la meilleure.","Du grec heuriskein, « trouver »."],
-  ["systems",1,"asymptote","/asɛ̃ptɔt/","nf","Droite dont une courbe s'approche indéfiniment sans jamais l'atteindre.","Du grec asymptōtos, « qui ne coïncide pas »."],
-  ["systems",1,"tautologie","/totɔlɔʒi/","nf","Proposition vraie par sa seule forme, et qui n'apprend donc rien du monde.","Du grec tauto (le même) + logos (discours)."],
-  ["systems",1,"idempotent","/idɑ̃pɔtɑ̃/","adj","Qui donne le même résultat qu'on l'applique une fois ou cent — la propriété qui rend une reprise sans danger.","Du latin idem (même) + potens (puissant)."],
-  ["systems",1,"récursivité","/ʁekyʁsivite/","nf","Définition ou procédure qui s'appelle elle-même sur un cas plus petit, jusqu'à un cas qu'on sait résoudre d'emblée.","Du latin recurrere, « revenir en courant »."],
+  ["systems",1,"asymptote","/asɛ̃ptɔt/","nf","Droite dont une courbe s’approche indéfiniment sans jamais l’atteindre.","Du grec asymptōtos, « qui ne coïncide pas »."],
+  ["systems",1,"tautologie","/totɔlɔʒi/","nf","Proposition vraie par sa seule forme, et qui n’apprend donc rien du monde.","Du grec tauto (le même) + logos (discours)."],
+  ["systems",1,"idempotent","/idɑ̃pɔtɑ̃/","adj","Qui donne le même résultat qu’on l’applique une fois ou cent — la propriété qui rend une reprise sans danger.","Du latin idem (même) + potens (puissant)."],
+  ["systems",1,"récursivité","/ʁekyʁsivite/","nf","Définition ou procédure qui s’appelle elle-même sur un cas plus petit, jusqu’à un cas qu’on sait résoudre d’emblée.","Du latin recurrere, « revenir en courant »."],
   ["systems",2,"monotone","/mɔnɔtɔn/","adj","Qui varie dans un seul sens et ne revient jamais en arrière.","Du grec monos (seul) + tonos (ton, tension)."],
   ["systems",2,"orthogonal","/ɔʁtɔɡɔnal/","adj","À angle droit ; par extension, qui varie tout à fait indépendamment.","Du grec orthos (droit) + gōnia (angle)."],
-  ["systems",2,"cardinalité","/kaʁdinalite/","nf","Taille d'un ensemble, définie par appariement plutôt que par comptage, ce qui permet de comparer des infinis.","Du latin cardinalis, « principal », de cardo (gond)."],
+  ["systems",2,"cardinalité","/kaʁdinalite/","nf","Taille d’un ensemble, définie par appariement plutôt que par comptage, ce qui permet de comparer des infinis.","Du latin cardinalis, « principal », de cardo (gond)."],
   ["systems",2,"isomorphisme","/izɔmɔʁfism/","nm","Correspondance qui conserve toute la structure et rend deux objets identiques à leur nom près.","Du grec isos (égal) + morphē (forme)."],
   ["systems",2,"stochastique","/stɔkastik/","adj","Régi par le hasard plutôt que par une règle fixe, et décrit par des lois de probabilité.","Du grec stochastikos, « habile à conjecturer », de stochos (la cible)."],
-  ["systems",3,"vecteur propre","/vɛktœʁ pʁɔpʁ/","nm","Direction qu'une transformation ne fait qu'étirer ou contracter, sans la faire tourner.","De propre au sens de « caractéristique », calque de l'allemand eigen."],
+  ["systems",3,"vecteur propre","/vɛktœʁ pʁɔpʁ/","nm","Direction qu’une transformation ne fait qu’étirer ou contracter, sans la faire tourner.","De propre au sens de « caractéristique », calque de l’allemand eigen."],
   ["systems",3,"convolution","/kɔ̃vɔlysjɔ̃/","nf","Opération qui fait glisser une fonction sur une autre et cumule leur recouvrement à chaque décalage.","Du latin convolvere, « rouler ensemble »."],
-  ["systems",3,"surjectif","/syʁʒɛktif/","adj","Se dit d'une application qui atteint tout élément de l'ensemble d'arrivée, sans en laisser un seul de côté.","De sur (vers) + latin jacere (jeter)."],
-  ["systems",3,"mémoïsation","/memɔizasjɔ̃/","nf","Mise en cache des résultats d'une fonction, pour répondre de mémoire à un appel déjà fait.","De l'anglais memoization, forgé sans le r de memorization."],
-  ["systems",3,"monoïde","/mɔnɔid/","nm","Ensemble muni d'une opération associative et d'un élément neutre qui ne change rien.","Du grec monos (seul) et du suffixe -oïde."],
-  ["systems",4,"homotopie","/ɔmɔtɔpi/","nf","Déformation continue d'une application en une autre, et relation que cette déformabilité définit.","Du grec homos (même) + topos (lieu)."],
-  ["systems",4,"catamorphisme","/katamɔʁfism/","nm","Schéma de récursion qui replie toute une structure en une seule valeur — la somme en est l'archétype.","Du grec kata (vers le bas) + morphē (forme)."],
-  ["systems",4,"quine","/kwin/","nm","Programme sans entrée qui imprime exactement son propre texte.","Du logicien W. V. O. Quine, dont le paradoxe repose sur l'autoréférence."],
-  ["systems",4,"linéarisabilité","/lineaʁizabilite/","nf","Garantie qu'une opération concurrente paraît prendre effet en un instant, quelque part entre son appel et son retour.","Du latin linea, « ligne »."],
-  ["systems",4,"faisceau","/fɛso/","nm","Structure qui attache des données à chaque ouvert d'un espace et dit comment recoller le local en global.","Du sens ordinaire : une gerbe de tiges liées en un même point."],
+  ["systems",3,"surjectif","/syʁʒɛktif/","adj","Se dit d’une application qui atteint tout élément de l’ensemble d’arrivée, sans en laisser un seul de côté.","De sur (vers) + latin jacere (jeter)."],
+  ["systems",3,"mémoïsation","/memɔizasjɔ̃/","nf","Mise en cache des résultats d’une fonction, pour répondre de mémoire à un appel déjà fait.","De l’anglais memoization, forgé sans le r de memorization."],
+  ["systems",3,"monoïde","/mɔnɔid/","nm","Ensemble muni d’une opération associative et d’un élément neutre qui ne change rien.","Du grec monos (seul) et du suffixe -oïde."],
+  ["systems",4,"homotopie","/ɔmɔtɔpi/","nf","Déformation continue d’une application en une autre, et relation que cette déformabilité définit.","Du grec homos (même) + topos (lieu)."],
+  ["systems",4,"catamorphisme","/katamɔʁfism/","nm","Schéma de récursion qui replie toute une structure en une seule valeur — la somme en est l’archétype.","Du grec kata (vers le bas) + morphē (forme)."],
+  ["systems",4,"quine","/kwin/","nm","Programme sans entrée qui imprime exactement son propre texte.","Du logicien W. V. O. Quine, dont le paradoxe repose sur l’autoréférence."],
+  ["systems",4,"linéarisabilité","/lineaʁizabilite/","nf","Garantie qu’une opération concurrente paraît prendre effet en un instant, quelque part entre son appel et son retour.","Du latin linea, « ligne »."],
+  ["systems",4,"faisceau","/fɛso/","nm","Structure qui attache des données à chaque ouvert d’un espace et dit comment recoller le local en global.","Du sens ordinaire : une gerbe de tiges liées en un même point."],
   ["systems",5,"ultrafiltre","/yltʁafiltʁ/","nm","Choix maximal et cohérent des parties tenues pour « grandes », qui tranche pour tout ensemble entre lui et son complémentaire.","Du latin ultra (au-delà) et de filtre."],
   ["systems",5,"anamorphisme","/anamɔʁfism/","nm","Miroir du catamorphisme : schéma qui déplie une graine unique en une structure entière.","Du grec ana (vers le haut) + morphē (forme)."],
-  ["systems",5,"paracohérence","/paʁakɔeʁɑ̃s/","nf","Propriété d'une logique où une contradiction n'entraîne pas n'importe quelle conclusion.","Du grec para (à côté) et de cohérence."],
-  ["systems",5,"machine à oracle","/maʃin a ɔʁakl/","nf","Ordinateur théorique doté d'une boîte noire qui résout un problème en une seule étape, pour mesurer des difficultés relatives.","Du latin oraculum ; la notion est de Turing."],
-  ["systems",5,"topos","/tɔpɔs/","nm","Catégorie qui se comporte comme un univers d'ensembles et sert de cadre à une géométrie et à une logique propres.","Du grec topos, « lieu »."],
+  ["systems",5,"paracohérence","/paʁakɔeʁɑ̃s/","nf","Propriété d’une logique où une contradiction n’entraîne pas n’importe quelle conclusion.","Du grec para (à côté) et de cohérence."],
+  ["systems",5,"machine à oracle","/maʃin a ɔʁakl/","nf","Ordinateur théorique doté d’une boîte noire qui résout un problème en une seule étape, pour mesurer des difficultés relatives.","Du latin oraculum ; la notion est de Turing."],
+  ["systems",5,"topos","/tɔpɔs/","nm","Catégorie qui se comporte comme un univers d’ensembles et sert de cadre à une géométrie et à une logique propres.","Du grec topos, « lieu »."],
+
+  // ── Langue & Rhétorique (suite) ──
+  ["language",1,"adage","/adaʒ/","nm","Formule brève consacrée par l’usage, énonçant une règle pratique ou juridique tenue pour évidente — « nul n’est censé ignorer la loi ».","Du latin adagium, « proverbe, dicton », composé de ad- et du radical de aio, « je dis »."],
+  ["language",1,"digression","/diɡʁɛsjɔ̃/","nf","Écart par lequel le discours quitte un moment son sujet pour y revenir, développement latéral toléré tant qu’il ne fait pas perdre le fil.","Du latin digressio, « action de s’écarter », de digredi, « s’éloigner, faire un détour »."],
+  ["language",1,"emphase","/ɑ̃fɑz/","nf","Force appuyée donnée à l’expression et, le plus souvent péjorativement, l’enflure d’un ton qui hausse la voix bien au-delà de ce que le sujet mérite.","Du latin emphasis, emprunté au grec emphasis, « apparence, expression forte », de emphainein, « faire voir »."],
+  ["language",1,"litote","/litɔt/","nf","Figure qui dit peu pour faire entendre beaucoup, l’atténuation valant renforcement — « Va, je ne te hais point » pour un aveu d’amour.","Du grec ancien litotēs, « simplicité, modération », dérivé de litos, « simple, uni »."],
+  ["language",1,"onomatopée","/ɔnɔmatɔpe/","nf","Mot forgé par imitation du bruit qu’il désigne, comme « glouglou », « clapotis » ou le « cocorico » du coq.","Du grec ancien onomatopoiia, « création de mots », de onoma, « nom », et poiein, « faire »."],
+  ["language",1,"oxymore","/ɔksimɔʁ/","nm","Alliance, dans un même groupe de mots, de deux termes contradictoires dont le heurt fait sens — « cette obscure clarté qui tombe des étoiles ».","Du grec ancien oxymōron, littéralement « spirituellement sot », de oxys, « aigu », et mōros, « émoussé, sot »."],
+  ["language",1,"prolixe","/pʁɔliks/","adj","Qui emploie beaucoup plus de mots que la matière n’en demande, diluant la pensée dans l’abondance du discours.","Du latin prolixus, « qui coule abondamment, étendu, allongé »."],
+  ["language",1,"quolibet","/kɔlibɛ/","nm","Raillerie lancée à la volée contre quelqu’un, plaisanterie publique de mauvais aloi qui vise à faire rire aux dépens d’un autre.","Du latin scolastique quodlibet, « ce qu’on veut », nom des disputes universitaires portant sur un sujet libre."],
+  ["language",2,"ampoulé","/ɑ̃pule/","adj","Gonflé de grands mots et de tours pompeux, d’un style dont la boursouflure excède de loin la matière traitée.","De ampoule, du latin ampulla, « petite fiole »; Horace nommait déjà ampullae les mots enflés."],
+  ["language",2,"circonlocution","/siʁkɔ̃lɔkysjɔ̃/","nf","Détour de langage par lequel on tourne autour d’une idée sans la nommer, pour ménager l’interlocuteur ou éviter de s’engager.","Du latin circumlocutio, « action de parler en tournant autour », calque du grec periphrasis."],
+  ["language",2,"faconde","/fakɔ̃d/","nf","Abondance facile et brillante de la parole, le mot ayant pris une teinte ironique envers celui qui parle trop aisément.","Du latin facundia, « éloquence, facilité d’élocution », de facundus, « disert »."],
+  ["language",2,"palinodie","/palinɔdi/","nf","Rétractation publique par laquelle on soutient le contraire de ce qu’on avait affirmé, souvent employé au pluriel pour railler les revirements d’un homme public.","Du grec ancien palinōidia, « chant repris à l’envers », de palin, « de nouveau », et ōidē, « chant »."],
+  ["language",2,"pérorer","/peʁɔʁe/","v","Discourir longuement et avec suffisance, en s’écoutant parler devant un auditoire qu’on suppose acquis.","Du latin perorare, « plaider jusqu’au bout, conclure un discours », de per- et orare, « parler »."],
+  ["language",2,"philippique","/filipik/","nf","Réquisitoire véhément prononcé en public contre un adversaire, discours d’attaque soutenu d’un bout à l’autre par l’indignation.","Du grec ancien Philippikoi logoi, « discours contre Philippe », harangues de Démosthène visant Philippe II de Macédoine."],
+  ["language",2,"sibyllin","/sibilɛ̃/","adj","Dont le sens reste volontairement obscur et suspendu, à la manière des oracles antiques — « il s’en tira par une réponse sibylline ».","Du latin sibyllinus, « qui appartient aux sibylles », prophétesses dont les oracles passaient pour indéchiffrables."],
+  ["language",2,"solécisme","/sɔlesism/","nm","Manquement à la syntaxe, la phrase étant mal construite alors que les mots la composant existent bel et bien — « après qu’il soit parti ».","Du grec ancien soloikismos, d’après Soloi, colonie de Cilicie où l’on parlait un grec fautif."],
+  ["language",3,"antonomase","/ɑ̃tɔnɔmaz/","nf","Échange d’un nom propre contre un nom commun ou l’inverse — « un harpagon » pour un avare, « le Stagirite » pour Aristote.","Du grec ancien antonomasia, « emploi d’un nom pour un autre », de anti, « à la place de », et onoma, « nom »."],
+  ["language",3,"asyndète","/asɛ̃dɛt/","nf","Suppression des mots de liaison entre propositions, dont la juxtaposition nue précipite le rythme — « Je suis venu, j’ai vu, j’ai vaincu ».","Du grec ancien asyndeton, « non lié », de a- privatif et syndetos, « attaché ensemble »."],
+  ["language",3,"chiasme","/kjasm/","nm","Disposition croisée des termes de deux membres symétriques selon le schéma AB-BA — « il faut manger pour vivre et non vivre pour manger ».","Du grec ancien chiasmos, « disposition en croix », d’après la forme de la lettre chi)."],
+  ["language",3,"diglossie","/diɡlɔsi/","nf","Coexistence dans une même communauté de deux variétés d’une langue hiérarchisées par l’usage, l’une réservée à l’écrit et au formel, l’autre à la conversation.","Du grec ancien diglōssos, « qui parle deux langues », de di-, « deux », et glōssa, « langue »."],
+  ["language",3,"gloser","/ɡloze/","v","Commenter un texte par des explications en marge et, par extension péjorative, s’étendre en remarques oiseuses sur un détail.","De glose, du latin glossa, emprunté au grec glōssa, « langue », puis « mot rare exigeant explication »."],
+  ["language",3,"hypotypose","/ipɔtipoz/","nf","Description si vive et si présente que la scène paraît se dérouler sous les yeux du lecteur, le récit se faisant tableau.","Du grec ancien hypotypōsis, « esquisse, modèle », de hypo, « sous », et typos, « empreinte »."],
+  ["language",3,"idiotisme","/idjɔtism/","nm","Tournure propre à une langue et rebelle à la traduction littérale, tel le gallicisme « il y a » ou l’anglais « it rains cats and dogs ».","Du latin idiotismus, du grec idiōtismos, « langage propre à un particulier », de idios, « propre »."],
+  ["language",3,"prosopopée","/pʁɔzɔpɔpe/","nf","Figure par laquelle on fait parler un absent, un mort, une abstraction ou une chose, à qui l’orateur prête voix et visage.","Du grec ancien prosōpopoiia, « action de donner un personnage », de prosōpon, « visage », et poiein, « faire »."],
+  ["language",4,"aposiopèse","/apɔzjɔpɛz/","nf","Rupture brusque du discours, la phrase restant en suspens et confiant au lecteur ce que le locuteur feint de ne pouvoir achever.","Du grec ancien aposiōpēsis, « action de se taire », de siōpan, « garder le silence »."],
+  ["language",4,"crase","/kʁɑz/","nf","Fusion en une seule voyelle longue de deux voyelles contiguës appartenant à des mots successifs, procédé courant du grec ancien.","Du grec ancien krasis, « mélange, fusion », de kerannymi, « mêler »."],
+  ["language",4,"épanadiplose","/epanadiploz/","nf","Figure où la phrase s’ouvre et se ferme sur le même mot, l’encadrement produisant un effet de clôture — « L’homme est un loup pour l’homme ».","Du grec ancien epanadiplōsis, « redoublement », de epi, ana et diploos, « double »."],
+  ["language",4,"épiphonème","/epifɔnɛm/","nm","Exclamation sentencieuse qui clôt un récit ou un développement pour en tirer la leçon — « Tel est pris qui croyait prendre ».","Du grec ancien epiphōnēma, « exclamation ajoutée », de epi, « sur », et phōnein, « faire entendre sa voix »."],
+  ["language",4,"haplologie","/aplɔlɔʒi/","nf","Chute de l’une de deux syllabes identiques ou voisines contiguës, qui a réduit « idololâtre » à « idolâtre ».","Du grec ancien haploos, « simple », et logos, « parole, discours »."],
+  ["language",4,"hendiadys","/ɛ̃djadis/","nm","Expression d’une idée unique par deux termes coordonnés là où l’un devrait grammaticalement dépendre de l’autre — « boire dans l’or et la coupe » pour « dans la coupe d’or ».","Du grec ancien hen dia dyoin, « une seule chose au moyen de deux », transmis par les grammairiens latins."],
+  ["language",4,"parataxe","/paʁataks/","nf","Construction qui juxtapose les propositions sans mot subordonnant, laissant au lecteur le soin de rétablir le rapport logique qui les unit.","Du grec ancien parataxis, « rangement côte à côte », de para, « auprès », et taxis, « ordre »."],
+  ["language",5,"apophonie","/apɔfɔni/","nf","Alternance vocalique à l’intérieur d’une même racine, porteuse à elle seule d’une valeur grammaticale — l’allemand « singen, sang, gesungen ».","Du grec ancien apo, « loin de », et phōnē, « son, voix »; calque savant de l’allemand Ablaut."],
+  ["language",5,"battologie","/batɔlɔʒi/","nf","Répétition oiseuse des mêmes mots ou des mêmes idées, radotage érigé en défaut caractérisé du style.","Du grec ancien battologia, d’après Battos, roi bègue de Cyrène, et logos, « parole »."],
+  ["language",5,"épanalepse","/epanalɛps/","nf","Reprise insistante d’un même mot ou groupe de mots au fil de la phrase ou en tête de membres successifs, la répétition martelant l’idée.","Du grec ancien epanalēpsis, « reprise », de epi, ana et lambanein, « prendre »."],
+  ["language",5,"hypocoristique","/ipɔkɔʁistik/","adj","Qui exprime la tendresse par le diminutif, le redoublement ou l’altération caressante d’un nom — « fifille », « chouchou », « Lolo » pour Laurence.","Du grec ancien hypokoristikos, « caressant », de hypokorizesthai, « appeler d’un nom tendre »."],
+  ["language",5,"paragoge","/paʁaɡɔʒ/","nf","Adjonction d’un son ou d’une syllabe à la fin d’un mot sans que le sens en soit modifié — le « s » des formes poétiques « jusques » et « avecques ».","Du grec ancien paragōgē, « action de conduire au-delà, allongement », de para, « à côté », et agein, « conduire »."],
+  ["language",5,"parémiologie","/paʁemjɔlɔʒi/","nf","Étude des proverbes et des locutions figées, de leur forme, de leur transmission et de leur emploi dans une communauté.","Du grec ancien paroimia, « proverbe », et logos, « étude, discours »."],
+  ["language",5,"synchyse","/sɛ̃kiz/","nf","Désordre extrême de la construction, les mots entrelacés brouillant les rapports syntaxiques au point de rendre la phrase presque indéchiffrable.","Du grec ancien synchysis, « confusion, mélange », de synchein, « verser ensemble, brouiller »."],
+
+  // ── Esprit & Philosophie (suite) ──
+  ["mind",1,"axiome","/aksjom/","nm","Proposition tenue pour évidente et posée sans démonstration, dont un système déductif tire toutes ses conséquences.","Du grec ancien axiôma, « ce qui est jugé digne, principe admis », de axios, « digne »."],
+  ["mind",1,"candeur","/kɑ̃dœʁ/","nf","Pureté d’un esprit sans détour, qui ne soupçonne pas la ruse et se livre sans calcul.","Du latin candor, « blancheur éclatante », de candere, « être d’un blanc brillant »."],
+  ["mind",1,"dessein","/desɛ̃/","nm","Projet formé par l’esprit et poursuivi avec suite — « il n’agit jamais qu’à dessein ».","De l’ancien français desseigner, du latin designare, « marquer d’un signe, désigner »."],
+  ["mind",1,"obnubiler","/ɔbnybile/","v","Occuper l’esprit d’une idée fixe au point d’en obscurcir tout le jugement, comme un nuage voile le ciel.","Du latin obnubilare, « couvrir de nuages », de nubes, « nuage »."],
+  ["mind",1,"probité","/pʁɔbite/","nf","Rectitude morale scrupuleuse qui fait observer ses devoirs jusque dans ce qu’aucun regard ne contrôle.","Du latin probitas, « honnêteté », de probus, « de bonne qualité, honnête »."],
+  ["mind",1,"ressentiment","/ʁəsɑ̃timɑ̃/","nm","Rancune tenace née d’une offense qu’on rumine, que Nietzsche érige en ressort secret de la morale des faibles.","De ressentir, « éprouver de nouveau », du latin sentire, « éprouver, sentir »."],
+  ["mind",1,"sagacité","/sagasite/","nf","Finesse d’esprit qui devine ce qui n’est qu’indiqué et tire d’un indice ténu la conclusion juste.","Du latin sagacitas, « finesse de l’odorat », de sagax, « qui a le flair sûr »."],
+  ["mind",1,"scrupule","/skʁypyl/","nm","Inquiétude de conscience qui retient d’agir par crainte de mal faire, jusque dans le détail le plus mince.","Du latin scrupulus, « petit caillou pointu » qui blesse le pied dans la sandale."],
+  ["mind",2,"concupiscence","/kɔ̃kypisɑ̃s/","nf","Inclination de l’appétit sensible qui porte au plaisir immédiat contre le jugement de la raison.","Du latin chrétien concupiscentia, « désir ardent », de concupiscere, « convoiter »."],
+  ["mind",2,"contingence","/kɔ̃tɛ̃ʒɑ̃s/","nf","Caractère de ce qui peut être ou n’être pas, également éloigné du nécessaire et de l’impossible.","Du latin contingere, « échoir, arriver par hasard », de tangere, « toucher »."],
+  ["mind",2,"immanence","/imanɑ̃s/","nf","Présence d’un principe au sein même de ce qu’il régit, sans recours à un au-delà — l’inverse exact de la transcendance.","Du latin immanere, « demeurer dans », de manere, « rester »."],
+  ["mind",2,"ineffable","/inefabl/","adj","Qui excède toute parole, non par pauvreté du vocabulaire mais parce que l’expérience déborde la structure du langage.","Du latin ineffabilis, « qui ne peut être dit », de fari, « parler »."],
+  ["mind",2,"inférence","/ɛ̃feʁɑ̃s/","nf","Opération par laquelle l’esprit tire une proposition nouvelle d’une ou plusieurs autres tenues pour vraies.","Du latin inferre, « porter dans, en tirer la conséquence »."],
+  ["mind",2,"maïeutique","/majøtik/","nf","Art socratique de faire accoucher l’interlocuteur, par questions graduées, des vérités qu’il portait sans le savoir.","Du grec ancien maieutikê tekhnê, « art de l’accouchement », de maia, « sage-femme »."],
+  ["mind",2,"pusillanime","/pyzilanim/","adj","Qui manque de la hauteur d’âme nécessaire pour vouloir de grandes choses et recule devant le moindre risque.","Du latin pusillanimis, « qui a l’âme petite », de pusillus, « très petit », et animus, « esprit »."],
+  ["mind",2,"syllogisme","/silɔʒism/","nm","Raisonnement déductif à deux prémisses et une conclusion, où un moyen terme relie les deux extrêmes.","Du grec ancien sullogismos, « calcul, raisonnement », de sun, « avec », et logizesthai, « calculer »."],
+  ["mind",3,"acédie","/asedi/","nf","Torpeur spirituelle du moine, mêlant dégoût de la prière et ennui du lieu, tenue au désert pour le pire des démons.","Du grec ancien akêdia, « absence de soin, indifférence », de kêdos, « souci »."],
+  ["mind",3,"ataraxie","/ataʁaksi/","nf","Tranquillité d’une âme que nul trouble n’agite plus, souverain bien visé par l’épicurisme comme par le stoïcisme.","Du grec ancien ataraxia, « absence de trouble », de tarassein, « agiter, troubler »."],
+  ["mind",3,"captieux","/kapsjø/","adj","Qui trompe sous une apparence de rigueur et tend un piège au consentement — « un argument captieux ».","Du latin captiosus, « qui cherche à prendre au piège », de capere, « prendre »."],
+  ["mind",3,"casuistique","/kazɥistik/","nf","Partie de la théologie morale qui résout les cas de conscience en confrontant la règle au détail des circonstances; par glissement, subtilité argumentative complaisante.","Du latin casus, « cas, ce qui échoit », par le latin scolastique casuista."],
+  ["mind",3,"monade","/mɔnad/","nf","Substance simple, sans parties ni fenêtres, qui exprime de sa place l’univers entier dans la métaphysique de Leibniz.","Du grec ancien monas, monados, « unité, ce qui est un »."],
+  ["mind",3,"psittacisme","/psitasism/","nm","Répétition mécanique de formules dont celui qui les profère n’a nulle intelligence.","Du latin psittacus, « perroquet », emprunté au grec psittakos."],
+  ["mind",3,"ratiociner","/ʁasjɔsine/","v","Raisonner interminablement, avec une subtilité pointilleuse qui ne mène à rien.","Du latin ratiocinari, « calculer, raisonner », de ratio, « compte, raison »."],
+  ["mind",3,"théodicée","/teɔdise/","nf","Justification de la bonté et de la justice divines face au scandale du mal, discipline nommée par Leibniz en 1710.","Du grec ancien theos, « dieu », et dikê, « justice » — mot forgé par Leibniz."],
+  ["mind",4,"aperception","/apɛʁsɛpsjɔ̃/","nf","Conscience réfléchie que l’esprit prend de ses propres perceptions, que Leibniz distingue de la perception obscure.","Dérivé d’apercevoir, du latin percipere, « saisir » — terme forgé en français par Leibniz."],
+  ["mind",4,"clinamen","/klinamɛn/","nm","Déviation infime et sans cause assignable qui écarte l’atome de sa chute chez Lucrèce, et sauve la liberté du déterminisme.","Du latin clinamen, « inclinaison, déviation », de clinare, « pencher »."],
+  ["mind",4,"conatus","/kɔnatys/","nm","Chez Spinoza, effort par lequel chaque chose persévère dans son être et qui constitue son essence actuelle.","Du latin conatus, « effort, élan », de conari, « s’efforcer »."],
+  ["mind",4,"enthymème","/ɑ̃timɛm/","nm","Syllogisme abrégé dont une prémisse, jugée évidente, reste tue — forme ordinaire du raisonnement rhétorique.","Du grec ancien enthumêma, « ce qu’on garde à l’esprit », de thumos, « cœur, esprit »."],
+  ["mind",4,"gnoséologie","/gnozeɔlɔʒi/","nf","Théorie générale de la connaissance envisagée dans ses conditions et ses limites, distincte de l’épistémologie des sciences constituées.","Du grec ancien gnôsis, « connaissance », et logos, « discours, étude »."],
+  ["mind",4,"nescience","/nesjɑ̃s/","nf","État d’ignorance envisagé positivement, comme un non-savoir assumé plutôt qu’une lacune à combler.","Du latin nescientia, « ignorance », de nescire, « ne pas savoir »."],
+  ["mind",4,"noème","/nɔɛm/","nm","Chez Husserl, contenu objectif visé par un acte de conscience, corrélat du versant vécu qu’est la noèse.","Du grec ancien noêma, « ce qui est pensé », de noein, « penser »."],
+  ["mind",5,"acatalepsie","/akatalɛpsi/","nf","Thèse sceptique selon laquelle aucune représentation ne permet de saisir avec certitude la nature des choses.","Du grec ancien akatalêpsia, « impossibilité de saisir », de katalambanein, « saisir »."],
+  ["mind",5,"apagogique","/apagɔʒik/","adj","Qualifie la démonstration qui établit une thèse en réduisant sa contradictoire à l’absurde.","Du grec ancien apagôgê, « action de détourner, d’écarter », de apagein, « emmener »."],
+  ["mind",5,"aséité","/aseite/","nf","Propriété de l’être qui tient son existence de lui seul, sans cause ni raison hors de soi, réservée à Dieu par la scolastique.","Du latin scolastique aseitas, formé sur a se, « par soi »."],
+  ["mind",5,"dianoétique","/djanɔetik/","adj","Relatif à la pensée discursive qui avance d’un pas à l’autre, par opposition à l’intuition — Aristote y range les vertus de l’intellect.","Du grec ancien dianoêtikos, « relatif à la pensée discursive », de dianoia, « pensée »."],
+  ["mind",5,"sorite","/sɔʁit/","nm","Raisonnement en chaîne où l’attribut de chaque proposition devient le sujet de la suivante; nom aussi du paradoxe du tas.","Du grec ancien sôreitês, « entassé », de sôros, « tas »."],
+  ["mind",5,"syncatégorématique","/sɛ̃kategɔʁematik/","adj","Qualifie le terme qui ne signifie rien par lui-même et ne prend fonction qu’adjoint à d’autres — « tout », « aucun », « ne… pas ».","Du grec ancien sunkatêgorêmatikos, « qui signifie conjointement », de katêgorêma, « attribut »."],
+  ["mind",5,"syndérèse","/sɛ̃deʁɛz/","nf","Disposition innée de l’intelligence pratique qui connaît sans faillir les premiers principes du bien, chez les scolastiques.","Du grec ancien suntêrêsis, « conservation, garde vigilante », de suntêrein, « conserver »."],
+
+  // ── Nature & Terre (suite) ──
+  ["nature",1,"bruine","/bʁɥin/","nf","Pluie très fine et froide dont les gouttelettes semblent flotter plutôt que tomber, mouillant lentement mais complètement.","Du latin pruina, « gelée blanche, givre »."],
+  ["nature",1,"combe","/kɔ̃b/","nf","Petite vallée encaissée aux versants raides; dans le Jura, dépression ouverte au sommet d’un pli par l’érosion de sa voûte.","Du gaulois cumba, « vallée, cuve »."],
+  ["nature",1,"embrun","/ɑ̃bʁœ̃/","nm","Fine poussière d’eau salée que le vent arrache à la crête des vagues et porte loin dans les terres, salant la végétation littorale.","Du provençal embrun, déverbal de embrumar, « bruiner »."],
+  ["nature",1,"estran","/ɛstʁɑ̃/","nm","Bande de littoral alternativement recouverte et découverte par la marée, domaine des laisses de mer et des pêcheurs à pied.","Du normand estran, issu de l’ancien scandinave strönd, « rivage »."],
+  ["nature",1,"friche","/fʁiʃ/","nf","Terre abandonnée par la culture et reconquise par la végétation spontanée, stade transitoire vers le retour du bois.","Du moyen néerlandais versch, « frais, nouvellement retourné »."],
+  ["nature",1,"futaie","/fytɛ/","nf","Peuplement forestier issu de semis, dont les arbres sont menés en hauts fûts jusqu’à maturité, par opposition au taillis exploité en rejets.","De fût, du latin fustis, « bâton, tronc »."],
+  ["nature",1,"lande","/lɑ̃d/","nf","Étendue de sol pauvre et acide, sans culture, où dominent bruyères, ajoncs et genêts sur un tapis ras.","Du gaulois landa, « terrain découvert, plaine »."],
+  ["nature",1,"taillis","/taji/","nm","Bois exploité par coupes rapprochées, où les souches conservées repoussent en rejets au lieu d’être remplacées par semis.","De tailler, du bas latin taliare, « couper, fendre »."],
+  ["nature",2,"adret","/adʁɛ/","nm","Versant de montagne tourné vers le soleil, où se concentrent les cultures, les villages et la limite haute des arbres.","De l’occitan adrech, du latin directus, « tourné en face »."],
+  ["nature",2,"bocage","/bɔkaʒ/","nm","Paysage agraire où chaque parcelle est close de haies vives et d’arbres, formant un maillage qui freine le vent et abrite la faune.","Du normanno-picard bocage, de bosc, « bois »."],
+  ["nature",2,"étiage","/etjaʒ/","nm","Niveau le plus bas atteint par un cours d’eau au fil de l’année, et débit de référence qu’on en tire pour dimensionner prélèvements et rejets.","De étier, « canal de marais salant », du latin aestuarium, « bras de mer »."],
+  ["nature",2,"glèbe","/ɡlɛb/","nf","Terre de culture envisagée comme fonds patrimonial, notamment celle à laquelle le serf médiéval était juridiquement attaché.","Du latin gleba, « motte de terre »."],
+  ["nature",2,"saumâtre","/somɑtʁ/","adj","D’une salinité intermédiaire entre l’eau douce et l’eau de mer, comme celle des estuaires et des lagunes, au goût âcre.","Du latin populaire salmacidus, « d’un goût salé »."],
+  ["nature",2,"sylvestre","/silvɛstʁ/","adj","Qui appartient à la forêt, y croît ou y vit à l’état spontané: « le pin sylvestre colonise les sols les plus maigres ».","Du latin silvestris, « des bois », de silva, « forêt »."],
+  ["nature",2,"tourbière","/tuʁbjɛʁ/","nf","Zone humide où l’engorgement permanent bloque la décomposition des végétaux, qui s’accumulent en tourbe sur plusieurs mètres.","De tourbe, du francique turba, « matière végétale décomposée »."],
+  ["nature",2,"ubac","/ybak/","nm","Versant de montagne exposé au nord, froid et humide, où la neige dure et où la forêt descend plus bas qu’en face.","De l’occitan ubac, du latin opacus, « sombre, ombragé »."],
+  ["nature",3,"drageon","/dʁaʒɔ̃/","nm","Rejet né sur une racine traçante, à distance du pied, qui donne un individu autonome et permet au peuplier ou au robinier d’envahir une parcelle.","Du francique draibjo, « rejeton, pousse »."],
+  ["nature",3,"essarter","/esaʁte/","v","Défricher un terrain boisé en arrachant broussailles et souches pour le livrer à la culture ou au pâturage.","Du bas latin exsartare, de exsarire, « sarcler, défricher »."],
+  ["nature",3,"guéret","/ɡeʁɛ/","nm","Terre labourée puis laissée nue en jachère jusqu’aux semailles suivantes, motte apparente et sillons ouverts.","Du latin vervactum, « jachère, terre labourée au printemps »."],
+  ["nature",3,"marcescent","/maʁsesɑ̃/","adj","Se dit du feuillage qui se dessèche sans se détacher et demeure sur l’arbre jusqu’au débourrement suivant, comme chez le chêne et le charme.","Du latin marcescens, participe de marcescere, « se flétrir »."],
+  ["nature",3,"moraine","/mɔʁɛn/","nf","Amas de débris rocheux arrachés, charriés puis abandonnés par un glacier, formant bourrelets latéraux ou barrage frontal.","Du savoyard morena, « bourrelet de terre », d’un radical préroman mor-, « monticule »."],
+  ["nature",3,"ripisylve","/ʁipisilv/","nf","Forêt riveraine étroite bordant un cours d’eau, à la fois filtre des nitrates, corridor pour la faune et frein à l’érosion des berges.","Du latin ripa, « rive », et silva, « forêt »."],
+  ["nature",3,"thalweg","/talvɛɡ/","nm","Ligne joignant les points les plus bas d’une vallée, vers laquelle converge l’écoulement et que suit souvent une frontière fluviale.","De l’allemand Thalweg, « chemin de la vallée », de Tal et Weg."],
+  ["nature",4,"affouiller","/afuje/","v","Creuser et miner par le courant la base d’une berge ou d’une pile de pont, jusqu’au déchaussement qui provoque l’effondrement.","De fouiller, du latin populaire fodiculare, « creuser », avec le préfixe a-."],
+  ["nature",4,"cespiteux","/sɛspitø/","adj","Dont les tiges naissent en touffe dense sur une même souche, port caractéristique des graminées formant gazon.","Du latin caespes, caespitis, « motte de gazon »."],
+  ["nature",4,"doline","/dɔlin/","nf","Dépression fermée en cuvette, creusée par la dissolution du calcaire, où s’accumulent argiles rouges et cultures de fond.","Du slovène dolina, « vallée, creux »."],
+  ["nature",4,"gélifraction","/ʒelifʁaksjɔ̃/","nf","Éclatement d’une roche sous l’effet des cycles gel-dégel de l’eau retenue dans ses fissures, principal fournisseur des éboulis d’altitude.","De gel, du latin gelu, et du latin fractio, « brisure »."],
+  ["nature",4,"régolithe","/ʁeɡɔlit/","nm","Couverture meuble d’altérites, de débris et de poussières qui coiffe la roche en place, sur Terre comme sur la Lune.","Du grec ancien rhêgos, « couverture », et lithos, « pierre »."],
+  ["nature",4,"rhéophile","/ʁeɔfil/","adj","Inféodé aux eaux vives, fraîches et bien oxygénées, comme la truite ou le chabot que la retenue d’un barrage élimine.","Du grec ancien rheos, « courant », et philos, « ami »."],
+  ["nature",4,"sciaphile","/sjafil/","adj","Qualifie une plante qui prospère à l’ombre du couvert forestier et souffre du plein soleil, tel le hêtre à l’état jeune.","Du grec ancien skia, « ombre », et philos, « ami »."],
+  ["nature",5,"aiguail","/eɡwaj/","nm","Rosée abondante restée sur l’herbe et les feuilles au petit matin, dont les veneurs lisent les traces pour relever la voie du cerf.","De l’ancien français aigue, « eau », du latin aqua."],
+  ["nature",5,"catabatique","/katabatik/","adj","Se dit d’un vent d’air froid et dense qui dévale une pente sous son propre poids, tels les blizzards permanents du plateau antarctique.","Du grec ancien katabatikos, « qui descend », de katabainein, « descendre »."],
+  ["nature",5,"hamada","/amada/","nf","Plateau désertique de roche nue, balayé par le vent qui en a emporté tout le sable, opposé aux ergs dunaires.","De l’arabe hammada, « terrain stérile et pierreux »."],
+  ["nature",5,"inselberg","/inzɛlbɛʁɡ/","nm","Relief résiduel isolé aux flancs abrupts, émergeant d’une surface d’aplanissement tropicale comme une île de roche saine.","De l’allemand Inselberg, « montagne-île », de Insel et Berg."],
+  ["nature",5,"nyctinastie","/niktinasti/","nf","Mouvement périodique de fermeture et d’ouverture des feuilles ou des fleurs commandé par l’alternance du jour et de la nuit, chez le trèfle ou le nénuphar.","Du grec ancien nux, nuktos, « nuit », et nastos, « tassé, pressé »."],
+  ["nature",5,"ombrotrophe","/ɔ̃bʁɔtʁɔf/","adj","Qualifie une tourbière nourrie des seules précipitations, sans apport de la nappe, donc extrêmement pauvre en minéraux et acide.","Du grec ancien ombros, « pluie », et trophê, « nourriture »."],
+  ["nature",5,"sténoèce","/stenɔɛs/","adj","Se dit d’une espèce à faible amplitude écologique, cantonnée à une fourchette étroite de conditions et donc excellente bio-indicatrice.","Du grec ancien stenos, « étroit », et oikos, « habitation »."],
+
+  // ── Matière & Cosmos (suite) ──
+  ["matter",1,"amalgame","/amalɡam/","nm","Alliage que le mercure forme avec un autre métal, longtemps employé pour dorer, pour extraire l’or et pour obturer les dents.","Du latin médiéval amalgama, probablement de l’arabe al-malgham « pâte molle », lui-même du grec malagma « emplâtre »."],
+  ["matter",1,"diaphane","/djafan/","adj","Qui laisse passer la lumière sans laisser voir nettement les formes, à mi-chemin du transparent et de l’opaque: « une porcelaine diaphane ».","Du grec ancien diaphanês, « qui se montre à travers », de dia « à travers » et phainein « paraître »."],
+  ["matter",1,"éther","/etɛʁ/","nm","Fluide impondérable dont on supposait l’espace empli pour porter la lumière, congédié par la relativité restreinte; chez les poètes, la région la plus pure du ciel.","Du grec ancien aithêr, « air supérieur, ciel embrasé », de aithein « brûler »."],
+  ["matter",1,"firmament","/fiʁmamɑ̃/","nm","La voûte du ciel tenue pour une surface fixe où seraient sertis les astres, image d’un monde clos que la science a défaite.","Du latin firmamentum, « appui, soutien », de firmus « ferme », calque du grec stereôma dans la Vulgate."],
+  ["matter",1,"incandescent","/ɛ̃kɑ̃desɑ̃/","adj","Porté à une température si haute que le corps rayonne de lui-même, du rouge sombre au blanc.","Du latin incandescere, « devenir blanc de chaleur », de candere « être ardent, blanc »."],
+  ["matter",1,"limaille","/limaj/","nf","Poussière de particules métalliques arrachées par la lime, dont on saupoudre un aimant pour rendre ses lignes de champ visibles.","De limer, du latin limare « polir à la lime », de lima « lime »."],
+  ["matter",1,"nébuleuse","/nebyløz/","nf","Vaste nuage de gaz et de poussières interstellaires, brillant de sa propre lumière ou éclairé par les étoiles qu’il enfante.","Du latin nebulosus, « couvert de brume », de nebula « nuée, brouillard »."],
+  ["matter",1,"scorie","/skɔʁi/","nf","Résidu vitreux qui surnage d’un métal en fusion et qu’on écume, ou lave bulleuse figée à la surface d’une coulée.","Du latin scoria, emprunté au grec skôria, « écume du métal en fusion », de skôr « déjection »."],
+  ["matter",2,"aérolithe","/aeʁɔlit/","nm","Nom ancien de la pierre tombée du ciel, en usage au temps où l’on discutait encore que le ciel pût lapider la Terre.","Du grec ancien aêr, « air », et lithos, « pierre »."],
+  ["matter",2,"aphélie","/afeli/","nm","Point de son orbite où une planète ou une comète se trouve le plus loin du Soleil, et où sa vitesse est la plus faible.","Du grec ancien apo, « loin de », et hêlios, « soleil »."],
+  ["matter",2,"chatoyer","/ʃatwaje/","v","Renvoyer des reflets mobiles et changeants selon l’angle du regard, comme la soie, l’opale ou l’œil-de-chat.","De chat, par analogie avec l’éclat mobile de l’œil du chat."],
+  ["matter",2,"ductile","/dyktil/","adj","Qualifie un métal qu’on peut étirer en fil sans qu’il rompe, l’or l’étant plus qu’aucun autre.","Du latin ductilis, « qu’on peut conduire ou étirer », de ducere « conduire, tirer »."],
+  ["matter",2,"empyrée","/ɑ̃piʁe/","nm","Dans la cosmologie antique et médiévale, la sphère la plus haute du ciel, faite de feu pur et demeure des bienheureux.","Du grec ancien empurios, « qui est dans le feu », de en « dans » et pur « feu »."],
+  ["matter",2,"gangue","/ɡɑ̃ɡ/","nf","Roche stérile qui enveloppe le minerai ou le cristal et dont il faut le dégager avant tout usage.","De l’allemand Gang, « filon de minerai », proprement « marche, allée »."],
+  ["matter",2,"nadir","/nadiʁ/","nm","Point de la sphère céleste diamétralement opposé au zénith, à la verticale sous les pieds de l’observateur.","De l’arabe nazīr as-samt, « opposé au zénith », de nazīr « vis-à-vis »."],
+  ["matter",2,"sidéral","/sideʁal/","adj","Qui se rapporte aux étoiles et se mesure sur elles: le jour sidéral, retour d’une étoile au méridien, dure 23 h 56 min.","Du latin sideralis, de sidus, sideris, « astre, constellation »."],
+  ["matter",3,"chondrite","/kɔ̃dʁit/","nf","Météorite pierreuse jamais fondue, criblée de billes silicatées condensées avant les planètes, et qui date la naissance du système solaire.","Du grec ancien khondros, « grain, granule », d’après les grains qu’elle renferme."],
+  ["matter",3,"dendrite","/dɑ̃dʁit/","nf","Cristal arborescent qui pousse en ramifications successives dans un métal en train de se solidifier ou sur une vitre qui givre.","Du grec ancien dendritês, « qui a rapport à l’arbre », de dendron « arbre »."],
+  ["matter",3,"écliptique","/ekliptik/","nm","Grand cercle que le Soleil paraît décrire en un an sur la sphère céleste, plan de référence auquel on rapporte l’inclinaison des orbites.","Du grec ancien ekleiptikos, « relatif aux éclipses », de ekleipsis « défaillance, éclipse »."],
+  ["matter",3,"frittage","/fʁitaʒ/","nm","Consolidation d’une poudre en une pièce cohérente par chauffage au-dessous du point de fusion, les grains se soudant par diffusion.","De fritte, de l’italien fritta, « frite », nom du mélange vitrifiable cuit à demi."],
+  ["matter",3,"héliaque","/eljak/","adj","Qualifie le lever ou le coucher d’un astre au ras du Soleil: « le lever héliaque de Sirius ouvrait l’année égyptienne ».","Du grec ancien hêliakos, « du soleil », de hêlios « soleil »."],
+  ["matter",3,"macle","/makl/","nf","Assemblage régulier de deux cristaux d’une même espèce accolés selon une loi de symétrie, tel le fer de lance du gypse.","Du latin macula, « tache », par l’ancien français macle, « losange » du blason."],
+  ["matter",3,"piézoélectricité","/pjezoelɛktʁisite/","nf","Propriété de certains cristaux qui se polarisent électriquement sous une contrainte mécanique, et se déforment en retour lorsqu’on leur applique un champ.","Du grec piezein, « presser », et de électricité."],
+  ["matter",4,"colure","/kɔlyʁ/","nm","Chacun des deux grands cercles de la sphère céleste passant par les pôles et par les points équinoxiaux ou solsticiaux.","Du grec ancien kolouros, « à la queue tronquée », de kolos « écourté » et oura « queue », le cercle paraissant coupé sous l’horizon."],
+  ["matter",4,"décrépiter","/dekʁepite/","v","Faire éclater un sel avec crépitement en le chauffant, l’eau emprisonnée dans ses cristaux se vaporisant d’un coup.","Du latin crepitare, « craquer, pétiller », avec le préfixe dé- marquant la séparation."],
+  ["matter",4,"épitaxie","/epitaksi/","nf","Croissance d’une couche cristalline dont l’orientation est dictée par le cristal qui lui sert de support, procédé au fondement des semi-conducteurs.","Du grec ancien epi, « sur », et taxis, « arrangement, ordre »."],
+  ["matter",4,"facule","/fakyl/","nf","Plage brillante et plus chaude de la surface solaire, visible surtout près du bord du disque et voisine des taches.","Du latin facula, « petite torche », diminutif de fax, facis « flambeau »."],
+  ["matter",4,"martensite","/maʁtɛnsit/","nf","Phase dure et distordue de l’acier, obtenue quand une trempe assez brutale piège le carbone sans lui laisser le temps de diffuser.","Du nom du métallurgiste allemand Adolf Martens (1850-1914), avec le suffixe minéralogique -ite."],
+  ["matter",4,"mésomérie","/mezɔmeʁi/","nf","Description d’une molécule dont la structure réelle tient à la fois de plusieurs formules limites, la délocalisation des électrons la stabilisant.","Du grec ancien mesos, « au milieu », et meros, « partie »."],
+  ["matter",4,"pléochroïsme","/pleɔkʁɔism/","nm","Propriété d’un cristal anisotrope de montrer des couleurs différentes selon la direction d’observation en lumière polarisée.","Du grec ancien pleiôn, « plus nombreux », et khrôs, khrôtos, « couleur, teint »."],
+  ["matter",5,"adularescence","/adylaʁesɑ̃s/","nf","Lueur bleutée et flottante qui semble glisser sous la surface de la pierre de lune lorsqu’on l’incline.","De adulaire, feldspath nommé d’après le massif de l’Adula, dans les Alpes suisses."],
+  ["matter",5,"anthélie","/ɑ̃teli/","nf","Tache blanche qui apparaît très rarement au point du ciel exactement opposé au Soleil, née de la réflexion sur des plaquettes de glace en suspension.","Du grec ancien anti, « en face de », et hêlios, « soleil »."],
+  ["matter",5,"métamicte","/metamikt/","adj","Qualifie un minéral dont la radioactivité interne a ruiné le réseau cristallin, laissant un verre sous une forme extérieure intacte.","Du grec ancien meta, « au-delà, changement », et miktos, « mélangé »."],
+  ["matter",5,"pnictogène","/pniktɔʒɛn/","nm","Élément de la quinzième colonne du tableau périodique, de l’azote au bismuth, réunis par leurs cinq électrons de couche externe.","Du grec ancien pnigein, « étouffer », et gennan, « engendrer », l’azote pur asphyxiant qui le respire."],
+  ["matter",5,"polytypie","/pɔlitipi/","nf","Faculté d’un même composé de cristalliser en variétés qui ne diffèrent que par l’ordre d’empilement de couches identiques, le carbure de silicium en comptant des centaines.","Du grec ancien polus, « nombreux », et tupos, « empreinte, forme »."],
+  ["matter",5,"rhéopexie","/ʁeɔpɛksi/","nf","Épaississement progressif d’un fluide soumis à une agitation prolongée, comportement rare et inverse de celui des pâtes qui se fluidifient sous cisaillement.","Du grec ancien rhein, « couler », et pêxis, « coagulation, prise en masse »."],
+  ["matter",5,"sidérophile","/sideʁɔfil/","adj","Qualifie un élément qui, lors de la différenciation d’une planète, suit le fer et s’enfonce avec lui vers le noyau, tel l’or ou le platine.","Du grec ancien sidêros, « fer », et philos, « ami, qui aime »."],
+
+  // ── Corps & Médecine (suite) ──
+  ["body",1,"cérumen","/seʁymɛn/","nm","Sécrétion cireuse jaune brun produite par les glandes du conduit auditif externe, dont elle protège la peau et le tympan.","Du latin médiéval cerumen, formé sur cera « cire »."],
+  ["body",1,"déglutir","/deglytiʁ/","v","Faire passer la salive, un aliment ou un médicament du fond de la bouche vers l’œsophage par un réflexe coordonné.","Du latin deglutire, « avaler », de gluttire « engloutir »."],
+  ["body",1,"ecchymose","/ekimoz/","nf","Épanchement de sang dans les tissus sous-cutanés après un choc, qui colore la peau en bleu sombre puis en jaune verdâtre à mesure qu’il se résorbe.","Du grec ancien ekkhumôsis, « épanchement d’humeur », de ek « hors de » et khumos « suc »."],
+  ["body",1,"entorse","/ɑ̃tɔʁs/","nf","Lésion articulaire par élongation ou déchirure des ligaments, sans déplacement durable des surfaces osseuses, à la différence de la luxation.","Ancien participe passé féminin de entordre, du latin intorquere « tordre en dedans »."],
+  ["body",1,"fébrile","/febʁil/","adj","Qui relève de la fièvre ou l’accompagne, et par extension qu’agite une excitation nerveuse comparable — « une attente fébrile ».","Du latin febrilis, dérivé de febris « fièvre »."],
+  ["body",1,"luette","/lɥɛt/","nf","Appendice charnu suspendu au milieu du bord libre du voile du palais, qui obture les fosses nasales pendant la déglutition.","De l’ancien français uete, diminutif du latin uva « grappe de raisin », avec agglutination de l’article dans « l’uette »."],
+  ["body",1,"omoplate","/ɔmɔplat/","nf","Os plat et triangulaire de l’épaule, que l’anatomie moderne nomme scapula, et qui coulisse librement sur l’arrière du thorax.","Du grec ancien ômoplatê, de ômos « épaule » et platê « surface plate »."],
+  ["body",1,"rotule","/ʁɔtyl/","nf","Petit os mobile logé devant l’articulation du genou, où il sert de poulie au tendon du quadriceps.","Du latin rotula, « petite roue », diminutif de rota « roue »."],
+  ["body",2,"coccyx","/kɔksis/","nm","Os terminal de la colonne vertébrale, formé de quatre ou cinq vertèbres soudées et atrophiées, vestige d’une queue.","Du grec ancien kokkux, « coucou », l’os évoquant le bec de cet oiseau."],
+  ["body",2,"exsangue","/ɛksɑ̃ɡ/","adj","Qui a perdu son sang et en porte la pâleur extrême, et par extension vidé de toute vigueur — « un visage exsangue ».","Du latin exsanguis, « sans sang », de ex « hors de » et sanguis « sang »."],
+  ["body",2,"fontanelle","/fɔ̃tanɛl/","nf","Espace membraneux souple séparant les os du crâne du nouveau-né, qui autorise le modelage de la tête à la naissance avant de s’ossifier.","De l’ancien français fontenele, « petite fontaine », diminutif de fontaine."],
+  ["body",2,"furoncle","/fyʁɔ̃kl/","nm","Inflammation aiguë et nécrosante d’un follicule pileux et de sa glande sébacée, formant un nodule douloureux qui finit par expulser un bourbillon.","Du latin furunculus, « petit voleur », diminutif de fur « voleur », d’abord le rejet de vigne qui dérobe la sève."],
+  ["body",2,"livide","/livid/","adj","D’une pâleur bleuâtre et plombée, couleur d’un corps privé de sang, le sens strict précédant l’usage affaibli où le mot vaut simplement « très pâle ».","Du latin lividus, « de couleur de plomb, bleuâtre », de livere « être bleuâtre »."],
+  ["body",2,"suppurer","/sypyʁe/","v","Produire du pus et le laisser s’écouler, en parlant d’une plaie ou d’un foyer infecté.","Du latin suppurare, de sub « sous » et pus, puris « pus »."],
+  ["body",2,"syncope","/sɛ̃kɔp/","nf","Perte de connaissance brève et complète due à une chute soudaine du débit sanguin cérébral, avec effondrement du tonus et retour spontané à soi.","Du grec ancien sunkopê, « brisement, retranchement », de sun « avec » et koptein « couper »."],
+  ["body",2,"urticaire","/yʁtikɛʁ/","nf","Éruption de papules rosées fugaces et intensément démangeantes, semblables à la brûlure de l’ortie, le plus souvent de mécanisme allergique.","Du latin savant urticaria, formé sur urtica « ortie »."],
+  ["body",3,"escarre","/ɛskaʁ/","nf","Croûte noirâtre de tissu mortifié résultant de la nécrose d’une zone cutanée comprimée trop longtemps contre un plan dur chez un malade alité.","Du grec ancien eskhara, « foyer, brasier », puis « croûte formée par une brûlure »."],
+  ["body",3,"expectorer","/ɛkspɛktɔʁe/","v","Rejeter par la bouche, au prix d’un effort de toux, les sécrétions accumulées dans les voies respiratoires.","Du latin expectorare, « chasser de la poitrine », de ex « hors de » et pectus, pectoris « poitrine »."],
+  ["body",3,"ictère","/iktɛʁ/","nm","Coloration jaune de la peau, des muqueuses et des conjonctives provoquée par l’accumulation de bilirubine, ce que la langue courante nomme jaunisse.","Du grec ancien ikteros, « jaunisse », nom d’un oiseau jaune dont la vue passait pour guérir le mal."],
+  ["body",3,"panaris","/panaʁi/","nm","Infection aiguë d’un doigt, siégeant le plus souvent à la pulpe ou au pourtour de l’ongle, née d’un germe introduit par une écharde ou une piqûre.","Du latin panaricium, altération du grec ancien parônukhia, « mal auprès de l’ongle »."],
+  ["body",3,"phosphène","/fɔsfɛn/","nm","Sensation lumineuse perçue en l’absence de toute lumière réelle, née d’une pression sur le globe oculaire ou d’une excitation directe de la rétine.","Du grec ancien phôs, phôtos « lumière » et phainein « faire apparaître »."],
+  ["body",3,"phtisie","/ftizi/","nf","Ancien nom de la tuberculose pulmonaire, retenant du mal l’amaigrissement et le dépérissement progressifs qui emportaient le malade.","Du grec ancien phthisis, « consomption, dépérissement », de phthiein « dépérir »."],
+  ["body",3,"pylore","/pilɔʁ/","nm","Orifice inférieur de l’estomac, muni d’un sphincter musculaire qui règle le passage du chyme vers le duodénum.","Du grec ancien pulôros, « portier », de pulê « porte » et ouros « gardien »."],
+  ["body",4,"cacochyme","/kakɔʃim/","adj","Dont les humeurs sont viciées, d’où d’une santé chétive et délabrée — le vieillard cacochyme et grognon de la comédie classique.","Du grec ancien kakokhumos, « aux humeurs mauvaises », de kakos « mauvais » et khumos « suc, humeur »."],
+  ["body",4,"clystère","/klistɛʁ/","nm","Lavement administré dans le rectum au moyen d’une canule, remède souverain de la médecine classique et cible privilégiée de la satire moliéresque.","Du grec ancien klustêr, « seringue à lavement », de kluzein « laver »."],
+  ["body",4,"hémoptysie","/emɔptizi/","nf","Rejet par la bouche, au cours d’un effort de toux, de sang rouge et spumeux provenant des voies respiratoires sous-glottiques.","Du grec ancien haima « sang » et ptusis « crachat », de ptuein « cracher »."],
+  ["body",4,"lipothymie","/lipɔtimi/","nf","Malaise avec sueurs, bourdonnements et vue qui se voile, donnant la sensation d’un évanouissement imminent mais sans perte complète de connaissance, à la différence de la syncope.","Du grec ancien leipothumia, de leipein « manquer » et thumos « souffle vital »."],
+  ["body",4,"mydriase","/midʁjaz/","nf","Dilatation anormale et persistante de la pupille, d’origine lésionnelle, toxique, ou provoquée par un collyre pour examiner le fond d’œil.","Du grec ancien mudriasis, « dilatation de la pupille »."],
+  ["body",4,"pyrosis","/piʁozis/","nm","Sensation de brûlure remontant de l’épigastre vers la gorge, accompagnée de renvois acides, signe cardinal du reflux gastro-œsophagien.","Du grec ancien purôsis, « embrasement », de pur « feu »."],
+  ["body",4,"vulnéraire","/vylneʁɛʁ/","adj","Propre à guérir les plaies, en parlant d’une plante ou d’une préparation de l’ancienne matière médicale.","Du latin vulnerarius, dérivé de vulnus, vulneris « blessure »."],
+  ["body",5,"épiploon","/epiplɔɔ̃/","nm","Vaste repli graisseux du péritoine pendant en tablier devant les anses intestinales, qui vient colmater les foyers infectieux de l’abdomen.","Du grec ancien epiploon, « ce qui flotte au-dessus », de epipleîn « naviguer sur »."],
+  ["body",5,"koïlonychie","/kɔilɔniʃi/","nf","Déformation des ongles qui s’aplatissent puis se creusent en cuillère, signe classique d’une carence martiale prolongée.","Du grec ancien koilos « creux » et onux, onukhos « ongle »."],
+  ["body",5,"myodésopsie","/mjɔdezɔpsi/","nf","Perception de filaments et de points sombres dérivant dans le champ visuel, ombres portées de condensations du corps vitré que les patients appellent des « mouches volantes ».","Du grec ancien muia « mouche », eidos « forme » et opsis « vue »."],
+  ["body",5,"opisthotonos","/ɔpistɔtɔnɔs/","nm","Contracture tétanique généralisée arquant le corps en arrière au point qu’il ne repose plus que sur la nuque et les talons.","Du grec ancien opisthen « en arrière » et tonos « tension »."],
+  ["body",5,"pandiculation","/pɑ̃dikylasjɔ̃/","nf","Mouvement réflexe d’étirement des membres et du tronc, tête renversée, qui accompagne le bâillement au sortir du sommeil.","Du latin pandiculari, « s’étirer », de pandere « déployer, étendre »."],
+  ["body",5,"strangurie","/stʁɑ̃ɡyʁi/","nf","Émission d’urine goutte à goutte, lente et cuisante, en dépit d’un besoin pressant.","Du grec ancien stranx, straggos « goutte pressée » et ouron « urine »."],
+  ["body",5,"ténesme","/tenɛsm/","nm","Tension douloureuse du sphincter anal ou vésical imposant une envie impérieuse d’évacuer qui reste sans effet.","Du grec ancien teinesmos, de teinein « tendre, faire effort »."],
+
+  // ── Arts & Métiers (suite) ──
+  ["arts",1,"arabesque","/aʁabɛsk/","nf","Ornement de rinceaux et d’entrelacs végétaux courant en lignes souples, et par analogie toute figure déliée que trace un corps ou une mélodie.","De l’italien arabesco, « à la manière arabe »."],
+  ["arts",1,"camaïeu","/kamajø/","nm","Peinture exécutée dans les seules valeurs d’une même couleur, du plus clair au plus sombre, sans autre contraste que le ton sur ton.","De l’ancien français camaheu, « pierre fine gravée en couches », doublet de camée."],
+  ["arts",1,"estampe","/ɛstɑ̃p/","nf","Image imprimée par report d’une planche gravée, tirée sur papier humidifié à un nombre limité d’exemplaires numérotés.","De l’italien stampa, « impression, empreinte », de stampare, « imprimer »."],
+  ["arts",1,"fusain","/fyzɛ̃/","nm","Bâtonnet de charbon de bois tiré de l’arbuste du même nom, au trait velouté et facile à estomper, et par extension le dessin qu’on en obtient.","Du latin fusus, « fuseau », le bois de l’arbuste servant à en tailler."],
+  ["arts",1,"gouache","/ɡwaʃ/","nf","Peinture à l’eau rendue opaque et mate par une charge blanche liée à la gomme, couvrante là où l’aquarelle laisse transparaître le papier.","De l’italien guazzo, « flaque d’eau », puis « détrempe », du latin aquatio."],
+  ["arts",1,"hachure","/aʃyʁ/","nf","Trait fin répété en séries parallèles ou croisées pour modeler l’ombre et le volume d’un dessin, d’une gravure ou d’une carte.","Dérivé de hacher, de hache, du francique hapja, « couperet »."],
+  ["arts",1,"pastiche","/pastiʃ/","nm","Œuvre qui imite délibérément la manière d’un maître ou d’une école, par exercice, hommage ou jeu, sans l’intention de tromper qu’aurait le faux.","De l’italien pasticcio, « pâté, mélange de choses disparates »."],
+  ["arts",1,"trompe-l’œil","/tʁɔ̃plœj/","nm","Peinture illusionniste qui, par la rigueur de la perspective et le rendu des matières, fait prendre un mur plat pour du relief ou une ouverture.","Composé du verbe tromper et du nom œil, du latin oculus."],
+  ["arts",2,"acanthe","/akɑ̃t/","nf","Plante méditerranéenne aux feuilles largement découpées dont le dessin nervé fournit le motif canonique du chapiteau corinthien.","Du grec akantha, « épine »."],
+  ["arts",2,"cariatide","/kaʁjatid/","nf","Statue de femme drapée qui, tenant lieu de colonne, porte l’entablement sur sa tête, comme au portique de l’Érechthéion.","Du grec karuatis, « femme de Karyai », bourg de Laconie."],
+  ["arts",2,"cire perdue","/siʁpɛʁdy/","phr","Procédé de fonte où le modèle en cire, enfermé dans un moule réfractaire, est fondu et évacué pour céder sa place au métal en fusion.","Locution formée de cire, du latin cera, et de perdu: le modèle est détruit à la coulée."],
+  ["arts",2,"eau-forte","/ofɔʁt/","nf","Acide nitrique qu’on laisse mordre une plaque de cuivre vernie et tracée à la pointe, et, par métonymie, l’estampe qui en sort.","Composé de eau et de fort, ancien nom de l’acide nitrique qui attaque les métaux."],
+  ["arts",2,"estompe","/ɛstɔ̃p/","nf","Petit rouleau de peau ou de papier serré avec lequel on fond un tracé de fusain ou de sanguine pour en adoucir les passages.","Du néerlandais stomp, « émoussé, tronqué »."],
+  ["arts",2,"marqueterie","/maʁkətʁi/","nf","Décor obtenu en assemblant à fleur de surface des placages de bois, d’écaille, de nacre ou de métal découpés selon un même tracé.","Dérivé de marqueter, « couvrir de marques, de taches »."],
+  ["arts",2,"polyptyque","/pɔliptik/","nm","Retable formé de plusieurs panneaux peints articulés par des charnières, que l’on ouvre ou referme selon les temps de la liturgie.","Du grec poluptukhos, « à plusieurs plis, à plusieurs volets »."],
+  ["arts",2,"sanguine","/sɑ̃ɡin/","nf","Crayon d’hématite d’un rouge brun, prisé pour le rendu des chairs, et le dessin exécuté avec lui, souvent relevé de craie blanche.","Du latin sanguineus, « couleur de sang »."],
+  ["arts",3,"aquatinte","/akwatɛ̃t/","nf","Gravure à l’eau-forte où un grain de résine fondue sur la plaque ménage des plages de morsure, imitant les valeurs continues du lavis.","De l’italien acquatinta, « eau teintée »."],
+  ["arts",3,"chantourner","/ʃɑ̃tuʁne/","v","Découper une pièce de bois, de pierre ou de métal suivant un profil sinueux, en la sciant sur son chant.","Composé de chant, « face étroite d’une pièce », et de tourner."],
+  ["arts",3,"cimaise","/simɛz/","nf","Moulure au profil ondé couronnant une corniche, et par extension la ligne d’accrochage des tableaux à hauteur d’œil dans une salle d’exposition.","Du latin cymatium, du grec kumation, « petite vague »."],
+  ["arts",3,"écoinçon","/ekwɛ̃sɔ̃/","nm","Surface triangulaire comprise entre la courbe d’un arc et l’encadrement rectangulaire qui l’inscrit, souvent occupée par un décor sculpté.","Dérivé de coin, du latin cuneus, « coin, angle »."],
+  ["arts",3,"lavis","/lavi/","nm","Mise en valeurs d’un dessin par de l’encre ou de l’aquarelle diluée, étendue au pinceau en couches transparentes superposées.","Dérivé de laver, du latin lavare, au sens d’étendre une couleur délayée."],
+  ["arts",3,"poncif","/pɔ̃sif/","nm","Carton dont le tracé, piqué de trous fins, se reporte en tamponnant de la poudre, d’où le sens dérivé de formule ressassée sans invention.","Dérivé de poncer, du latin pumex, « pierre ponce »."],
+  ["arts",3,"prédelle","/pʁedɛl/","nf","Bande basse d’un retable, divisée en petits compartiments peints où se racontent les épisodes secondaires du panneau principal.","De l’italien predella, « marchepied, degré »."],
+  ["arts",3,"rehaut","/ʁəo/","nm","Touche claire posée en dernier pour accrocher la lumière sur une arête, une chevelure ou un pli, tel le blanc de céruse sur papier teinté.","Déverbal de rehausser, de haut, du latin altus."],
+  ["arts",4,"appoggiature","/apɔdʒjatyʁ/","nf","Note étrangère à l’accord qui, appuyée sur le temps fort, emprunte sa durée à la note principale avant de s’y résoudre.","De l’italien appoggiatura, « appui », de appoggiare, « appuyer »."],
+  ["arts",4,"brunissoir","/bʁyniswaʁ/","nm","Outil à pointe d’agate ou d’acier poli dont le frottement lustre l’or posé à la feuille ou referme le grain d’un métal.","Dérivé de brunir, « rendre luisant », du germanique brun."],
+  ["arts",4,"intrados","/ɛ̃tʁado/","nm","Surface intérieure concave d’un arc ou d’une voûte, celle que voit l’usager, par opposition à l’extrados qui en forme le dos.","Composé du latin intra, « en dedans », et de dos, du latin dorsum."],
+  ["arts",4,"métope","/metɔp/","nf","Panneau, souvent sculpté en bas-relief, qui remplit l’intervalle entre deux triglyphes d’une frise dorique.","Du grec metopê, de meta, « entre », et opê, « ouverture de poutre »."],
+  ["arts",4,"modénature","/mɔdenatyʁ/","nf","Ensemble des profils, saillies et proportions des moulures d’un édifice, tenu pour la signature plastique de l’ordre employé.","De l’italien modanatura, « moulure », de modano, « gabarit »."],
+  ["arts",4,"sgraffite","/sɡʁafit/","nm","Décor mural obtenu en grattant l’enduit clair encore frais pour découvrir en creux la couche colorée posée dessous.","De l’italien sgraffito, « gratté », de sgraffiare, « égratigner »."],
+  ["arts",4,"tranchefile","/tʁɑ̃ʃfil/","nf","Bourrelet de fil brodé sur une âme, fixé en tête et en queue du dos d’un livre relié, qui tient les cahiers et masque leur couture.","Composé de tranche et de file, le cordon courant sur la tranche du dos."],
+  ["arts",5,"bucrane","/bykʁan/","nm","Motif ornemental figurant un crâne de bœuf décharné, relié par des guirlandes, qui rythme les frises des temples antiques et de leurs imitations.","Du grec boukranion, de bous, « bœuf », et kranion, « crâne »."],
+  ["arts",5,"chryséléphantin","/kʁizelefɑ̃tɛ̃/","adj","Fait d’or et d’ivoire, en parlant des grandes statues grecques dont les chairs étaient d’ivoire et les vêtures de plaques d’or montées sur une âme de bois.","Du grec khrusos, « or », et elephas, « ivoire »."],
+  ["arts",5,"duite","/dɥit/","nf","Passage d’un fil de trame d’une lisière à l’autre, unité de compte de la densité d’un tissage et d’une tapisserie de haute lice.","Du latin ducta, participe de ducere, « conduire »."],
+  ["arts",5,"épannelage","/epanlaʒ/","nm","Dégrossissage d’un bloc en une suite de plans, ou panneaux, qui cernent la forme à venir avant toute taille de détail.","Dérivé de épanneler, « tailler par plans », de panneau."],
+  ["arts",5,"gradine","/ɡʁadin/","nf","Ciseau de sculpteur à tranchant denté qui dégrossit la pierre en y laissant des sillons parallèles, entre l’ébauche et le poli.","De l’italien gradina, dérivé de grado, « degré, marche »."],
+  ["arts",5,"mixtion","/mikstjɔ̃/","nf","Mordant huileux et siccatif dont on enduit un support pour y faire adhérer la feuille d’or au moment précis où il tire à sec.","Du latin mixtio, « mélange », de miscere, « mêler »."],
+  ["arts",5,"quilisma","/kilisma/","nm","Neume grégorien en dents de scie notant une note légère et comme frémissante, qu’on aborde en allongeant celle qui la précède.","Du grec kulisma, « roulement », de kuliein, « rouler »."],
+
+  // ── Société & Droit (suite) ──
+  ["society",1,"chancellerie","/ʃɑ̃sɛlʁi/","nf","Service qui rédige, scelle et conserve les actes d’une autorité — souverain, ambassade, ordre — et, en France, l’administration centrale du ministère de la Justice.","Du latin cancellarius, « huissier posté devant les cancelli », les barreaux séparant le tribunal du public."],
+  ["society",1,"concussion","/kɔ̃kysjɔ̃/","nf","Perception par un agent public de sommes qu’il sait n’être pas dues, ou refus de percevoir celles qui le sont.","Du latin concussio, « secousse, extorsion », de concutere, « ébranler »."],
+  ["society",1,"doléance","/dɔleɑ̃s/","nf","Plainte adressée à une autorité pour dénoncer un abus ou réclamer réparation, le mot restant attaché aux cahiers de doléances rédigés pour les états généraux de 1789.","De l’ancien français doloir, « souffrir, se plaindre », du latin dolere, « éprouver de la douleur »."],
+  ["society",1,"édile","/edil/","nm","Magistrat romain chargé de la voirie, des marchés et des jeux, et, par extension journalistique, élu municipal responsable de l’aménagement de la cité.","Du latin aedilis, « préposé aux édifices », de aedes, « temple, bâtiment »."],
+  ["society",1,"manant","/manɑ̃/","nm","Roturier fixé dans une seigneurie et soumis à ses charges, le mot ayant glissé vers l’injure désignant un rustre sans manières.","Participe présent de l’ancien verbe manoir, « demeurer », du latin manere, « rester »."],
+  ["society",1,"quorum","/kɔʁɔm/","nm","Nombre minimal de membres présents sans lequel une assemblée ne peut valablement délibérer ni voter.","Du latin quorum, « desquels », premier mot de la formule désignant les commissaires dont la présence était requise."],
+  ["society",1,"roture","/ʁɔtyʁ/","nf","Condition de celui qui n’appartient pas à la noblesse et, à l’origine, tenure paysanne concédée contre redevance annuelle.","Du latin médiéval ruptura, « terre rompue, défrichée », de rumpere, « rompre »."],
+  ["society",1,"servage","/sɛʁvaʒ/","nm","Condition du serf, attaché héréditairement à la terre qu’il cultive et soumis aux redevances et à la justice du seigneur, sans être pour autant la chose de celui-ci.","De serf, du latin servus, « esclave »."],
+  ["society",2,"contumace","/kɔ̃tymas/","nf","État de l’accusé qui, régulièrement cité devant une juridiction criminelle, refuse de comparaître, et procédure suivie hors sa présence; « condamné par contumace ».","Du latin contumacia, « obstination, refus de se soumettre », de contumax, « rebelle »."],
+  ["society",2,"débouter","/debute/","v","Rejeter par jugement la demande d’un plaideur, qui perd ainsi son procès sans que le fond lui soit nécessairement défavorable; « la cour l’a débouté de ses prétentions ».","De l’ancien français bouter, « pousser, chasser », du francique *bôtan, « frapper »."],
+  ["society",2,"échevin","/eʃvɛ̃/","nm","Magistrat municipal de l’Ancien Régime siégeant auprès du maire pour la police et la justice de la ville, titre encore porté par les adjoints communaux en Belgique.","Du francique *skabin, « juge, assesseur », latinisé en scabinus."],
+  ["society",2,"forfaiture","/fɔʁfɛtyʁ/","nf","Crime de l’officier public qui trahit gravement les devoirs de sa charge; au sens féodal, manquement du vassal à la foi jurée.","De l’ancien français forfaire, « agir hors de la règle », de fors, « en dehors » (latin foris), et faire."],
+  ["society",2,"nonobstant","/nɔnɔpstɑ̃/","adv","Sans que cela fasse obstacle: marque qu’une règle s’applique en dépit de ce qui vient d’être posé; « nonobstant toute clause contraire ».","De non et de obstant, participe présent du latin obstare, « se tenir devant, faire obstacle »."],
+  ["society",2,"prétoire","/pʁetwaʁ/","nm","Salle où siège le tribunal, prise comme le lieu même du procès et de l’éloquence judiciaire.","Du latin praetorium, « tente du général, siège du préteur », de praetor, « magistrat qui dit le droit »."],
+  ["society",2,"prévôt","/pʁevo/","nm","Officier seigneurial ou royal exerçant la justice et la police d’un ressort, appellation conservée par la gendarmerie aux armées.","Du latin praepositus, « placé à la tête, préposé »."],
+  ["society",2,"vindicte","/vɛ̃dikt/","nf","Poursuite et punition des crimes exercées au nom du corps social, presque toujours dans la formule « vouer quelqu’un à la vindicte publique ».","Du latin vindicta, « vengeance, châtiment », de vindex, « celui qui revendique en justice »."],
+  ["society",3,"aînesse","/ɛnɛs/","nf","Priorité que la coutume reconnaît au premier-né dans une succession, et notamment la part accrue ou le fief entier qui lui échoit au détriment des cadets.","De aîné, du latin populaire ante natus, « né avant »."],
+  ["society",3,"forclusion","/fɔʁklyzjɔ̃/","nf","Extinction du droit d’agir en justice faute d’avoir accompli l’acte dans le délai imparti, qui frappe le plaideur négligent sans que le fond soit jamais examiné.","De forclore, du latin foris, « dehors », et claudere, « fermer »."],
+  ["society",3,"gabelle","/gabɛl/","nf","Impôt sur le sel de l’Ancien Régime, dont le taux inégal selon les provinces nourrit la contrebande du faux-saunage et une haine tenace de la fiscalité royale.","De l’italien gabella, « taxe », de l’arabe qabāla, « redevance, contrat de fermage »."],
+  ["society",3,"ordalie","/ɔʁdali/","nf","Épreuve judiciaire du feu, de l’eau ou du duel par laquelle le haut Moyen Âge demandait à Dieu de désigner le coupable.","Du latin médiéval ordalium, emprunté au vieil anglais ordāl, « jugement »."],
+  ["society",3,"patriciat","/patʁisja/","nm","Ensemble des familles patriciennes qui monopolisaient les magistratures et les sacerdoces à Rome, et, par transposition, oligarchie héréditaire d’une cité marchande.","Du latin patricius, « qui descend des pères », de pater, « père »."],
+  ["society",3,"rescrit","/ʁɛskʁi/","nm","Réponse écrite d’une autorité — empereur romain, pape, administration fiscale — à une question portant sur un cas particulier, et qui vaut décision opposable.","Du latin rescriptum, « écrit en réponse », de rescribere, « répondre par écrit »."],
+  ["society",3,"surseoir","/syʁswaʁ/","v","Différer l’exécution d’une mesure ou la marche d’une instance jusqu’à un événement attendu; « surseoir à statuer dans l’attente de l’expertise ».","Du latin supersedere, « s’asseoir au-dessus », d’où « s’abstenir de, renoncer à »."],
+  ["society",3,"synallagmatique","/sinalagmatik/","adj","Qualifie le contrat dont les obligations sont réciproques, chaque partie étant à la fois créancière et débitrice de l’autre — la vente, non la donation.","Du grec ancien sunallagma, « échange, convention », de sun-, « avec », et allassein, « échanger »."],
+  ["society",4,"chirographaire","/kiʁɔgʁafɛʁ/","adj","Qualifie le créancier dépourvu de toute sûreté, dont le droit ne repose que sur un écrit et qui vient au dernier rang dans la distribution du prix.","Du grec ancien kheirographon, « écrit de la main », de kheir, « main », et graphein, « écrire »."],
+  ["society",4,"emphytéose","/ɑ̃fiteoz/","nf","Bail de très longue durée — dix-huit à quatre-vingt-dix-neuf ans — qui confère au preneur un droit réel sur le fonds, à charge de l’améliorer contre une redevance modique.","Du grec ancien emphuteusis, « action de planter dans », de phuteuein, « planter »."],
+  ["society",4,"exequatur","/ɛgzekwatyʁ/","nm","Décision par laquelle un juge confère force exécutoire sur son territoire à un jugement étranger ou à une sentence arbitrale.","Du latin exequatur, « qu’il exécute », subjonctif de exsequi, « poursuivre jusqu’au bout »."],
+  ["society",4,"intuitu personae","/ɛ̃tɥity pɛʁsɔne/","phr","En considération de la personne: marque le contrat dont l’identité du cocontractant est la cause déterminante, d’où son incessibilité et son extinction par le décès.","Locution latine, « en considération de la personne », de intuitus, « regard porté sur »."],
+  ["society",4,"potestatif","/pɔtɛstatif/","adj","Qualifie la condition dont la réalisation dépend de la seule volonté de celui qui s’oblige, et que le droit frappe de nullité parce qu’elle vide l’engagement de sa substance.","Du latin potestas, « pouvoir, faculté de disposer »."],
+  ["society",4,"prévariquer","/pʁevaʁike/","v","Manquer sciemment, par intérêt ou par faveur, aux devoirs de la charge publique dont on est investi.","Du latin praevaricari, « marcher de travers », d’où « s’entendre avec l’adversaire, trahir sa fonction »."],
+  ["society",4,"usucapion","/yzykapjɔ̃/","nf","Acquisition de la propriété par une possession paisible, publique et continue prolongée pendant le délai que fixe la loi.","Du latin usucapio, de usu capere, « prendre par l’usage »."],
+  ["society",5,"adirer","/adiʁe/","v","Égarer une pièce ou un titre au cours d’une procédure; ne survit guère qu’au participe passé, « un acte adiré », qu’il faut alors faire reconstituer.","De l’ancien français estre a dire, « faire défaut, manquer »."],
+  ["society",5,"anatocisme","/anatɔsism/","nm","Capitalisation des intérêts échus qui, joints au capital, produisent à leur tour intérêt — pratique que la loi n’autorise qu’à des conditions strictes de délai et d’accord écrit.","Du grec ancien anatokismos, de ana-, « de nouveau », et tokos, « intérêt, produit de l’argent »."],
+  ["society",5,"antichrèse","/ɑ̃tikʁɛz/","nf","Sûreté par laquelle le débiteur remet un immeuble à son créancier, qui en perçoit les fruits et les impute sur les intérêts puis sur le capital de la dette.","Du grec ancien antikhrêsis, « usage en retour », de anti, « en échange de », et khrêsis, « usage »."],
+  ["society",5,"atimie","/atimi/","nf","À Athènes, déchéance des droits civiques frappant le débiteur du trésor ou le citoyen déshonoré, qui perdait l’accès aux tribunaux, à l’assemblée et aux sanctuaires.","Du grec ancien atimia, « privation d’honneur », de a- privatif et timê, « honneur, considération »."],
+  ["society",5,"estoppel","/ɛstɔpɛl/","nm","Principe interdisant à une partie de se contredire au détriment d’autrui après avoir créé chez lui une attente légitime, invoqué en arbitrage et en droit international.","De l’anglais estoppel, lui-même de l’ancien français estoupail, « bouchon, ce qui obstrue », de estouper, « boucher »."],
+  ["society",5,"pollicitation","/pɔlisitasjɔ̃/","nf","Offre de contracter déjà émise mais non encore acceptée, qui lie son auteur au moins par l’interdiction de la retirer abusivement.","Du latin pollicitatio, « promesse spontanée », de polliceri, « promettre »."],
+  ["society",5,"stellionat","/stɛljɔna/","nm","Escroquerie de celui qui vend ou hypothèque un immeuble qu’il sait ne pas lui appartenir, ou qui en dissimule les charges à l’acquéreur.","Du latin stellionatus, de stellio, « lézard tacheté », animal réputé pour sa fourberie."],
+
+  // ── Nombre & Systèmes (suite) ──
+  ["systems",1,"abaque","/abak/","nm","Table à jetons ou à tringles sur laquelle on pose les opérations en déplaçant des pièces; par extension, tout graphique gradué qui livre un résultat par simple lecture, sans calcul.","Du latin abacus, lui-même du grec ancien abax, « planche, tablette à calcul »."],
+  ["systems",1,"aléa","/alea/","nm","Part d’incertitude irréductible attachée à un événement dont l’issue dépend du hasard, que le calcul des probabilités quantifie sans jamais la supprimer.","Du latin alea, « jeu de dés, hasard »."],
+  ["systems",1,"entropie","/ɑ̃tʁɔpi/","nf","Mesure du désordre d’un système ou, chez Shannon, de l’incertitude moyenne d’une source d’information, exprimée en bits par symbole émis.","De l’allemand Entropie, forgé par Clausius sur le grec ancien entropê, « retour, transformation »."],
+  ["systems",1,"logarithme","/lɔɡaʁitm/","nm","Exposant auquel il faut élever une base fixe pour obtenir un nombre donné, artifice qui convertit les produits en sommes et fonde la règle à calcul.","Forgé par Napier sur le grec ancien logos, « rapport », et arithmos, « nombre »."],
+  ["systems",1,"myriade","/miʁjad/","nf","Quantité si nombreuse qu’on renonce à la compter — « une myriade d’étoiles » — le mot désignant d’abord, en métrologie grecque, le groupement exact de dix mille unités.","Du grec ancien murias, muriados, « dizaine de milliers »."],
+  ["systems",1,"parité","/paʁite/","nf","Caractère pair ou impair d’un entier; en transmission de données, bit surnuméraire ajouté pour rendre paire la somme des bits et déceler ainsi une altération du message.","Du latin paritas, « égalité », de par, « égal »."],
+  ["systems",1,"réciproque","/ʁesipʁɔk/","nf","Proposition obtenue en échangeant l’hypothèse et la conclusion d’un théorème, et dont la vérité n’est nullement garantie par celle de l’énoncé direct: « la réciproque est fausse ».","Du latin reciprocus, « qui va en arrière et en avant, alternatif »."],
+  ["systems",1,"rétroaction","/ʁetʁoaksjɔ̃/","nf","Réinjection de la sortie d’un système dans son entrée, soit pour amplifier l’écart et emballer le régime, soit pour le corriger et le stabiliser.","Du latin retro, « en arrière », et action; calque de l’anglais feedback."],
+  ["systems",2,"arborescence","/aʁbɔʁesɑ̃s/","nf","Structure hiérarchique où tout élément, hormis la racine unique, relève d’un seul parent, ce qui interdit tout cycle entre les nœuds.","Du latin arborescere, « devenir arbre », de arbor, « arbre »."],
+  ["systems",2,"commutatif","/kɔmytatif/","adj","Qualifie une opération dont le résultat est insensible à l’ordre des opérandes, propriété que perdent la soustraction, le produit matriciel et la composition de fonctions.","Du latin commutare, « échanger, changer complètement »."],
+  ["systems",2,"congruence","/kɔ̃ɡʁyɑ̃s/","nf","Relation entre deux entiers qui laissent le même reste dans la division par un module donné: « 17 et 3 sont congrus modulo 7 ».","Du latin congruentia, « accord, convenance », de congruere, « coïncider »."],
+  ["systems",2,"corollaire","/kɔʁɔlɛʁ/","nm","Proposition qui découle immédiatement d’un théorème déjà établi et n’exige donc pas de démonstration propre.","Du latin corollarium, « petite couronne offerte en gratification, supplément », de corolla."],
+  ["systems",2,"cybernétique","/sibɛʁnetik/","nf","Science des systèmes gouvernés par l’information et la boucle de rétroaction, qu’ils soient machines, organismes ou institutions.","Du grec ancien kubernêtikê tekhnê, « art de piloter un navire »."],
+  ["systems",2,"dénombrable","/denɔ̃bʁabl/","adj","Qualifie un ensemble infini dont les éléments s’énumèrent un à un en correspondance biunivoque avec les entiers naturels: les rationnels le sont, les réels non.","De dénombrer, du latin numerare, « compter », sur numerus, « nombre »."],
+  ["systems",2,"scalaire","/skalɛʁ/","nm","Grandeur entièrement décrite par un seul nombre, sans direction, et par laquelle on multiplie un vecteur sans changer sa droite support.","Du latin scalaris, « en forme d’échelle », de scala, « échelle », par l’anglais scalar."],
+  ["systems",2,"transcendant","/tʁɑ̃sɑ̃dɑ̃/","adj","Qualifie un nombre qui n’est racine d’aucun polynôme à coefficients entiers, tels pi et e — cas de presque tous les réels, bien qu’on en démontre fort peu.","Du latin transcendere, « franchir, dépasser »."],
+  ["systems",3,"homéostasie","/ɔmeɔstazi/","nf","Maintien actif des constantes internes d’un système autour d’un point d’équilibre, obtenu par un jeu de rétroactions correctrices.","Du grec ancien homoios, « semblable », et stasis, « position stable »."],
+  ["systems",3,"involution","/ɛ̃vɔlysjɔ̃/","nf","Transformation qui, appliquée deux fois de suite, restitue l’identité, telle la symétrie centrale ou le passage au conjugué d’un complexe.","Du latin involutio, « enroulement », de involvere, « envelopper »."],
+  ["systems",3,"lemme","/lɛm/","nm","Proposition auxiliaire démontrée dans le seul but de servir la preuve d’un théorème, et qu’il arrive de voir survivre à celui qu’elle devait soutenir.","Du grec ancien lêmma, « ce que l’on prend, prémisse admise », de lambanein, « prendre »."],
+  ["systems",3,"numéraire","/nymeʁɛʁ/","nm","Bien pris pour étalon dans lequel s’expriment tous les prix d’un système économique, et dont le prix vaut un par construction.","Du bas latin numerarius, « qui concerne les nombres, comptable », de numerus."],
+  ["systems",3,"quantile","/kɑ̃til/","nm","Valeur qui découpe une distribution en tranches d’effectifs égaux, dont la médiane, les quartiles et les centiles ne sont que des cas particuliers.","Du latin quantus, « combien grand », par l’anglais quantile, sur le modèle de percentile."],
+  ["systems",3,"sexagésimal","/sɛɡzaʒezimal/","adj","Qui compte par soixante, à la manière des scribes babyloniens dont ce système survit dans la division de l’heure, de la minute et du degré.","Du latin sexagesimus, « soixantième », de sexaginta, « soixante »."],
+  ["systems",3,"transfini","/tʁɑ̃sfini/","adj","Qualifie les ordinaux et cardinaux qui excèdent tout entier fini, degrés d’infini que Cantor a rendus comparables et calculables.","De l’allemand transfinit, forgé par Cantor sur le latin trans, « au-delà », et finis, « limite »."],
+  ["systems",4,"aleph","/alɛf/","nm","Lettre initiale de l’alphabet hébreu dont Cantor a fait le symbole des cardinaux infinis, l’aleph-zéro mesurant la taille de l’ensemble des entiers naturels.","De l’hébreu aleph, « bœuf », nom de la première lettre de l’alphabet."],
+  ["systems",4,"aliquote","/alikɔt/","adj","Qualifie la partie d’une grandeur qui y est contenue un nombre entier de fois, comme le tiers dans l’unité, par opposition à la partie aliquante qui laisse un reste.","Du latin aliquot, « un certain nombre de, quelques »."],
+  ["systems",4,"chiliade","/kiljad/","nf","Groupe de mille unités ou période de mille ans, unité de découpage des grandes séries dans l’arithmétique et la chronologie anciennes.","Du grec ancien khilias, khiliados, « millier », de khilioi, « mille »."],
+  ["systems",4,"ergodique","/ɛʁɡɔdik/","adj","Qualifie un système dont la trajectoire explore l’espace des états assez équitablement pour que la moyenne temporelle d’une observable égale sa moyenne d’ensemble.","Du grec ancien ergon, « travail », et hodos, « chemin », terme forgé par Boltzmann."],
+  ["systems",4,"foncteur","/fɔ̃ktœʁ/","nm","Application d’une catégorie dans une autre qui transporte objets et flèches en préservant composition et identités, déplaçant ainsi une structure entière et non ses seuls éléments.","Du latin functio, « accomplissement, exécution », par l’anglais functor."],
+  ["systems",4,"nilpotent","/nilpɔtɑ̃/","adj","Qualifie un élément dont une puissance entière s’annule, telle la matrice triangulaire stricte élevée à sa propre taille.","Du latin nihil, « rien », et potens, « puissant, capable de »."],
+  ["systems",4,"quaternion","/kwatɛʁnjɔ̃/","nm","Nombre hypercomplexe à quatre composantes dont la multiplication, non commutative, encode les rotations de l’espace à trois dimensions sans blocage de cardan.","Du latin quaternio, « groupe de quatre », de quaterni, « quatre par quatre »."],
+  ["systems",5,"algorisme","/alɡɔʁism/","nm","Art médiéval du calcul décimal de position, transmis par les traités arabes et longtemps opposé à l’abacisme des jetons, dont le nom a donné « algorithme ».","Du latin médiéval algorismus, du nom du mathématicien persan al-Khwarizmi."],
+  ["systems",5,"borélien","/bɔʁeljɛ̃/","adj","Qualifie les ensembles engendrés à partir des ouverts par réunions dénombrables et passages au complémentaire, tribu minimale sur laquelle une mesure se laisse définir.","Du nom du mathématicien français Émile Borel, fondateur de la théorie de la mesure."],
+  ["systems",5,"coalgèbre","/koalʒɛbʁ/","nf","Structure duale de l’algèbre, dont la multiplication est renversée en une comultiplication qui décompose au lieu de combiner.","De co- et algèbre, ce dernier de l’arabe al-jabr, « la réduction »."],
+  ["systems",5,"cyclotomique","/siklɔtɔmik/","adj","Relatif à la division du cercle en parts égales, d’où le polynôme dont les racines sont exactement les racines primitives de l’unité d’un ordre donné.","Du grec ancien kuklos, « cercle », et tomê, « coupure, section »."],
+  ["systems",5,"gnomon","/ɡnɔmɔ̃/","nm","Équerre que l’arithmétique grecque ajoutait à un carré figuré pour obtenir le carré suivant, chaque gnomon valant un nombre impair successif — d’où le style dressé du cadran solaire.","Du grec ancien gnômôn, « ce qui fait connaître, indicateur »."],
+  ["systems",5,"mantisse","/mɑ̃tis/","nf","Partie fractionnaire d’un logarithme décimal, seule consignée dans les tables puisque la caractéristique entière se lit d’un coup d’œil; en informatique, champ des chiffres significatifs d’un nombre à virgule flottante, dont dépend toute la précision du calcul.","Du latin mantissa, « surplus, appoint que l’on ajoute au poids », mot d’origine étrusque."],
+  ["systems",5,"matroïde","/matʁɔid/","nm","Structure combinatoire axiomatisant la notion d’indépendance commune aux familles de vecteurs et aux forêts d’un graphe, par la seule donnée de ses parties indépendantes.","De matrice et du suffixe -oïde, du grec ancien eidos, « forme »."],
 ];
 
 // ── model ───────────────────────────────────────────────────────────────────
@@ -806,7 +1169,9 @@ const levelOf = (n) => ({ n, roman: ROMAN[n - 1], ...T().levels[n - 1] });
 const posName = (code) => T().pos[code] || code;
 
 const load = () => {
-  const fromUrl = new URLSearchParams(location.search).get("lang");
+  const params = new URLSearchParams(location.search);
+  state.linked = params.get("w");
+  const fromUrl = params.get("lang");
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(STORE) || "{}"); } catch { /* corrupt entry means defaults */ }
   // The URL wins over the remembered choice, so a shared link opens in the
@@ -849,6 +1214,11 @@ const paintLanguage = () => {
   $("noDomains").textContent = t.none;
   $("next").textContent = t.next;
   $("dl").textContent = t.download;
+  $("share").textContent = t.share;
+  $("sheetTitle").textContent = t.shareTitle;
+  $("copyLink").textContent = t.copyLink;
+  $("copyImage").textContent = t.copyImage;
+  $("sheetNote").textContent = t.shareNote;
   $("hint").innerHTML = t.hint;
   $("footnote").textContent = t.footnote;
   $("theme").setAttribute("aria-label", t.themeLabel);
@@ -871,6 +1241,10 @@ const paintLanguage = () => {
   document.querySelectorAll(".lang").forEach((b) => {
     b.setAttribute("aria-pressed", String(b.dataset.lang === state.lang));
   });
+
+  // Writing an image to the clipboard is not universally supported; offer the
+  // button only where it will actually work.
+  $("copyImage").hidden = typeof ClipboardItem === "undefined" || !(navigator.clipboard && navigator.clipboard.write);
 };
 
 const syncControls = () => {
@@ -897,6 +1271,9 @@ const render = (entry) => {
   const stage = $("stage");
   state.current = entry;
   $("dl").disabled = !entry;
+  $("share").disabled = !entry;
+  // The panel is about the word on screen, so a new draw retires it.
+  closeSheet();
 
   if (!entry) {
     const t = T();
@@ -1113,37 +1490,176 @@ const renderCard = (entry) => {
   return canvas;
 };
 
+// Fold accents before slugifying, or "mémoïsation" would come out gutted.
+// Ligatures do not decompose under NFD, so they must be spelled out first or
+// "synœcisme" would slug to "syn-cisme" and "trompe-l'œil" to "trompe-l-il".
+const slugify = (w) =>
+  w.replace(/œ/g, "oe").replace(/Œ/g, "OE").replace(/æ/g, "ae").replace(/Æ/g, "AE")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase();
+
+// The card is typeset in the same faces as the page, so wait for them.
+const ensureFonts = async () => {
+  if (!document.fonts) return;
+  await Promise.all(["400 62px Newsreader", "italic 400 19px Newsreader", "400 16px Inter", "500 12px Inter"].map((f) => document.fonts.load(f)));
+  await document.fonts.ready;
+};
+
+const cardBlob = async (entry) => {
+  await ensureFonts();
+  return new Promise((resolve) => renderCard(entry).toBlob(resolve, "image/png"));
+};
+
+const cardName = (entry) => `lexicon-${state.lang}-${slugify(entry.word)}.png`;
+
+// A shared link reopens the exact word, in the language it was shared in.
+const shareUrl = (entry) => {
+  const u = new URL(location.href);
+  u.search = "";
+  u.hash = "";
+  u.searchParams.set("lang", state.lang);
+  u.searchParams.set("w", slugify(entry.word));
+  return u.toString();
+};
+
+const shareText = (entry) => {
+  const def = entry.def.length > 160 ? `${entry.def.slice(0, 157)}…` : entry.def;
+  return `${entry.word} ${entry.ipa} — ${def}`;
+};
+
+// Flash a transient label on a button without losing what it said. Restoring
+// early must also cancel the pending timer, or it fires later against an
+// already-cleared `was` and writes "undefined" into the button.
+const unflash = (btn) => {
+  clearTimeout(Number(btn.dataset.timer));
+  if (btn.dataset.was !== undefined) btn.textContent = btn.dataset.was;
+  delete btn.dataset.was;
+  delete btn.dataset.timer;
+};
+
+const flash = (btn, msg, ms = 1400) => {
+  clearTimeout(Number(btn.dataset.timer));
+  if (btn.dataset.was === undefined) btn.dataset.was = btn.textContent;
+  btn.textContent = msg;
+  btn.dataset.timer = String(setTimeout(() => unflash(btn), ms));
+};
+
 const download = async () => {
   const entry = state.current;
   if (!entry) return;
   const t = T();
   const btn = $("dl");
   btn.disabled = true;
-  const was = btn.textContent;
-  btn.textContent = t.drawing;
+  flash(btn, t.drawing, 6000);
   try {
-    // The card is typeset in the same faces as the page, so wait for them.
-    if (document.fonts) {
-      await Promise.all(["400 62px Newsreader", "italic 400 19px Newsreader", "400 16px Inter", "500 12px Inter"].map((f) => document.fonts.load(f)));
-      await document.fonts.ready;
-    }
-    const canvas = renderCard(entry);
-    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    const blob = await cardBlob(entry);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    // Fold accents before slugifying, or "mémoïsation" would come out gutted.
-    const slug = entry.word.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase();
-    a.download = `lexicon-${state.lang}-${slug}.png`;
+    a.download = cardName(entry);
     a.click();
     URL.revokeObjectURL(url);
-    btn.textContent = t.saved;
-    setTimeout(() => { btn.textContent = was; }, 1400);
+    flash(btn, t.saved);
   } catch {
-    btn.textContent = t.failed;
-    setTimeout(() => { btn.textContent = was; }, 1800);
+    flash(btn, t.failed, 1800);
   } finally {
     btn.disabled = false;
+  }
+};
+
+// ── sharing ─────────────────────────────────────────────────────────────────
+// On a phone the native sheet hands the actual PNG to whatever app the reader
+// picks, which is the only route that shares the card itself. Desktop browsers
+// mostly refuse files, so there the panel opens instead and shares a link that
+// reopens the word.
+const SOCIALS = [
+  { key: "x", name: "X", href: (u, t) => `https://x.com/intent/post?text=${encodeURIComponent(t)}&url=${encodeURIComponent(u)}` },
+  { key: "bluesky", name: "Bluesky", href: (u, t) => `https://bsky.app/intent/compose?text=${encodeURIComponent(`${t}\n${u}`)}` },
+  { key: "linkedin", name: "LinkedIn", href: (u) => `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(u)}` },
+  { key: "whatsapp", name: "WhatsApp", href: (u, t) => `https://wa.me/?text=${encodeURIComponent(`${t} ${u}`)}` },
+  { key: "telegram", name: "Telegram", href: (u, t) => `https://t.me/share/url?url=${encodeURIComponent(u)}&text=${encodeURIComponent(t)}` },
+];
+
+const buildSocials = () => {
+  $("socials").innerHTML = SOCIALS.map(
+    (s) => `<a class="sheet__b" data-social="${s.key}" target="_blank" rel="noopener noreferrer">${s.name}</a>`,
+  ).join("");
+};
+
+const closeSheet = () => {
+  const sheet = $("sheet");
+  if (sheet.hidden) return;
+  sheet.hidden = true;
+  $("share").setAttribute("aria-expanded", "false");
+};
+
+const openSheet = () => {
+  const entry = state.current;
+  if (!entry) return;
+  const url = shareUrl(entry);
+  const text = shareText(entry);
+  document.querySelectorAll("[data-social]").forEach((a) => {
+    const s = SOCIALS.find((x) => x.key === a.dataset.social);
+    a.href = s.href(url, text);
+    a.setAttribute("aria-label", T().shareOn(s.name));
+  });
+  $("sheet").hidden = false;
+  $("share").setAttribute("aria-expanded", "true");
+  $("copyLink").focus();
+};
+
+const share = async () => {
+  const entry = state.current;
+  if (!entry) return;
+  const t = T();
+  const btn = $("share");
+  if (!$("sheet").hidden) return closeSheet();
+
+  // Only build the file when the browser will actually take one.
+  if (navigator.canShare) {
+    btn.disabled = true;
+    flash(btn, t.drawing, 6000);
+    try {
+      const file = new File([await cardBlob(entry)], cardName(entry), { type: "image/png" });
+      if (navigator.canShare({ files: [file] })) {
+        const payload = { files: [file], title: `Lexicon — ${entry.word}`, text: shareText(entry) };
+        try {
+          await navigator.share({ ...payload, url: shareUrl(entry) });
+        } catch (err) {
+          if (err && err.name === "AbortError") return;
+          // Some engines reject files alongside url; the file is the point, so drop the url.
+          await navigator.share(payload);
+        }
+        return;
+      }
+    } catch (err) {
+      if (err && err.name === "AbortError") return;
+    } finally {
+      btn.disabled = false;
+      unflash(btn);
+    }
+  }
+  openSheet();
+};
+
+const copyLink = async () => {
+  if (!state.current) return;
+  try {
+    await navigator.clipboard.writeText(shareUrl(state.current));
+    flash($("copyLink"), T().copied);
+  } catch {
+    flash($("copyLink"), T().failed, 1800);
+  }
+};
+
+const copyImage = async () => {
+  if (!state.current) return;
+  const btn = $("copyImage");
+  try {
+    const blob = await cardBlob(state.current);
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    flash(btn, T().copied);
+  } catch {
+    flash(btn, T().failed, 1800);
   }
 };
 
@@ -1173,9 +1689,27 @@ const setLang = (lang) => {
 };
 
 load();
+buildSocials();
 paintLanguage();
+
+// A shared link opens on its word — and moves the level and domain to match, so
+// the controls describe what is actually on screen rather than contradicting it.
+const openLinked = () => {
+  if (!state.linked) return false;
+  const entry = entries().find((e) => slugify(e.word) === state.linked);
+  state.linked = null;
+  if (!entry) return false;
+  state.level = entry.level;
+  state.domains.add(entry.domain);
+  seen = new Set([entry.id]);
+  syncControls();
+  save();
+  render(entry);
+  return true;
+};
+
 syncControls();
-draw();
+if (!openLinked()) draw();
 
 $("langs").addEventListener("click", (e) => {
   const btn = e.target.closest(".lang");
@@ -1220,6 +1754,17 @@ $("noDomains").addEventListener("click", () => setAll(false));
 
 $("next").addEventListener("click", draw);
 $("dl").addEventListener("click", download);
+$("share").addEventListener("click", share);
+$("copyLink").addEventListener("click", copyLink);
+$("copyImage").addEventListener("click", copyImage);
+
+// The panel describes the word currently on screen, so drawing a new one closes it.
+document.addEventListener("click", (e) => {
+  if (!$("sheet").hidden && !e.target.closest("#sheet, #share")) closeSheet();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$("sheet").hidden) { closeSheet(); $("share").focus(); }
+});
 
 $("theme").addEventListener("click", () => {
   const dark = matchMedia("(prefers-color-scheme: dark)").matches;
@@ -1233,6 +1778,7 @@ document.addEventListener("keydown", (e) => {
   if (e.target.closest("button, input, textarea, select")) return;
   if (e.key === " " || e.key === "Enter") { e.preventDefault(); draw(); }
   if (e.key.toLowerCase() === "d") { e.preventDefault(); download(); }
+  if (e.key.toLowerCase() === "s") { e.preventDefault(); share(); }
   if (e.key.toLowerCase() === "l") { e.preventDefault(); setLang(state.lang === "en" ? "fr" : "en"); }
 });
 </script>
