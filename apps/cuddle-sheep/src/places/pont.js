@@ -293,7 +293,9 @@ const buildWorld = () => {
   }
 
   // the road on, out of the far corner of the right ledge
-  ways.out = edges(scene, place, isoY(4.5, 2.5, LEDGE), go, exit);
+  // exits are declared per place because the ground is not the same shape twice:
+  // two ledges, nothing in the middle
+  ways.out = edges(scene, place, { z: LEDGE, west: [0.9, 3.0], east: [8.6, 2.5], home: [8.0, 5.4] }, go, exit);
   ways.out.sync();
 };
 

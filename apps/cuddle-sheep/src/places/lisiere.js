@@ -181,7 +181,9 @@ const buildWorld = () => {
     if (e.key === " " || e.key === "Enter") { e.preventDefault(); touchDog(); }
   });
 
-  ways.out = edges(scene, place, isoY(4.5, 2.5, GROUND), go, exit);
+  // exits are declared per place because the ground is not the same shape twice:
+  // ground -1.2..10.2 x -1.6..5.8
+  ways.out = edges(scene, place, { z: GROUND, west: [-0.1, 4.2], east: [9.1, 4.2], home: [2.0, 5.2] }, go, exit);
   ways.out.sync();
 };
 

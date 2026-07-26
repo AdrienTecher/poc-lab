@@ -250,7 +250,10 @@ const buildWorld = () => {
   }
 
   // the barn door, and the road back to the river
-  ways.out = edges(scene, place, isoY(4.5, 2.5, FLOOR), go, exit);
+  // exits are declared per place because the ground is not the same shape twice:
+  // floor -0.6..8.8 x -0.6..4.8, and clear of the three post tap targets,
+  // which are 92 units wide at isoX 385, 569 and 753 and sit IN FRONT of these
+  ways.out = edges(scene, place, { z: FLOOR, west: [0.4, 4.3], east: [7.7, 2.4], home: [4.2, 4.3] }, go, exit);
   ways.out.sync();
 };
 

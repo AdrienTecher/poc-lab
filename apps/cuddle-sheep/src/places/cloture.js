@@ -133,7 +133,9 @@ const buildWorld = () => {
     });
   }
 
-  ways.out = edges(scene, place, isoY(4.5, 2.5, GROUND), go, exit);
+  // exits are declared per place because the ground is not the same shape twice:
+  // field -1.2..9.4 x -1.4..5.8
+  ways.out = edges(scene, place, { z: GROUND, west: [-0.1, 3.6], east: [8.3, 3.6], home: [1.8, 5.2] }, go, exit);
   ways.out.sync();
 };
 

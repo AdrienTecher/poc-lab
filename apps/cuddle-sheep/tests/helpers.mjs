@@ -113,10 +113,11 @@ export const geometryIssues = (page) => page.evaluate(() => {
       } else if (!document.elementFromPoint(cx, cy)?.closest(".edge")) {
         issues.push(`the "${name}" edge is covered by something`);
       }
-      // Reachable is not the same as tappable. A diorama is letterboxed to fit, so
-      // at 320px the projection scale is ~0.44 and these drew at 18px — hittable by
-      // a mouse, not by a thumb. They counter-scale for it now; this is the number
-      // that says so, rather than trusting that they do.
+      // Reachable is not the same as tappable. A diorama is letterboxed to fit, so at
+      // 320px the projection is ~0.44 — an early version of these drew at 18px, which
+      // a mouse can hit and a thumb cannot. A floor marker cannot counter-scale for
+      // that without breaking the perspective it is drawn in, so the target is an
+      // oversized invisible rect instead. This is the number that says it worked.
       if (Math.min(r.width, r.height) < 38) {
         issues.push(`the "${name}" edge is only ${Math.round(Math.min(r.width, r.height))}px across`);
       }

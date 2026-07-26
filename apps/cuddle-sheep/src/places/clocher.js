@@ -182,7 +182,10 @@ const buildWorld = () => {
     layers.add(bell, () => gx + ROW_GY, `bell-${id}`);
   }
 
-  ways.out = edges(scene, place, isoY(4.5, 2.5, FLOOR), go, exit);
+  // exits are declared per place because the ground is not the same shape twice:
+  // floor -0.6..7.6 x -0.6..4.4 — shallow, so these are not on one row: two on the
+  // left would overlap, and the rope tap targets run across the back
+  ways.out = edges(scene, place, { z: FLOOR, west: [0.3, 3.0], east: [6.9, 2.8], home: [4.4, 4.0] }, go, exit);
   ways.out.sync();
 };
 

@@ -169,7 +169,9 @@ const buildWorld = () => {
   bindBoat();
 
   // the road east, out of the far corner of the right bank
-  ways.out = edges(scene, place, isoY(4.5, 2.5, 1), go, exit);
+  // exits are declared per place because the ground is not the same shape twice:
+  // banks are gx 0..3 and 6..9, gy 0..5 — and the left one is crowded with slots
+  ways.out = edges(scene, place, { z: 1, west: [1.9, 4.0], east: [7.8, 1.8], home: [8.3, 4.0] }, go, exit);
   ways.out.sync();
 };
 

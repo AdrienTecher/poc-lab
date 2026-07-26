@@ -143,6 +143,15 @@
     --cloture-glass:   color-mix(in oklab, #7d94a6 calc(var(--m) * 100%), #5f6266);
     --cloture-flame:   #ffd071;
 
+    /* the ways out — flagstones set into the ground of every place, so they are one
+       material rather than six, and warm with his mood like the rest of the world.
+       Worn PALER than the slab, because the part of a stone that gets walked on is
+       the part that stays swept. The rim is not here: it is a translucent shadow, so
+       it darkens whatever ground it lies on rather than naming a colour. */
+    --edge-stone: color-mix(in oklab, #b6ada0 calc(var(--m) * 100%), #8a878b);
+    --edge-worn:  color-mix(in oklab, #d6cfc3 calc(var(--m) * 100%), #a5a2a6);
+    --edge-cut:   color-mix(in oklab, #6f665a calc(var(--m) * 100%), #555356);
+
     /* le chien — global rather than per-place, because he IS one animal: the dog
        in the grass and the dog on the perch read from these same three. */
     --chien-coat:   color-mix(in oklab, #4a4f63 calc(var(--m) * 100%), #4b4a50);
@@ -553,72 +562,33 @@
   .gate__halo{opacity:0}
   .gate.reveal .gate__halo{animation:halo .9s ease-out}
 
-  /* The way out is the border of the frame — the Dofus answer, and the one this
-     filmstrip was already shaped for. A chevron where the road continues, a second
-     fainter one behind it so it reads as a direction rather than as a button, and
-     the destination's name only once you look at it: six names shouting from the
-     edges of every frame is the clutter the signpost was already close to. */
+  /* The way out of a place is a threshold laid into its ground — the Dofus answer,
+     drawn as part of the landscape instead of as chrome over it. An earlier pass put
+     frosted-glass cartouches at the frame's borders, which was the HUD's material
+     floating in world space: exactly the panel this game had decided against. So:
+     flagstones, worn pale down the middle, mossy at the rim, with a chevron of three
+     smaller stones let into the slab. Nothing here is translucent and nothing blurs.
+
+     Hover and focus WARM the stone rather than lifting it, because a paving slab
+     that rises when you look at it is a button again. */
   html[data-place] .edge{pointer-events:auto; cursor:pointer}
   .edge{outline:none}
-  .edge__lean{transition:transform .24s cubic-bezier(.2,1.7,.4,1)}
-  .edge__pad{
-    fill:rgba(255,255,255,.16); stroke:rgba(255,255,255,.3); stroke-width:1.4;
-    transition:fill .22s;
-  }
-  .edge__arrow{fill:#fff}
-  .edge__trail{fill:#fff; opacity:.34}
+  .edge__slab, .edge__worn, .edge__mark{transition:fill .25s, opacity .25s}
+  .edge__mark{opacity:.85}
+  .edge:hover .edge__worn, .edge:focus-visible .edge__worn{fill:#fff8e6}
+  .edge:hover .edge__mark, .edge:focus-visible .edge__mark{opacity:1}
+  .edge:focus-visible .edge__slab{stroke:#fff; stroke-width:2}
+  /* the chevron breathes, so a way out is never quite still — the one bit of motion,
+     and it is on the marks rather than on the stone they are set into */
+  .edge__mark{animation:edge-beckon 2.8s ease-in-out infinite}
+  .edge__mark:nth-child(2){animation-delay:.22s}
+  @keyframes edge-beckon{0%,100%{opacity:.55}50%{opacity:1}}
   .edge__name{
     fill:#fff; font-weight:500; letter-spacing:.01em; pointer-events:none;
     opacity:0; transition:opacity .22s;
-    paint-order:stroke; stroke:rgba(38,44,56,.45); stroke-width:3.4; stroke-linejoin:round;
+    paint-order:stroke; stroke:rgba(38,44,56,.5); stroke-width:3.6; stroke-linejoin:round;
   }
   .edge:hover + .edge__name, .edge:focus-visible + .edge__name{opacity:1}
-  .edge:hover .edge__pad, .edge:focus-visible .edge__pad{fill:rgba(255,255,255,.34)}
-  /* the nudge outward is the whole invitation: it leans the way it will take you */
-  .edge[data-dir="1"]:hover .edge__lean,
-  .edge[data-dir="1"]:focus-visible .edge__lean{transform:translateX(5px)}
-  .edge[data-dir="-1"]:hover .edge__lean,
-  .edge[data-dir="-1"]:focus-visible .edge__lean{transform:translateX(-5px)}
-  .edge[data-dir="0"]:hover .edge__lean,
-  .edge[data-dir="0"]:focus-visible .edge__lean{transform:translateY(5px)}
-  /* and a slow drift at rest, so an edge that leads somewhere is never quite still */
-  .edge__trail{animation:edge-drift 2.6s ease-in-out infinite}
-  @keyframes edge-drift{0%,100%{opacity:.16}50%{opacity:.5}}
-
-  /* le pont: who is coming along is shown on the walkers themselves rather than
-     in the bar, because the bar has no room and the flock is right there. */
-  html[data-place] .walker:not([disabled]), html[data-place] .lantern{pointer-events:auto; cursor:pointer}
-  .walker{outline:none; transition:filter .25s}
-  .walker[disabled]{cursor:default; pointer-events:none; filter:saturate(.55) brightness(.82)}
-  .walker:hover:not([disabled]), .walker:focus-visible{filter:drop-shadow(0 0 7px #fff)}
-  /* chosen reads as lit BY the lantern — the light is the mechanic, so the light
-     is the feedback, and it works the same on him as on a lamb */
-  .walker.chosen{filter:drop-shadow(0 0 10px var(--pont-lamp)) drop-shadow(0 0 22px var(--pont-lamp))}
-  .walker__tag{transform-box:fill-box; transform-origin:50% 0; animation:tagswing 3.6s ease-in-out infinite}
-  @keyframes tagswing{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
-  html[data-mode="bridge"] .stage.chosen{filter:drop-shadow(0 0 12px var(--pont-lamp))}
-  .lantern{outline:none; transform-box:fill-box}
-  .lantern > *{transform-origin:50% 0}
-  .lantern__glow{transform-box:fill-box; transform-origin:50% 50%; animation:flicker 2.4s ease-in-out infinite}
-  @keyframes flicker{0%,100%{transform:scale(1)}42%{transform:scale(1.09)}68%{transform:scale(.96)}}
-  .lantern.ready{animation:lampcall 2.2s ease-in-out infinite}
-  @keyframes lampcall{0%,100%{filter:none}50%{filter:drop-shadow(0 0 12px var(--pont-lamp))}}
-  .lantern:hover, .lantern:focus-visible{filter:drop-shadow(0 0 10px #fff)}
-
-  /* le clocher: the rope is the target, because a bell up a tower is out of reach
-     and bringing it down to you is the entire point of a bell rope. */
-  html[data-place] .rope:not([disabled]){pointer-events:auto; cursor:pointer}
-  .rope{outline:none}
-  .rope[disabled]{cursor:default; pointer-events:none}
-  .rope__cord, .rope__grip{transition:filter .2s}
-  .rope:hover .rope__cord, .rope:focus-visible .rope__cord,
-  .rope:hover .rope__grip, .rope:focus-visible .rope__grip{filter:drop-shadow(0 0 6px #fff)}
-  /* a ringing bell is lit, not scaled: bronze catching the light through the arch */
-  .bell{transition:filter .28s}
-  .bell.lit{filter:drop-shadow(0 0 9px var(--clocher-bell-l))}
-  /* and the moment of the strike gets its own flash, so a phrase that rings the
-     same bell twice reads as two strikes rather than one long swing */
-  .bell.struck{filter:drop-shadow(0 0 16px var(--clocher-bell-l)) brightness(1.16)}
 
   /* la clôture: lit and unlit have to be legible at a glance and at any mood, so
      the difference is carried by the glass AND the spill on the grass, not by one
@@ -681,7 +651,7 @@
   }
   @media (prefers-reduced-motion: reduce){
     .sun__rays,.blade,.cloudbank .puff,.hint__hand,
-    .walker__tag,.lantern__glow,.lantern.ready{animation:none}
+    .walker__tag,.lantern__glow,.lantern.ready,.edge__mark{animation:none}
   }
   @media (max-width:720px){
     .hud{gap:10px; padding:12px}

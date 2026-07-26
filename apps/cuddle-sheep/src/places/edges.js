@@ -1,88 +1,120 @@
-// The way out of a place: the edges of the frame themselves.
+// The way out of a place: a threshold laid into its ground.
 //
-// This replaces the signpost, and it is the Dofus/Wakfu answer to the same
-// question. A signpost is a thing you read; an edge is a thing you walk off. The
-// valley was already built for it — six places laid out as a filmstrip indexed by
-// `road`, each one frame of a shared coordinate space — so "the next place east"
-// was already a number, not a name. What was missing was that the border of the
-// screen should say so.
+// The Dofus/Wakfu system — you leave by the border of the screen — but drawn as
+// part of the landscape rather than as chrome over it. An earlier pass put frosted
+// glass cartouches at the frame's edges and it was wrong in a way worth recording:
+// they were the HUD's material floating in world space, which is exactly the
+// "navigation is a panel" this game had already decided against.
 //
-// Three markers, at most: onward, back, and home. They sit at the frame's own
-// bounds rather than at a hand-placed tile, so they land in the same place in every
-// diorama and a new place gets them for nothing.
+// So a way out is a THING NOW: flagstones set into the ground at the edge, worn
+// pale where feet have crossed them, with a chevron cut into the slab pointing the
+// way. Flat, in the 2:1 plane, mossy at the rim. The old
+// signpost already had this vocabulary — it stood on `.way__stone` flat quads — so
+// this is the same material with the post taken away.
+//
+// Two things follow from being in the landscape rather than over it:
+//
+//  * It is filed at its OWN depth (gx + gy) instead of in front of everything, so
+//    it is occluded like any other piece. That is what embedded means.
+//  * It cannot counter-scale for thumbs the way the glass version did, because a
+//    floor decal that resizes breaks the perspective it is drawn in. The target is
+//    a generous invisible rect instead: 150x96 user units, which still measures
+//    over 40px on a 320px phone, and nothing visible is distorted.
 //
 // ADJACENCY IS NOT STRICT, and that is deliberate. The two unlock branches open
 // roads 0-2-4 and 1-3-5, so a player who only ever feeds him has la rivière and le
-// pont open with la grange closed BETWEEN them. Strictly adjacent edges would leave
-// that player walled in at the river with nowhere to go. So an edge means "onward,
-// this way" and travel.toward() finds the nearest OPEN place in that direction — a
-// closed place is simply not a stop yet, which is also how it reads.
+// pont open with la grange closed BETWEEN them. Strictly adjacent thresholds would
+// wall that player in at the river. So a threshold means "onward, this way" and
+// travel.toward() finds the nearest OPEN place in that direction — a closed place is
+// simply not a stop yet, which is also how it reads.
 import { el } from "../engine/svg.js";
-import { clamp } from "../engine/math.js";
-import { VB_X, VB_Y, VB_W, VB_H, project } from "../engine/camera.js";
+import { isoX, isoY, pt } from "../engine/iso.js";
 import * as valley from "../world/valley.js";
 import { roster } from "./registry.js";
 
-// Where a marker sits in the frame. Band-local, so identical in every place.
-const MID_Y = VB_Y + VB_H * 0.5;
-const INSET = 40;
-const HOME_AT = [VB_X + VB_W * 0.2, VB_Y + VB_H - 34];
+// Half-extents of the slab, in tiles. Kept modest on purpose: at 1.05 a slab was
+// 178 user units wide on screen, and three of those will not fit on a floor as
+// shallow as le clocher's without overlapping each other. At this size a slab is
+// 140x70, which needs 3.05 tiles of separation. The invisible target does not
+// shrink with it, so nothing about tapping gets harder.
+const HW = 0.78, HD = 0.50;
 
-const PAD = 42;      // the marker's drawn size in user units
-const THUMB = 44;    // ...and the smallest it may ever be on screen, in pixels
-
-/**
- * How much to grow a marker so a thumb can land on it.
- *
- * A diorama is authored in tile space and letterboxed to fit, so on a 320px phone
- * the projection scale is about 0.44 — which drew these at 18px. That is reachable,
- * and the geometry sweep said so, but 18px is not something anybody taps on purpose.
- * The meadow props already solve this shape of problem (scenery.propScale), so the
- * same trick: ask the browser for its own matrix and counter-scale.
- *
- * Never shrinks. On a wide screen 42 units is already comfortably past a thumb, and
- * markers that got smaller as the window grew would be the opposite of the point.
- */
-const thumbScale = () => clamp(THUMB / (PAD * (project().sc || 1)), 1, 2.8);
+// The chevron, in screen space, before the scale(1 .5) lies it into the plane. West
+// and east point along the screen's own axis rather than along a tile axis, because a
+// tile axis in a 2:1 projection points diagonally and "onward" should not look like
+// it goes uphill. Home points down-screen, out of the front of the frame.
+const CHEV = {
+  "-1": [[11, -15], [-9, 0], [11, 15]],
+  1: [[-11, -15], [9, 0], [-11, 15]],
+  0: [[-15, -11], [0, 9], [15, -11]],
+};
+/** The screen direction each chevron travels in, for offsetting the second one. */
+const AIM = { "-1": [-1, 0], 1: [1, 0], 0: [0, 1] };
 
 /** The nearest open place in a direction, or null. The same rule travel uses, asked
- *  here so a marker is only drawn when it leads somewhere. */
+ *  here so a threshold is only laid where it leads somewhere. */
 const onward = (me, dir) => roster()
   .filter((p) => p !== me && valley.opened(p.id) && Math.sign(p.road - me.road) === dir)
   .sort((a, b) => Math.abs(a.road - me.road) - Math.abs(b.road - me.road))[0] ?? null;
 
+/** One flat stone, as an iso quad on the ground. */
+const slab = (gx, gy, hw, hd, z, cls, fill) => el("polygon", {
+  class: cls,
+  points: [pt(gx - hw, gy - hd, z), pt(gx + hw, gy - hd, z),
+    pt(gx + hw, gy + hd, z), pt(gx - hw, gy + hd, z)].join(" "),
+  fill,
+});
+
 /**
- * One marker: a chevron at the border, and the name of what is past it.
+ * A threshold at tile (gx, gy), on the ground at height z, pointing `dir`.
  *
- * The name is hidden until you look at it. Six places all shouting their names at
- * the edges of every frame would be the clutter the signpost was already close to
- * — an arrow is enough to say "this way", and the name is there the moment you
- * hover, focus or read it with a screen reader.
+ * The name is set into the slab but hidden until you look at it: three names
+ * lettered across the ground of every frame is the clutter the signpost was already
+ * close to, and a chevron says "this way" without any.
  */
-const marker = (into, x, y, dir, label, aria, onPick) => {
+const threshold = (into, gx, gy, z, dir, label, aria, onPick) => {
   const g = el("g", { class: "edge", tabindex: "0", role: "button", "data-dir": String(dir) });
   g.setAttribute("aria-label", aria);
-  g.dataset.x = String(x);
-  g.dataset.y = String(y);
+  const px = isoX(gx, gy), py = isoY(gx, gy, z);
 
-  // Two nested groups on purpose. The outer one is PLACED with a transform
-  // attribute; a CSS transform on the same element replaces that attribute rather
-  // than composing with it, so a hover lean applied here would drop every marker at
-  // the origin. Same trap the flowers in scenery.js are nested to avoid.
-  const lean = el("g", { class: "edge__lean" });
-  g.appendChild(lean);
-
-  // a soft cartouche behind the chevron, so it reads on grass, stone and water alike
-  lean.appendChild(el("rect", {
-    class: "edge__pad", x: -21, y: -21, width: 42, height: 42, rx: 15,
+  // The target, and it is invisible on purpose. A slab is 150x83 user units of
+  // screen extent, which is a comfortable mouse target and a marginal thumb one, so
+  // the rect is squarer than the stone is. It sits at the edge of a frame where no
+  // puzzle piece ever does, so there is nothing for it to steal a tap from.
+  g.appendChild(el("rect", {
+    x: (px - 75).toFixed(1), y: (py - 58).toFixed(1), width: 150, height: 96, fill: "transparent",
   }));
-  // dir: -1 west, +1 east, 0 home (down toward the camera)
-  const tip = dir === 0 ? "0,11 -10,-3 10,-3" : dir > 0 ? "11,0 -3,-10 -3,10" : "-11,0 3,-10 3,10";
-  lean.appendChild(el("polygon", { class: "edge__arrow", points: tip }));
-  // ...and a second, fainter chevron behind it: two marks read as motion, one reads
-  // as a button, and this is a direction rather than a control
-  const trail = dir === 0 ? "0,3 -7,-7 7,-7" : dir > 0 ? "3,0 -7,-7 -7,7" : "-3,0 7,-7 7,7";
-  lean.appendChild(el("polygon", { class: "edge__trail", points: trail }));
+
+  // A dark rim first, then the slab inside it, so the stone reads as set INTO the
+  // ground rather than resting on it. The rim is a translucent SHADOW rather than a
+  // colour, on purpose: it was moss to begin with, which was charming on la clôture's
+  // grass and plainly wrong on la grange's plank floor — moss is a living thing and a
+  // flagstone is a made one. A shadow darkens whatever it happens to lie on, so one
+  // rim works on grass, planks, tower stone and bare rock alike.
+  const rim = slab(gx, gy, HW + 0.13, HD + 0.11, z + 0.002, "edge__rim", "#2f2a24");
+  rim.setAttribute("opacity", ".24");
+  g.appendChild(rim);
+  g.appendChild(slab(gx, gy, HW, HD, z + 0.004, "edge__slab", "var(--edge-stone)"));
+  // a paler patch down the middle: the part that has actually been walked on
+  g.appendChild(slab(gx, gy, HW * 0.72, HD * 0.52, z + 0.006, "edge__worn", "var(--edge-worn)"));
+
+  // The chevron, carved into the slab. A first pass set three small square stones
+  // stepping along the direction and it read as scattered blocks — a square has no
+  // pointy end, so nothing about it said "that way". A chevron does, so it is drawn
+  // as one: two of them, in SCREEN space, inside a scale(1 .5) that lies them down
+  // into the 2:1 plane. The squash thins the stroke vertically as well, which is
+  // exactly what a mark cut into a floor and seen at this angle looks like.
+  const marks = el("g", { transform: `translate(${px.toFixed(1)} ${py.toFixed(1)}) scale(1 .5)` });
+  const [ux, uy] = AIM[String(dir)];
+  for (const shift of [-11, 11]) {
+    marks.appendChild(el("polyline", {
+      class: "edge__mark",
+      points: CHEV[String(dir)].map(([ax, ay]) => `${ax + ux * shift},${ay + uy * shift}`).join(" "),
+      fill: "none", stroke: "var(--edge-cut)", "stroke-width": 8,
+      "stroke-linecap": "round", "stroke-linejoin": "round",
+    }));
+  }
+  g.appendChild(marks);
 
   const pick = (e) => { e.preventDefault?.(); e.stopPropagation?.(); onPick(); };
   g.addEventListener("pointerdown", pick);
@@ -90,16 +122,12 @@ const marker = (into, x, y, dir, label, aria, onPick) => {
   into.appendChild(g);
 
   // The name is a SIBLING, not a child, and that is not tidiness — an SVG group's
-  // box is the union of its children, so a label inside it inflated the marker from
-  // 42x42 to 156x56 even at opacity 0. The centre of that box then sat on empty air
-  // beside the chevron: a tap aimed at the middle of the thing hit the hills behind
-  // it, and travel simply never fired. Kept adjacent so CSS can still light it up
-  // from the marker's own hover and focus.
+  // box is the union of its children, so a label inside it moved the group's centre
+  // off the stone, and a tap aimed at the middle of the thing landed on the scenery
+  // behind it. Kept adjacent so CSS can still light it up from the stone's own hover.
   const text = el("text", {
     class: "edge__name",
-    x: (x + (dir === 0 ? 0 : dir > 0 ? -30 : 30)).toFixed(1),
-    y: (y + (dir === 0 ? -30 : 5)).toFixed(1),
-    "text-anchor": dir === 0 ? "middle" : dir > 0 ? "end" : "start",
+    x: px.toFixed(1), y: (py - 26).toFixed(1), "text-anchor": "middle",
     "font-size": 15, "font-family": "var(--display)",
   });
   text.textContent = label;
@@ -107,67 +135,57 @@ const marker = (into, x, y, dir, label, aria, onPick) => {
 };
 
 /**
- * Put the edges on a diorama.
- *  `me`     — the place they belong to, so onward is measured from its road
- *  `groundY` — the user-space floor line he stands on here, so a door is on it
+ * Lay the thresholds into a diorama.
+ *  `me`    — the place they belong to, so onward is measured from its road
+ *  `exits` — `{ z, west: [gx, gy], east: [gx, gy], home: [gx, gy] }` in TILE space.
+ *            Per place, and it has to be: the ground is not flat everywhere, and a
+ *            generic "middle of the west border" would lay a flagstone over le
+ *            pont's gorge. Declared rather than derived, like every other bit of
+ *            world geometry here.
  *  `onGo`   — walk to a place id
  *  `onHome` — leave the valley for the meadow
  *
- * Returns `sync()` to redraw them from what is open now, and `doorAt(dir)` — where
- * he sets off from and arrives at, which is the edge he is actually using rather
- * than one shared point per place. Leaving east now starts at the east border and
- * lands on the next place's west one.
+ * Returns `sync()` to relay them from what is open now, and `doorAt(dir)` — the
+ * threshold he actually sets off from and arrives at, so a walk east leaves by the
+ * east stone and lands on the next place's west one.
  */
-export const edges = (scene, me, groundY, onGo, onHome) => {
+export const edges = (scene, me, exits, onGo, onHome) => {
   const g = el("g", { class: "edges" });
-  // filed at a depth past anything a place draws, so the markers are never behind
-  // a bale, a bell rope or a hen
-  scene.layers.add(g, () => 99, `edges-${me.id}`);
+  const where = (dir) => (dir === 0 ? exits.home : dir > 0 ? exits.east : exits.west);
 
-  /** Where he sets off from and arrives at, just inside the border he is crossing.
-   *  A user-space point, like every doorway before it — `groundY` is the place's own
-   *  floor line, passed in, because a barn floor and a ledge are at different
-   *  heights and he must stand on whichever one he is actually on. */
-  const doorAt = (dir = 0) => [
-    dir === 0 ? HOME_AT[0] : dir > 0 ? VB_X + VB_W - INSET : VB_X + INSET,
-    groundY,
-  ];
+  // Filed at the depth of whichever stone is furthest forward, so the group is
+  // ordered against the pieces like anything else in the diorama. A floor marker
+  // that painted over a bale would not be in the floor.
+  scene.layers.add(g, () => {
+    const [gx, gy] = exits.home;
+    return gx + gy;
+  }, `edges-${me.id}`);
 
-  /** Place every marker, at whatever size a thumb needs right now. The scale goes
-   *  in the SAME transform as the position — one attribute, so they cannot disagree
-   *  — and the CSS hover lean stays on the inner group where it composes. */
-  const rescale = () => {
-    const k = thumbScale();
-    for (const m of g.querySelectorAll(".edge")) {
-      m.setAttribute("transform",
-        `translate(${Number(m.dataset.x).toFixed(1)} ${Number(m.dataset.y).toFixed(1)}) scale(${k.toFixed(3)})`);
-    }
+  const doorAt = (dir = 0) => {
+    const [gx, gy] = where(dir);
+    return [isoX(gx, gy), isoY(gx, gy, exits.z)];
   };
-  // a rotated phone changes the projection without changing the board
-  addEventListener("resize", rescale);
 
   return {
     node: g,
     doorAt,
-    rescale,
-    /** Rebuild from what is open now. Cheap, and called on arrival, so a place that
-     *  opens while he is out has an edge leading to it when he gets back. */
+    /** Relay them from what is open now. Cheap, and called on arrival, so a place
+     *  that opens while he is out has a stone leading to it when he gets back. */
     sync: () => {
       g.replaceChildren();
       for (const dir of [-1, 1]) {
         const next = onward(me, dir);
         if (!next) continue;
-        marker(g, dir > 0 ? VB_X + VB_W - INSET : VB_X + INSET, MID_Y, dir,
-          next.label[0],
+        const [gx, gy] = where(dir);
+        threshold(g, gx, gy, exits.z, dir, next.label[0],
           `${dir > 0 ? "Continuer vers" : "Revenir vers"} ${next.label[0]} — ${dir > 0 ? "onward to" : "back to"} ${next.label[1]}`,
           () => onGo(next.id));
       }
-      // Home is always here, in every phase. "Any place can be left at any moment"
+      // Home is always laid, in every phase. "Any place can be left at any moment"
       // is a rule of this game, and the moment you have just solved a puzzle is the
       // worst possible one to take the way out away from someone.
-      marker(g, HOME_AT[0], HOME_AT[1], 0, "le pré",
+      threshold(g, exits.home[0], exits.home[1], exits.z, 0, "le pré",
         "Revenir au pré — back to the meadow", onHome);
-      rescale();
       g.style.display = "";
     },
   };
