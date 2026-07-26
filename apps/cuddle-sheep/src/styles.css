@@ -55,6 +55,7 @@
     --iso-plank-r: color-mix(in oklab, #7d5936 calc(var(--m) * 100%), #575250);
     --iso-barn:    color-mix(in oklab, #8f4f42 calc(var(--m) * 100%), #6a5f5d);
     --iso-barn-l:  color-mix(in oklab, #733f36 calc(var(--m) * 100%), #564e4c);
+    --iso-stone:   color-mix(in oklab, #b9b2a4 calc(var(--m) * 100%), #8d8a8e);
     --iso-roof:    color-mix(in oklab, #4e3a30 calc(var(--m) * 100%), #3f3a3c);
     --cross-top: clamp(70px,11vh,110px);
     --cross-bot: clamp(78px,13vh,120px);
@@ -99,7 +100,7 @@
   }
   @keyframes spin{to{transform:rotate(360deg)}}
   .veil{
-    position:absolute; inset:0; opacity:calc(1 - var(--m));
+    position:absolute; inset:0; pointer-events:none; opacity:calc(1 - var(--m));
     background:
       radial-gradient(120% 70% at 50% -10%, rgba(58,68,84,.36), transparent 62%),
       linear-gradient(180deg, rgba(92,102,118,.32), rgba(120,128,142,.05) 62%);
@@ -307,6 +308,12 @@
   .gate.open .gate__planks{animation:shimmer 3.4s ease-in-out infinite}
   .gate__halo{opacity:0}
   .gate.reveal .gate__halo{animation:halo .9s ease-out}
+
+  /* the way out of a place: stones underfoot and a sign above them */
+  .way{cursor:pointer; outline:none; transition:filter .3s}
+  .way:hover, .way:focus-visible{filter:drop-shadow(0 0 8px #fff)}
+  .way__stone{opacity:.85}
+  .way:hover .way__stone, .way:focus-visible .way__stone{opacity:1}
 
   /* la grange: a post lights up when the bale in his mouth may go there */
   .post{cursor:pointer; outline:none}

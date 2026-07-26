@@ -26,8 +26,10 @@ import { release } from "../world/hands.js";
 import * as valley from "../world/valley.js";
 import { HOME } from "../engine/save.js";
 import { POSTS, BALES, OPTIMAL, start, top, refuses, solved } from "../puzzles/meules.js";
-import { mount, unmount } from "./registry.js";
+import { mount, unmount, enrol } from "./registry.js";
 import { dioramaFor } from "./diorama.js";
+import { wayTo } from "./signpost.js";
+import { go } from "./travel.js";
 
 const stage = $("#stage");
 const barnMoves = $("#barnMoves");
@@ -243,6 +245,10 @@ const buildWorld = () => {
     layers.add(node, () => baleDepth(size), `bale${size}`);
     game.bales.push(node);
   }
+
+  // the barn door, and the road back to the river
+  ways.west = wayTo(scene, -0.8, 4.1, -1, RIVIERE, go);
+  ways.west.sync();
 };
 
 /* ---- drawing ---- */
@@ -365,13 +371,24 @@ const resetBoard = (animate = true) => {
   if (animate) readout();
 };
 
+/* ---- the three beats of arriving somewhere ---- */
+const wake = () => { buildWorld(); scene.show(true); };
+const sleep = () => { scene.show(false); game.on = false; };
+const land = () => {
+  game.on = true;
+  ways.west?.sync();
+  setMoves(); syncPosts(); draw(); measureUI();
+  setHint("Empile les trois ballots sur le dernier pieu — jamais un gros sur un petit",
+    "stack all three on the last post — never a big one on a small one");
+  setTimeout(() => { refreshCTM(); draw(); measureUI(); }, 20);
+  setTimeout(refreshCTM, 1000);
+  readout();
+};
+
 /* ---- entering and leaving ---- */
 export const enter = () => {
   if (game.on || !valley.opened("grange")) return;
-  buildWorld();
-  scene.show(true);
-  game.on = true;
-  game.phase = "idle";
+  wake();
   poke();
   mount(place);
   panTo(1, true);
@@ -379,14 +396,10 @@ export const enter = () => {
   release();
   dropShears();
   cancelDrag();
-  resetBoard(false);
+  if (!game.seen) { game.seen = true; resetBoard(false); }
+  land();
   stage.classList.add("gliding");
   setTimeout(() => stage.classList.remove("gliding"), 1000);
-  setHint("Empile les trois ballots sur le dernier pieu — jamais un gros sur un petit",
-    "stack all three on the last post — never a big one on a small one");
-  setTimeout(() => { refreshCTM(); draw(); measureUI(); }, 20);
-  setTimeout(refreshCTM, 1000);
-  readout();
 };
 
 export const exit = () => {
@@ -425,9 +438,20 @@ const frame = (dt, t) => {
   draw();
 };
 
+const ways = {};
+const RIVIERE = { id: "riviere", label: ["la rivière", "the river"] };
+
 const place = {
   id: "grange",
   mode: "barn",
+  road: 1,
+  label: ["la grange", "the barn"],
+  doorway: () => [isoX(-0.8, 4.1), isoY(-0.8, 4.1, FLOOR)],
   frame,
+  wake, sleep, land,
+  enter, exit,
   tapSheep: () => touchPost(game.at),
 };
+
+enrol(place);
+export default place;

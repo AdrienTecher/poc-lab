@@ -26,8 +26,10 @@ import { release } from "../world/hands.js";
 import * as valley from "../world/valley.js";
 import { HOME } from "../engine/save.js";
 import { PIECES, OPTIMAL, unsafe, solved } from "../puzzles/traversee.js";
-import { mount, unmount } from "./registry.js";
+import { mount, unmount, enrol } from "./registry.js";
 import { dioramaFor } from "./diorama.js";
+import { wayTo } from "./signpost.js";
+import { go } from "./travel.js";
 
 const stage = $("#stage");
 const crossMoves = $("#crossMoves");
@@ -162,6 +164,10 @@ const buildWorld = () => {
   game.tok = { loup: wolf, chou };
   for (const id of CARGO) bindTok(id);
   bindBoat();
+
+  // the road east, out of the far corner of the right bank
+  ways.riviere = wayTo(scene, 9.4, 3.9, 1, GRANGE, go);
+  ways.riviere.sync();
 };
 
 /* ---- placement: one rail for all three actors, so they never drift apart ---- */
@@ -213,13 +219,33 @@ const syncTokens = () => {
   }
 };
 
+/* ---- the three beats of arriving somewhere ---- */
+
+/** Drawn and on screen, but not yet his. Called before a pan starts, so the
+ *  place is already there when the camera reaches it. */
+const wake = () => { buildWorld(); scene.show(true); };
+
+/** Out of the document. Everything it knows is kept: walk away mid-crossing and
+ *  the boat is where you left it when you come back. */
+const sleep = () => { scene.show(false); game.on = false; };
+
+/** His. Accepting input, and saying where everything is. */
+const land = () => {
+  game.on = true;
+  if (game.phase === "rowing") game.phase = "idle";   // a crossing cannot outlive a walk
+  ways.riviere?.sync();
+  setMoves(); syncTokens(); drawActors(); measureUI();
+  setHint("Le loup mange le mouton, le mouton mange le chou — une seule place dans la barque",
+    "wolf eats sheep, sheep eats cabbage — one seat in the boat");
+  setTimeout(() => { refreshCTM(); drawActors(); measureUI(); }, 20);
+  setTimeout(refreshCTM, 1000);
+  readout();
+};
+
 /* ---- entering and leaving ---- */
 export const enter = () => {
   if (game.on || !valley.opened("riviere")) return;
-  buildWorld();
-  scene.show(true);
-  game.on = true;
-  game.phase = "idle";
+  wake();
   poke();
   mount(place);
   panTo(0, true);
@@ -227,14 +253,10 @@ export const enter = () => {
   release();
   dropShears();
   cancelDrag();
-  resetBoard(false);
+  if (!game.seen) { game.seen = true; resetBoard(false); }
+  land();
   stage.classList.add("gliding");
   setTimeout(() => stage.classList.remove("gliding"), 1000);
-  setHint("Le loup mange le mouton, le mouton mange le chou — une seule place dans la barque",
-    "wolf eats sheep, sheep eats cabbage — one seat in the boat");
-  setTimeout(() => { refreshCTM(); drawActors(); measureUI(); }, 20);
-  setTimeout(refreshCTM, 1000);
-  readout();
 };
 
 export const exit = () => {
@@ -459,9 +481,22 @@ const frame = (dt, t) => {
 
 /** The place, as the rest of the game sees it: an id for the save, a mode for
  *  the stylesheet, a frame, and what a tap on the sheep means while he is here. */
+const ways = {};
+// named lazily: the two places know each other, and a module cannot import a
+// half-built neighbour at load time
+const GRANGE = { id: "grange", label: ["la grange", "the barn"] };
+
 const place = {
   id: "riviere",
   mode: "cross",
+  road: 0,                                  // frame on the filmstrip
+  label: ["la rivière", "the river"],
+  doorway: () => [isoX(9.4, 3.9), isoY(9.4, 3.9, 1)],
   frame,
+  wake, sleep, land,
+  enter, exit,
   tapSheep: () => embark("mouton"),
 };
+
+enrol(place);
+export default place;

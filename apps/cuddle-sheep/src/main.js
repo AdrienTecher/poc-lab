@@ -16,11 +16,13 @@ import * as gate from "./world/gate.js";
 import * as butterflies from "./world/butterflies.js";
 import * as hands from "./world/hands.js";
 import * as mood from "./world/mood.js";
+import * as valley from "./world/valley.js";
 import * as riviere from "./places/riviere.js";
 import * as grange from "./places/grange.js";
 import * as camera from "./engine/camera.js";
 import { refreshCTM } from "./world/pointer.js";
-import { active } from "./places/registry.js";
+import { active, placeOf } from "./places/registry.js";
+import * as travel from "./places/travel.js";
 
 attachParticles($("#fx"));
 
@@ -40,11 +42,16 @@ grange.build();
 clovers.settle();   // past solves may have earned more than the three he starts with
 mood.watch();
 
+// He was left somewhere. Put him back there rather than marching him home —
+// the valley is a place you return to, not a level you restart.
+const wasAt = placeOf(valley.at());
+if (wasAt) wasAt.enter();
+
 let t = 0, last = performance.now();
 
 const frame = (ms) => {
   const place = active();
-  if (place) refreshCTM();
+  if (place || travel.going()) refreshCTM();
   // a tab left in the background hands back one enormous dt; clamping it keeps
   // every spring stable and every clock honest, since the clocks are epochs
   const dt = Math.min(0.034, (ms - last) / 1000);
@@ -56,6 +63,7 @@ const frame = (ms) => {
   camera.paint();                // ...so the layers are framed before he is placed in them
   butterflies.step(dt, t, m);
   if (place) place.frame(dt, t);
+  else if (travel.going()) { travel.scenery(dt, t); travel.step(dt, t); }
   stepParticles(dt);
   scenery.setBloom(m > 0.5);
   hud.paint(w);
