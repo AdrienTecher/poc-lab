@@ -1,57 +1,25 @@
 import * as save from "./engine/save.js";
+import { clamp, lerp, rand, now, REDUCED } from "./engine/math.js";
+import { $, el, tapTarget } from "./engine/svg.js";
+import { springs, S, set, v, kick, stepSpring, stepSprings } from "./engine/spring.js";
+import { sfx } from "./engine/audio.js";
+import { attachParticles, spawn, heart, sparkle, crumb, tear, tuft, zzz, stepParticles } from "./engine/particles.js";
+import { IW, IH, IZ, IOX, IOY, isoX, isoY, pt, poly, boxAt, pine } from "./engine/iso.js";
+import { depthLayers } from "./engine/depth.js";
+import { state } from "./state.js";
+import {
+  HAPPY_MS, FADE_MS, PET_TARGET, DOZE_AFTER,
+  WOOL_FULL_MS, SHEAR_TARGET, WOOL_READY, SHEAR_MIN, SHEAR_CALM, FIRST_FLEECE,
+  CLOVERS_TO_UNLOCK,
+} from "./rules.js";
 
 (() => {
   "use strict";
 
-  const NS = "http://www.w3.org/2000/svg";
-  const $ = (s, r = document) => r.querySelector(s);
-  const el = (n, a = {}) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); return e; };
-  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
-  const lerp = (a, b, t) => a + (b - a) * t;
-  const rand = (a, b) => a + Math.random() * (b - a);
-  const now = () => performance.now() / 1000;
-  const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  /* ------------------------------------------------------------------ *
-   * Rules of the world
-   * ------------------------------------------------------------------ */
-  const HAPPY_MS = 5 * 60 * 1000;   // a cuddle buys exactly five minutes
-  const FADE_MS = 20 * 1000;        // ...the last twenty of which he droops through
-  const PET_TARGET = 460;           // stroke distance (svg units) that fills one cuddle
-  const DOZE_AFTER = 55;            // seconds of being ignored before he nods off
-  const WOOL_FULL_MS = 15 * 60 * 1000; // shorn to full fleece, wall-clock, growing while away
-  const SHEAR_TARGET = 760;         // shear-stroke distance that takes a full fleece off
-  const WOOL_READY = 0.6;           // past here he is visibly overgrown and the shears glint
-  const SHEAR_MIN = 0.2;            // below this there is nothing worth taking off
-  const SHEAR_CALM = 0.62;          // he only holds still for the blades once he feels safe
-  const FIRST_FLEECE = 0.45;        // a first visit starts mid-fleece, i.e. the look he shipped with
-  const CLOVERS_TO_UNLOCK = 5;      // clovers eaten before the river puzzle opens
-
   const svg = $("#sheep"), stage = $("#stage"), fx = $("#fx");
   const live = $("#live"), hintEl = $("#hint"), hintText = $("#hintText");
+  attachParticles(fx);
 
-  const state = {
-    happyUntil: 0,        // epoch ms — the only source of the five-minute window
-    cuddle: 0,            // 0..1, fills while stroking, decays when you stop
-    mood: 0,              // smoothed 0..1, what the whole scene keys on
-    petting: false,
-    dozing: false,
-    chewUntil: 0,
-    bleatUntil: 0,
-    lastPoke: now(),
-    lastPointer: -99,
-    everCuddled: false,
-    sound: true,
-    // the fleece is stored as the instant it was last taken to zero, so it keeps
-    // growing while the tab is closed — one timestamp, no ticking to persist
-    woolFrom: Date.now() - FIRST_FLEECE * WOOL_FULL_MS,
-    wool: FIRST_FLEECE,
-    tool: null,           // null | "shears" — a held tool, not a mode toggle
-    shearing: false,
-    shiverUntil: 0,
-    fed: 0,               // clovers eaten, all-time
-    lookAt: 0,            // until when his gaze is forced at the meadow sprout
-  };
 
   // restore an in-flight happiness window so a reload doesn't betray him
   if (save.data.sheep.happyUntil > Date.now()) {
@@ -81,15 +49,7 @@ import * as save from "./engine/save.js";
   /* ------------------------------------------------------------------ *
    * Springs — every limb is a mass on a spring, which is what sells "alive"
    * ------------------------------------------------------------------ */
-  const springs = {};
-  const S = (name, value, k, d) => (springs[name] = { v: value, vel: 0, target: value, k, d });
-  const set = (name, target) => (springs[name].target = target);
-  const v = (name) => springs[name].v;
-  const kick = (name, impulse) => (springs[name].vel += impulse);
-  const stepSpring = (s, dt) => {
-    s.vel += (s.k * (s.target - s.v) - s.d * s.vel) * dt;
-    s.v += s.vel * dt;
-  };
+
 
   S("lean", 0, 90, 13);      // head tilt, degrees
   S("gazeX", 0, 110, 15);
@@ -214,8 +174,6 @@ import * as save from "./engine/save.js";
 
   // clovers are the treat: pick one out of the grass and offer it to him
   const CLOVER_X = [140, 355, 890, 560, 250, 760];
-  const tapTarget = (g, w, h, y) => g.appendChild(el("rect", { x: -w / 2, y, width: w, height: h, fill: "transparent" }));
-
   const addClover = (x) => {
     const g = el("g", { class: "clover", tabindex: "0", role: "button" });
     g.setAttribute("aria-label", "Offrir un trèfle — give him a clover");
@@ -286,164 +244,12 @@ import * as save from "./engine/save.js";
   /* ------------------------------------------------------------------ *
    * Sound — a tiny synth; nothing ever plays without a gesture behind it
    * ------------------------------------------------------------------ */
-  const sfx = (() => {
-    let ctx = null;
-    const AC = () => {
-      if (!state.sound) return null;
-      if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
-      if (ctx.state === "suspended") ctx.resume();
-      return ctx;
-    };
-    const env = (c, node, t, attack, decay, peak) => {
-      const g = c.createGain();
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(peak, t + attack);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + attack + decay);
-      node.connect(g); g.connect(c.destination);
-      return g;
-    };
-    return {
-      /* a bleat is a detuned saw pair under heavy vibrato — the wobble is the sheep */
-      bleat(happy = true) {
-        const c = AC(); if (!c) return;
-        const t = c.currentTime;
-        const base = happy ? 430 : 262;
-        const filt = c.createBiquadFilter();
-        filt.type = "lowpass"; filt.frequency.value = happy ? 2200 : 1150;
-        env(c, filt, t, 0.03, happy ? 0.5 : 0.8, 0.11);
-        const lfo = c.createOscillator(); lfo.frequency.value = happy ? 19 : 12;
-        const lfoGain = c.createGain(); lfoGain.gain.value = happy ? 26 : 15;
-        lfo.connect(lfoGain);
-        for (const detune of [0, 7]) {
-          const o = c.createOscillator();
-          o.type = "sawtooth";
-          o.frequency.setValueAtTime(base + detune, t);
-          o.frequency.exponentialRampToValueAtTime(base * (happy ? 1.14 : 0.84) + detune, t + 0.16);
-          o.frequency.exponentialRampToValueAtTime(base * (happy ? 0.94 : 0.7) + detune, t + (happy ? 0.5 : 0.8));
-          lfoGain.connect(o.frequency);
-          o.connect(filt); o.start(t); o.stop(t + (happy ? 0.66 : 0.95));
-        }
-        lfo.start(t); lfo.stop(t + 1);
-      },
-      chime() {
-        const c = AC(); if (!c) return;
-        const t = c.currentTime;
-        [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
-          const o = c.createOscillator(); o.type = "triangle"; o.frequency.value = f;
-          env(c, o, t + i * 0.075, 0.01, 0.5, 0.06);
-          o.start(t + i * 0.075); o.stop(t + i * 0.075 + 0.62);
-        });
-      },
-      munch() {
-        const c = AC(); if (!c) return;
-        for (const i of [...Array(3).keys()]) {
-          const t = c.currentTime + i * 0.17;
-          const buf = c.createBuffer(1, 2048, c.sampleRate);
-          const d = buf.getChannelData(0);
-          for (const k of [...Array(d.length).keys()]) d[k] = (Math.random() * 2 - 1) * (1 - k / d.length);
-          const src = c.createBufferSource(); src.buffer = buf;
-          const bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 900 + i * 240; bp.Q.value = 3;
-          src.connect(bp);
-          env(c, bp, t, 0.005, 0.09, 0.15);
-          src.start(t);
-        }
-      },
-      /* two blade chirps and a metal ping: the shears closing */
-      snip() {
-        const c = AC(); if (!c) return;
-        for (const i of [0, 1]) {
-          const t = c.currentTime + i * 0.055;
-          const buf = c.createBuffer(1, 1024, c.sampleRate);
-          const d = buf.getChannelData(0);
-          for (const k of [...Array(d.length).keys()]) d[k] = (Math.random() * 2 - 1) * (1 - k / d.length) ** 2;
-          const src = c.createBufferSource(); src.buffer = buf;
-          const bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 2600 + i * 900; bp.Q.value = 6;
-          src.connect(bp);
-          env(c, bp, t, 0.003, 0.05, 0.09);
-          src.start(t);
-        }
-        const o = c.createOscillator(); o.type = "triangle"; o.frequency.value = 3140;
-        env(c, o, c.currentTime + 0.05, 0.004, 0.09, 0.022);
-        o.start(c.currentTime + 0.05); o.stop(c.currentTime + 0.2);
-      },
-      /* the breathy dodge when he will not hold still */
-      row() {
-        const c = AC(); if (!c) return;
-        const t = c.currentTime;
-        const o = c.createOscillator(); o.type = "triangle";
-        o.frequency.setValueAtTime(190, t);
-        o.frequency.exponentialRampToValueAtTime(150, t + 0.24);
-        env(c, o, t, 0.02, 0.22, 0.05);
-        o.start(t); o.stop(t + 0.3);
-        const buf = c.createBuffer(1, 8000, c.sampleRate);
-        const d = buf.getChannelData(0);
-        for (const k of [...Array(d.length).keys()]) d[k] = (Math.random() * 2 - 1) * (1 - k / d.length);
-        const src = c.createBufferSource(); src.buffer = buf;
-        const lp = c.createBiquadFilter(); lp.type = "lowpass";
-        lp.frequency.setValueAtTime(900, t);
-        lp.frequency.exponentialRampToValueAtTime(300, t + 0.3);
-        src.connect(lp);
-        env(c, lp, t, 0.03, 0.26, 0.045);
-        src.start(t);
-      },
-      whiff() {
-        const c = AC(); if (!c) return;
-        const t = c.currentTime;
-        const buf = c.createBuffer(1, 6000, c.sampleRate);
-        const d = buf.getChannelData(0);
-        for (const k of [...Array(d.length).keys()]) d[k] = (Math.random() * 2 - 1) * (1 - k / d.length);
-        const src = c.createBufferSource(); src.buffer = buf;
-        const lp = c.createBiquadFilter(); lp.type = "lowpass";
-        lp.frequency.setValueAtTime(1400, t);
-        lp.frequency.exponentialRampToValueAtTime(420, t + 0.22);
-        src.connect(lp);
-        env(c, lp, t, 0.02, 0.2, 0.05);
-        src.start(t);
-      },
-      purr() {
-        const c = AC(); if (!c) return;
-        const t = c.currentTime;
-        const o = c.createOscillator(); o.type = "sine"; o.frequency.value = 138;
-        env(c, o, t, 0.05, 0.3, 0.045);
-        o.start(t); o.stop(t + 0.42);
-      },
-      flutter() {
-        const c = AC(); if (!c) return;
-        const t = c.currentTime;
-        const o = c.createOscillator(); o.type = "sine";
-        o.frequency.setValueAtTime(880, t);
-        o.frequency.exponentialRampToValueAtTime(1720, t + 0.18);
-        env(c, o, t, 0.01, 0.18, 0.03);
-        o.start(t); o.stop(t + 0.26);
-      },
-    };
-  })();
+
 
   /* ------------------------------------------------------------------ *
    * Particles
    * ------------------------------------------------------------------ */
-  const parts = [];
-  const PART_CAP = 140;
-  const spawn = (node, opts) => {
-    if (parts.length >= PART_CAP) parts.shift().node.remove();
-    fx.appendChild(node);
-    parts.push({ node, age: 0, life: 1.4, vx: 0, vy: -40, spin: 0, rot: 0, scale: 1, grow: 0, gravity: 0, x: 0, y: 0, ...opts });
-  };
-  const heart = (x, y) => spawn(el("use", { href: "#heartPath", fill: "#ff7fa6" }),
-    { x, y, vx: rand(-26, 26), vy: rand(-64, -104), life: rand(1.1, 1.7), scale: rand(0.5, 0.95), spin: rand(-60, 60) });
-  const sparkle = (x, y) => spawn(el("use", { href: "#sparkPath", fill: "#fff3c4" }),
-    { x, y, vx: rand(-18, 18), vy: rand(-34, -66), life: rand(0.7, 1.2), scale: rand(0.35, 0.7), spin: rand(-120, 120) });
-  const crumb = (x, y) => spawn(el("circle", { r: 2.6, fill: "#6fbe58" }),
-    { x, y, vx: rand(-64, 64), vy: rand(-40, -92), life: 0.9, gravity: 280 });
-  const tear = (x, y) => spawn(el("ellipse", { rx: 4, ry: 5.6, fill: "#a9d8ef", opacity: ".9" }),
-    { x, y, vx: rand(-4, 4), vy: 10, life: 1.5, gravity: 220 });
-  const tuft = (x, y) => spawn(el("circle", { r: rand(5, 9.5), fill: "#fffaf1", opacity: ".96" }),
-    { x, y, vx: rand(-72, 72), vy: rand(-96, -18), life: rand(0.9, 1.6), gravity: 210, spin: rand(-90, 90) });
-  const zzz = (x, y) => {
-    const t = el("text", { fill: "#fff", "font-size": 22, "font-family": "Fredoka, sans-serif", opacity: ".8" });
-    t.textContent = "z";
-    spawn(t, { x, y, vx: 16, vy: -30, life: 2.4, grow: 0.6, spin: 10 });
-  };
+
 
   /* ------------------------------------------------------------------ *
    * Interaction
@@ -773,12 +579,9 @@ import * as save from "./engine/save.js";
    * stroke him on the bank between moves and the world greys out around the
    * river if his five minutes run out mid-crossing.
    * ------------------------------------------------------------------ */
-  const IW = 46, IH = 23, IZ = 30, IOX = 468, IOY = 134;   // 2:1 dimetric, one function, no matrices
-  const isoX = (gx, gy) => IOX + (gx - gy) * IW;
-  const isoY = (gx, gy, gz = 0) => IOY + (gx + gy) * IH - gz * IZ;
-  const pt = (gx, gy, gz) => `${isoX(gx, gy).toFixed(1)},${isoY(gx, gy, gz).toFixed(1)}`;
 
   const crossBack = $("#crossBack"), crossFront = $("#crossFront"), decor = $("#isoDecor");
+  const layers = depthLayers(crossBack, crossFront);
   const crossUI = $("#crossUI"), crossMoves = $("#crossMoves");
   const SLOTS = {
     L: { loup: [2.6, 0.4], mouton: [1.4, 2.2], chou: [0.4, 4.0] },
@@ -802,31 +605,6 @@ import * as save from "./engine/save.js";
   S("cargoY", 0, 190, 13);
 
   /* ---- world building: made things are faceted, living things are rounded ---- */
-  const poly = (layer, points, fill, opacity) => {
-    const n = el("polygon", { points, fill });
-    if (opacity !== undefined) n.setAttribute("opacity", opacity);
-    layer.appendChild(n);
-    return n;
-  };
-  const boxAt = (layer, gx, gy, w, d, z0, h, top, left, right) => {
-    poly(layer, [pt(gx, gy, z0 + h), pt(gx + w, gy, z0 + h), pt(gx + w, gy + d, z0 + h), pt(gx, gy + d, z0 + h)].join(" "), top);
-    poly(layer, [pt(gx, gy + d, z0 + h), pt(gx + w, gy + d, z0 + h), pt(gx + w, gy + d, z0), pt(gx, gy + d, z0)].join(" "), left);
-    poly(layer, [pt(gx + w, gy, z0 + h), pt(gx + w, gy + d, z0 + h), pt(gx + w, gy + d, z0), pt(gx + w, gy, z0)].join(" "), right);
-  };
-
-  const pine = (layer, gx, gy, scale = 1) => {
-    const x = isoX(gx, gy), y = isoY(gx, gy, 1);
-    const g = el("g", { transform: `translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${scale})` });
-    g.appendChild(el("ellipse", { cx: 0, cy: 0, rx: 15, ry: 6, fill: "#2c3a2e", opacity: ".16" }));
-    g.appendChild(el("polygon", { points: "-3.5,0 3.5,0 2.5,-16 -2.5,-16", fill: "var(--iso-wood-r)" }));
-    for (const [w, base, top] of [[19, -12, -40], [14, -32, -58]]) {
-      g.appendChild(el("polygon", { points: `${-w},${base} 0,${base + 4} 0,${top}`, fill: "var(--iso-pine-l)" }));
-      g.appendChild(el("polygon", { points: `${w},${base} 0,${base + 4} 0,${top}`, fill: "var(--iso-pine-r)" }));
-      g.appendChild(el("polygon", { points: `${-w},${base} ${w},${base} 0,${top}`, fill: "var(--iso-pine)", opacity: ".0" }));
-    }
-    layer.appendChild(g);
-    return g;
-  };
 
   const crests = [];
   const buildWorld = () => {
@@ -911,7 +689,7 @@ import * as save from "./engine/save.js";
       <circle cx="11.6" cy="-102" r="2.6" fill="#fff"/>
       <path d="M-24,-112 Q-14,-116 -6,-112" stroke="#6d7688" stroke-width="3" fill="none" stroke-linecap="round"/>
       <path d="M24,-112 Q14,-116 6,-112" stroke="#6d7688" stroke-width="3" fill="none" stroke-linecap="round"/>`;
-    crossBack.appendChild(wolf);
+    layers.add(wolf, () => depthOf("loup"), "loup");
 
     /* ---- the cabbage ---- */
     const chou = el("g", { id: "tokChou", class: "tok", tabindex: "0", role: "button" });
@@ -929,7 +707,7 @@ import * as save from "./engine/save.js";
       <path d="M-38,-34 Q0,-14 38,-34" stroke="#5faa46" stroke-width="3.4" fill="none" stroke-linecap="round"/>
       <ellipse cx="-16" cy="-68" rx="10" ry="6.5" fill="#c9 efa0" opacity="0"/>
       <ellipse cx="-16" cy="-68" rx="10" ry="6.5" fill="#c8efa2" opacity=".45"/>`;
-    crossFront.appendChild(chou);
+    layers.add(chou, () => depthOf("chou"), "chou");
     game.tok = { loup: wolf, chou };
     bindTok("loup"); bindTok("chou"); bindBoat();
   };
@@ -955,6 +733,11 @@ import * as save from "./engine/save.js";
   };
   const TOK_SCALE = { loup: 0.58, chou: 0.52 };
   const boatSpot = (gx) => [isoX(gx, BOAT_GY), isoY(gx, BOAT_GY, BOAT_GZ)];
+  const depthOf = (id) => {
+    if (game.where[id] === "boat") return v("boatX") + BOAT_GY;
+    const [gx, gy] = SLOTS[game.where[id]][id];
+    return gx + gy;
+  };
   const spot = (id) => {
     if (game.where[id] === "boat") {
       const [x, y] = boatSpot(v("boatX"));
@@ -968,6 +751,7 @@ import * as save from "./engine/save.js";
     for (const id of ["loup", "chou"]) placeTok(id, ...spot(id), TOK_SCALE[id]);
     const [mx, my] = spot("mouton");
     placeSheepAt(mx, my);
+    layers.sort(depthOf("mouton"));
   };
 
   /* ---- the rules, one predicate, one call site ---- */
@@ -1040,7 +824,7 @@ import * as save from "./engine/save.js";
     springs.cargoY.target = springs.cargoY.v = 0;
     for (const id of ["loup", "chou"]) game.tok[id].classList.remove("gone");
     game.tok.chou.style.transform = "";
-    if (game.tok.chou.parentNode !== crossFront) crossFront.appendChild(game.tok.chou);
+    layers.reset();
     $("#pennant").classList.remove("up");
     setMoves(); syncTokens(); drawActors(); measureUI();
     if (animate) { readout(); }
@@ -1058,10 +842,6 @@ import * as save from "./engine/save.js";
       game.aboard = id;
       kick("cargoY", -260);
     } else return;
-    if (id === "chou") {
-      // aboard, the cabbage is behind Nuage; ashore on the near bank, in front of him
-      (game.where.chou === "boat" ? crossBack : crossFront).appendChild(game.tok.chou);
-    }
     poke();
     sfx.flutter();
     syncTokens(); drawActors(); readout();
@@ -1090,7 +870,6 @@ import * as save from "./engine/save.js";
     if (!game.on) return;
     if (game.aboard) {                 // auto-disembark: a second click carries no decision
       game.where[game.aboard] = game.boat;
-      if (game.aboard === "chou") crossFront.appendChild(game.tok.chou);
       game.aboard = null;
       springs.cargoY.v = springs.cargoY.target = 0;
     }
@@ -1169,7 +948,6 @@ import * as save from "./engine/save.js";
     springs.boatX.target = DOCK[game.boat];
     if (REDUCED) springs.boatX.v = DOCK[game.boat];
     for (const id of ["loup", "chou"]) game.tok[id].classList.remove("gone");
-    (game.where.chou === "boat" ? crossBack : crossFront).appendChild(game.tok.chou);
     $("#pennant").classList.remove("up");
     stage.classList.remove("riding");
     setMoves(); syncTokens(); drawActors(); readout();
@@ -1452,7 +1230,7 @@ import * as save from "./engine/save.js";
       }
     }
 
-    for (const k in springs) stepSpring(springs[k], dt);
+    stepSprings(dt);
 
     /* ---- body: breathe, hop, squash ---- */
     const breathe = Math.sin(t * 1.35) * (1.6 + m * 0.8) * lerp(1, 0.45, Math.max(0, nerve));
@@ -1578,18 +1356,7 @@ import * as save from "./engine/save.js";
 
     gameFrame(dt, t);
 
-    /* ---- particles ---- */
-    for (let i = parts.length - 1; i >= 0; i--) {
-      const p = parts[i];
-      p.age += dt;
-      if (p.age >= p.life) { p.node.remove(); parts.splice(i, 1); continue; }
-      p.vy += p.gravity * dt;
-      p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.spin * dt;
-      const k = p.age / p.life;
-      const sc = (p.scale + p.grow * k) * (1 + Math.sin(k * Math.PI) * 0.12);
-      p.node.setAttribute("transform", `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${p.rot.toFixed(1)}) scale(${sc.toFixed(3)})`);
-      p.node.setAttribute("opacity", (1 - k * k).toFixed(3));
-    }
+    stepParticles(dt);
 
     /* ---- the meadow blooms when he does ---- */
     if (m > 0.5 !== bloomed) {

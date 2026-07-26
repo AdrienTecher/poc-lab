@@ -28,6 +28,19 @@ export default async ({ newPage, check, APP }) => {
   await page.locator("#crossReset").click();
   await page.waitForTimeout(500);
 
+  // painter order is computed, not hand-wired: a piece nearer the camera than
+  // Nuage must be drawn in the layer in front of him, and behind when it is not
+  const layerOfChou = () => page.evaluate(() => document.querySelector("#tokChou").parentElement.id);
+  check("the cabbage starts in front of him", (await layerOfChou()) === "crossFront");
+  await tapSheep(page);                 // Nuage crosses, so he is now the far piece
+  await row(page);
+  await row(page);                      // the boat comes back empty
+  await clickMid(page, "#tokChou");     // and the cabbage boards
+  check("aboard, with him on the far bank, it moves behind him", (await layerOfChou()) === "crossBack");
+  await page.locator("#crossReset").click();
+  await page.waitForTimeout(600);
+  check("a reset puts it back in front", (await layerOfChou()) === "crossFront");
+
   // the optimal seven
   for (const step of ["sheep", null, "#tokLoup", "sheep", "#tokChou", null, "sheep"]) {
     if (step === "sheep") await tapSheep(page);
