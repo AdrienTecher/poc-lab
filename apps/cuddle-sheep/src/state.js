@@ -8,7 +8,7 @@
 // that is already true.
 import * as save from "./engine/save.js";
 import { now } from "./engine/math.js";
-import { FIRST_FLEECE, WOOL_FULL_MS } from "./rules.js";
+import { FIRST_FLEECE, WOOL_FULL_MS, HAPPY_MS } from "./rules.js";
 
 export const state = {
   happyUntil: 0,        // epoch ms — the only source of the five-minute window
@@ -35,9 +35,18 @@ export const state = {
   dragging: null,       // the clover currently in your hand, if any
 };
 
-// restore an in-flight happiness window so a reload doesn't betray him
+// Restore an in-flight happiness window so a reload doesn't betray him — but never
+// further out than a window can legitimately be. An epoch beyond now + HAPPY_MS was
+// never a value this game could produce; it means the clock moved backwards under a
+// stored one. Healed here rather than merely hidden by the readout, or it would sit
+// in the save telling the same lie until real time caught up with it.
 if (save.data.sheep.happyUntil > Date.now()) {
-  state.happyUntil = save.data.sheep.happyUntil;
+  const ceiling = Date.now() + HAPPY_MS;
+  state.happyUntil = Math.min(save.data.sheep.happyUntil, ceiling);
+  if (save.data.sheep.happyUntil > ceiling) {
+    save.data.sheep.happyUntil = state.happyUntil;
+    save.touch(true);
+  }
   state.mood = 1;
   state.everCuddled = true;
 }

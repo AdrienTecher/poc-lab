@@ -18,7 +18,18 @@ import { active } from "../places/registry.js";
 // happy when you come back, and must not spring up to it from zero
 S("moodS", state.mood, 26, 10);
 
-export const remaining = () => state.happyUntil - Date.now();
+/** What is left of the window.
+ *
+ *  Clamped, because nothing in this game can buy more than HAPPY_MS: goHappy sets
+ *  exactly that and topUp caps at it. So a larger number never means a longer
+ *  cuddle — it means the machine's clock moved backwards underneath a stored
+ *  epoch, which a timezone change or an NTP correction is enough to do. Left
+ *  unclamped it reaches the HUD as "50849:39 restantes", which is the toy telling
+ *  an obvious lie about something the whole game is built on.
+ *
+ *  Pure on purpose: this is read every frame, so it reports the truth and leaves
+ *  repairing the stored value to the one place that hydrates it. */
+export const remaining = () => Math.min(state.happyUntil - Date.now(), HAPPY_MS);
 
 /** A cuddle just landed. `isRefresh` is a cuddle on top of a running window —
  *  worth a heart, not the whole fanfare. */

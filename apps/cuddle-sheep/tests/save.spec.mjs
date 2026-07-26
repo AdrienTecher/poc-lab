@@ -25,6 +25,29 @@ export default async ({ newPage, check, APP }) => {
   check("and it does not lose the window either", leftAfter > leftBefore - 20, `${leftBefore}s -> ${leftAfter}s`);
   await page.close();
 
+  // A clock that moved BACKWARDS under a stored epoch. Nothing here can buy more
+  // than five minutes, so a window ending in a month is not a long cuddle — it is a
+  // timezone change or an NTP correction, and the readout used to print it
+  // faithfully as "50849:39 restantes". The number is clamped on the way out and
+  // the stored epoch healed, so the lie does not survive in the save either.
+  page = await newPage({ viewport: { width: 1280, height: 800 } });
+  await boot(page, APP, {
+    "nuage:save": JSON.stringify({
+      v: 4, sheep: { happyUntil: Date.now() + 30 * 24 * 3600 * 1000, woolFrom: Date.now() - 60000 },
+      care: { fed: 0, shorn: 0 }, valley: { at: "pre", visited: ["pre"], unlocked: [], solves: {}, boards: {} },
+      prefs: { sound: false },
+    }),
+  });
+  const absurd = await page.locator("#chipTime").innerText();
+  check("a window from a rewound clock is not read back as a month",
+    /^[0-5]:\d\d restantes$/.test(absurd), absurd);
+  check("and he is simply happy, for the five minutes it can actually be",
+    (await page.locator("#chipState").innerText()) === "Heureux");
+  const healed = await page.evaluate(() => JSON.parse(localStorage.getItem("nuage:save")).sheep.happyUntil);
+  check("and the save is healed rather than left telling it",
+    healed <= Date.now() + 5 * 60 * 1000 + 2000, `${Math.round((healed - Date.now()) / 1000)}s out`);
+  await page.close();
+
   // The fleece is a wall-clock. Start it somewhere a non-persisting boot could
   // never produce (a fresh save always reads 45%), so "it survived" is provable.
   page = await newPage({ viewport: { width: 1280, height: 800 } });
