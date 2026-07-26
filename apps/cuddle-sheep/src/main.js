@@ -21,6 +21,7 @@ import * as valley from "./world/valley.js";
 import * as daylight from "./world/daylight.js";
 import * as riviere from "./places/riviere.js";
 import * as grange from "./places/grange.js";
+import * as pont from "./places/pont.js";
 import * as camera from "./engine/camera.js";
 import { refreshCTM } from "./world/pointer.js";
 import { active, placeOf } from "./places/registry.js";
@@ -42,6 +43,7 @@ hud.build();
 hands.build();
 riviere.build();    // after hands: Escape drops the shears before it leaves a place
 grange.build();
+pont.build();
 clovers.settle();   // past solves may have earned more than the three he starts with
 mood.watch();
 

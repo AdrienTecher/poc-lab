@@ -18,6 +18,12 @@ export const FIRST_FLEECE = 0.45;           // a first visit starts mid-fleece: 
 export const CLOVERS_TO_UNLOCK = 5;         // clovers eaten before the river puzzle opens
 export const FLEECES_TO_UNLOCK = 3;         // fleeces shorn before the barn opens — they ARE the bales
 
+// The meadow has exactly two care rituals and both are already spent on a door.
+// A third meadow door would need a third chore, and a key that arrives by waiting
+// is not care — so the way further down the valley is opened by having finished
+// what is nearer, and it opens onto the signpost rather than onto the grass.
+export const SOLVES_TO_OPEN_PONT = 1;       // crossings solved before the bridge is lit
+
 /* ---- the day ----------------------------------------------------------- *
  * The only clock in the game with no stored state: it is read from the
  * player's own clock, so it cannot rewind and cannot be fallen behind on.

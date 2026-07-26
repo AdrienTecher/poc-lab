@@ -63,6 +63,48 @@
     --iso-stone:   color-mix(in oklab, #b9b2a4 calc(var(--m) * 100%), #8d8a8e);
     --iso-sign-ink: color-mix(in oklab, #4a3524 calc(var(--m) * 100%), #3f3a3c);
     --iso-roof:    color-mix(in oklab, #4e3a30 calc(var(--m) * 100%), #3f3a3c);
+
+    /* le pont — dusk WITHOUT a grade. A multiply over the scene scales the gap
+       between the happy palette and the sad one by the same factor it scales the
+       palette, and that gap is the whole meaning of --m. So the cleft is dark in
+       its own colours: every pair below is chosen at both ends, which keeps the
+       full mood distance by construction rather than by measurement.
+
+       Avoiding the grade is not enough on its own, and this palette got it wrong
+       once already: a first pass painted the cleft dark at BOTH ends of every mix
+       — #46506e against #3b3f49, some 42 levels apart where the meadow's sky
+       spans 135 — and pont.spec measured the mood at 35% of the meadow's, which
+       is worse than the grade would have cost. A dark place tempts you to darken
+       the happy end too, and that is the same mistake wearing different clothes.
+       So the reading is: twilight sky seen up between the walls, with three
+       darkening ridges in front of it. That earns a luminous happy end against a
+       flat slate sad one, and keeps the distance. */
+    --pont-sky:     color-mix(in oklab, #8093d8 calc(var(--m) * 100%), #4c4f57);
+    --pont-far:     color-mix(in oklab, #6473b8 calc(var(--m) * 100%), #43464d);
+    --pont-far-2:   color-mix(in oklab, #4c5890 calc(var(--m) * 100%), #3a3d43);
+    --pont-far-3:   color-mix(in oklab, #37406a calc(var(--m) * 100%), #313439);
+    --pont-deep:    color-mix(in oklab, #26305a calc(var(--m) * 100%), #262930);
+    --pont-mist:    color-mix(in oklab, #c8d6ef calc(var(--m) * 100%), #949aa3);
+    --pont-rock:    color-mix(in oklab, #b8926d calc(var(--m) * 100%), #6d696c);
+    --pont-rock-l:  color-mix(in oklab, #8e6b48 calc(var(--m) * 100%), #545055);
+    --pont-rock-r:  color-mix(in oklab, #6b4d2f calc(var(--m) * 100%), #434046);
+    --pont-tuft:    color-mix(in oklab, #79a85f calc(var(--m) * 100%), #59615a);
+    --pont-plank:   color-mix(in oklab, #d09355 calc(var(--m) * 100%), #8a8480);
+    --pont-plank-2: color-mix(in oklab, #b17c46 calc(var(--m) * 100%), #746f6c);
+    --pont-rope:    color-mix(in oklab, #b08f57 calc(var(--m) * 100%), #746f6e);
+    --pont-post:    color-mix(in oklab, #a87745 calc(var(--m) * 100%), #6d6865);
+    --pont-post-l:  color-mix(in oklab, #875f36 calc(var(--m) * 100%), #57534f);
+    --pont-post-r:  color-mix(in oklab, #654827 calc(var(--m) * 100%), #45413e);
+    /* the lamp still burns when he is sad — it only burns wanly */
+    --pont-lamp:    color-mix(in oklab, #ffd489 calc(var(--m) * 100%), #cbc3bd);
+    --pont-fleece:      color-mix(in oklab, #fdf3e2 calc(var(--m) * 100%), #ddd9de);
+    --pont-fleece-edge: color-mix(in oklab, #e9d3b3 calc(var(--m) * 100%), #c0bcc4);
+    --pont-ainee:       color-mix(in oklab, #e8e1d4 calc(var(--m) * 100%), #cdcace);
+    --pont-ainee-edge:  color-mix(in oklab, #c7baa4 calc(var(--m) * 100%), #adaab0);
+    --pont-face:    color-mix(in oklab, #f7e6dd calc(var(--m) * 100%), #ded3d3);
+    --pont-muzzle:  color-mix(in oklab, #fff3ec calc(var(--m) * 100%), #eae1e1);
+    --pont-tag:     color-mix(in oklab, #86b6da calc(var(--m) * 100%), #8b9098);
+    --pont-tag-ink: color-mix(in oklab, #1f3547 calc(var(--m) * 100%), #33363a);
     --cross-top: clamp(70px,11vh,110px);
     --cross-bot: clamp(78px,13vh,120px);
     --hud:      rgba(255,255,255,.15);
@@ -353,6 +395,7 @@
   /* every place gets the same bar; only its own is shown */
   html[data-mode="cross"] #crossUI{display:flex}
   html[data-mode="barn"] #barnUI{display:flex}
+  html[data-mode="bridge"] #bridgeUI{display:flex}
   .place-ui button{
     padding:8px 16px; border-radius:999px; font-size:.84rem; font-weight:500;
     background:var(--hud); border:1px solid var(--hud-line); color:#fff;
@@ -393,6 +436,26 @@
   .way__plank:hover .way__board, .way__plank:focus-visible .way__board{filter:drop-shadow(0 0 7px #fff)}
   .way__name{pointer-events:none; font-weight:500; letter-spacing:.01em}
 
+  /* le pont: who is coming along is shown on the walkers themselves rather than
+     in the bar, because the bar has no room and the flock is right there. */
+  html[data-place] .walker:not([disabled]), html[data-place] .lantern{pointer-events:auto; cursor:pointer}
+  .walker{outline:none; transition:filter .25s}
+  .walker[disabled]{cursor:default; pointer-events:none; filter:saturate(.55) brightness(.82)}
+  .walker:hover:not([disabled]), .walker:focus-visible{filter:drop-shadow(0 0 7px #fff)}
+  /* chosen reads as lit BY the lantern — the light is the mechanic, so the light
+     is the feedback, and it works the same on him as on a lamb */
+  .walker.chosen{filter:drop-shadow(0 0 10px var(--pont-lamp)) drop-shadow(0 0 22px var(--pont-lamp))}
+  .walker__tag{transform-box:fill-box; transform-origin:50% 0; animation:tagswing 3.6s ease-in-out infinite}
+  @keyframes tagswing{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+  html[data-mode="bridge"] .stage.chosen{filter:drop-shadow(0 0 12px var(--pont-lamp))}
+  .lantern{outline:none; transform-box:fill-box}
+  .lantern > *{transform-origin:50% 0}
+  .lantern__glow{transform-box:fill-box; transform-origin:50% 50%; animation:flicker 2.4s ease-in-out infinite}
+  @keyframes flicker{0%,100%{transform:scale(1)}42%{transform:scale(1.09)}68%{transform:scale(.96)}}
+  .lantern.ready{animation:lampcall 2.2s ease-in-out infinite}
+  @keyframes lampcall{0%,100%{filter:none}50%{filter:drop-shadow(0 0 12px var(--pont-lamp))}}
+  .lantern:hover, .lantern:focus-visible{filter:drop-shadow(0 0 10px #fff)}
+
   /* la grange: a post lights up when the bale in his mouth may go there */
   .post{cursor:pointer; outline:none}
   .post[disabled]{cursor:default; pointer-events:none}
@@ -411,7 +474,8 @@
     .place-ui{bottom:8px}
   }
   @media (prefers-reduced-motion: reduce){
-    .sun__rays,.blade,.cloudbank .puff,.hint__hand{animation:none}
+    .sun__rays,.blade,.cloudbank .puff,.hint__hand,
+    .walker__tag,.lantern__glow,.lantern.ready{animation:none}
   }
   @media (max-width:720px){
     .hud{gap:10px; padding:12px}
