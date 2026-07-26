@@ -1,3 +1,5 @@
+import * as save from "./engine/save.js";
+
 (() => {
   "use strict";
 
@@ -24,9 +26,6 @@
   const SHEAR_CALM = 0.62;          // he only holds still for the blades once he feels safe
   const FIRST_FLEECE = 0.45;        // a first visit starts mid-fleece, i.e. the look he shipped with
   const CLOVERS_TO_UNLOCK = 5;      // clovers eaten before the river puzzle opens
-  const STORE_KEY = "nuage:happy-until";
-  const WOOL_KEY = "nuage:wool-from";
-  const FED_KEY = "nuage:clovers-fed";
 
   const svg = $("#sheep"), stage = $("#stage"), fx = $("#fx");
   const live = $("#live"), hintEl = $("#hint"), hintText = $("#hintText");
@@ -54,27 +53,18 @@
     lookAt: 0,            // until when his gaze is forced at the meadow sprout
   };
 
-  const store = {
-    get(key, fallback = 0) {
-      try { return Number(localStorage.getItem(key) || 0) || fallback; } catch { return fallback; }
-    },
-    set(key, value) {
-      try { localStorage.setItem(key, String(value)); } catch { /* private mode: he simply forgets */ }
-    },
-    drop(key) {
-      try { localStorage.removeItem(key); } catch { /* ignore */ }
-    },
-  };
-
   // restore an in-flight happiness window so a reload doesn't betray him
-  const savedHappy = store.get(STORE_KEY);
-  if (savedHappy > Date.now()) { state.happyUntil = savedHappy; state.mood = 1; state.everCuddled = true; }
-  const savedWool = store.get(WOOL_KEY);
+  if (save.data.sheep.happyUntil > Date.now()) {
+    state.happyUntil = save.data.sheep.happyUntil;
+    state.mood = 1;
+    state.everCuddled = true;
+  }
   // A first visit starts mid-fleece — write that epoch down straight away, or a
   // player who never shears would start over at 45% on every reload.
-  if (savedWool > 0) state.woolFrom = savedWool;
-  else store.set(WOOL_KEY, state.woolFrom);
-  state.fed = store.get(FED_KEY);
+  if (save.data.sheep.woolFrom > 0) state.woolFrom = save.data.sheep.woolFrom;
+  else { save.data.sheep.woolFrom = state.woolFrom; save.touch(true); }
+  state.fed = save.data.care.fed;
+  state.sound = save.data.prefs.sound;
 
   const woolNow = () => clamp((Date.now() - state.woolFrom) / WOOL_FULL_MS, 0, 1);
   let woolWrote = 0;
@@ -82,7 +72,8 @@
   const saveWool = (force) => {
     if (!force && Date.now() - woolWrote < 500) return;
     woolWrote = Date.now();
-    store.set(WOOL_KEY, state.woolFrom);
+    save.data.sheep.woolFrom = state.woolFrom;
+    save.touch(force);
   };
   addEventListener("pagehide", () => saveWool(true));
   state.wool = woolNow();
@@ -490,7 +481,8 @@
   const goHappy = (isRefresh) => {
     const wasHappy = state.happyUntil > Date.now();
     state.happyUntil = Date.now() + HAPPY_MS;
-    try { localStorage.setItem(STORE_KEY, String(state.happyUntil)); } catch { /* ignore */ }
+    save.data.sheep.happyUntil = state.happyUntil;
+    save.touch(true);
     if (!wasHappy) {
       sfx.chime(); sfx.bleat(true);
       kick("hop", -330);
@@ -645,7 +637,8 @@
     // a treat doesn't buy happiness — only a cuddle does — but it tops up a
     // window that is already running, which is how a well-fed sheep stays happy.
     state.fed = Math.min(state.fed + 1, CLOVERS_TO_UNLOCK);
-    store.set(FED_KEY, state.fed);
+    save.data.care.fed = state.fed;
+    save.touch(true);
     updateSprout();
     if (state.fed >= CLOVERS_TO_UNLOCK) setTimeout(unlockRiver, 700);
     if (state.happyUntil > Date.now()) {
@@ -765,6 +758,8 @@
     state.sound = !state.sound;
     soundBtn.setAttribute("aria-pressed", String(state.sound));
     soundBtn.setAttribute("aria-label", state.sound ? "Couper le son — mute" : "Activer le son — unmute");
+    save.data.prefs.sound = state.sound;
+    save.touch();
     if (state.sound) sfx.flutter();
   });
 
@@ -778,7 +773,6 @@
    * stroke him on the bank between moves and the world greys out around the
    * river if his five minutes run out mid-crossing.
    * ------------------------------------------------------------------ */
-  const UNLOCK_KEY = "nuage:unlocked", SOLVE_KEY = "nuage:crossings";
   const IW = 46, IH = 23, IZ = 30, IOX = 468, IOY = 134;   // 2:1 dimetric, one function, no matrices
   const isoX = (gx, gy) => IOX + (gx - gy) * IW;
   const isoY = (gx, gy, gz = 0) => IOY + (gx + gy) * IH - gz * IZ;
@@ -800,7 +794,8 @@
     on: false, built: false, phase: "idle",
     boat: "L", where: { loup: "L", mouton: "L", chou: "L" },
     aboard: null, moves: 0, stack: [], rowUntil: 0, rowing: 0,
-    solves: store.get(SOLVE_KEY), unlocked: store.get(UNLOCK_KEY) === 1,
+    solves: save.data.valley.solves.riviere ?? 0,
+    unlocked: save.data.valley.unlocked.includes("riviere"),
   };
 
   S("boatX", DOCK.L, 34, 11);
@@ -1154,7 +1149,8 @@
     // if he is sad, the victory bleat is the sad bleat
     setTimeout(() => sfx.bleat(state.mood > 0.5), 900);
     game.solves += 1;
-    store.set(SOLVE_KEY, game.solves);
+    save.data.valley.solves.riviere = game.solves;
+    save.touch(true);
     growReward();
     const best = game.moves === 7 ? " C'est la solution optimale." : "";
     announce(`Tout le monde est passé en ${game.moves} passages.${best}`);
@@ -1212,7 +1208,8 @@
   const unlockRiver = () => {
     if (game.unlocked) return;
     game.unlocked = true;
-    store.set(UNLOCK_KEY, 1);
+    if (!save.data.valley.unlocked.includes("riviere")) save.data.valley.unlocked.push("riviere");
+    save.touch(true);
     updateSprout();
     sprout.classList.add("reveal");
     setTimeout(() => sfx.chime(), 350);
@@ -1643,7 +1640,8 @@
         hintText.innerHTML = "Encore un câlin ? <span class=\"en\">· one more cuddle?</span>";
         hintEl.classList.remove("gone");
       }
-      try { localStorage.removeItem(STORE_KEY); } catch { /* ignore */ }
+      save.data.sheep.happyUntil = 0;
+      save.touch(true);
     }
     wasHappy = isHappy;
   }, 1000);

@@ -13,10 +13,15 @@ pnpm build                                  # from the repo root, into dist/cudd
 Both are a single stored epoch, derived on read, so they keep running while the
 tab is closed and need no ticking:
 
-| clock | key | rule |
+| clock | field | rule |
 |---|---|---|
-| happiness | `nuage:happy-until` | a full cuddle buys exactly 5 min, drooping over the last 20 s |
-| fleece | `nuage:wool-from` | shorn → full in 15 min; the shears refuse a sheep who is not settled |
+| happiness | `sheep.happyUntil` | a full cuddle buys exactly 5 min, drooping over the last 20 s |
+| fleece | `sheep.woolFrom` | shorn → full in 15 min; the shears refuse a sheep who is not settled |
+
+Both live in one versioned save under `nuage:save`, owned by
+[`src/engine/save.js`](src/engine/save.js) — the only module that knows the
+shape. It migrates the five loose v1 keys on first boot and clears them, and
+anything it cannot read opens a fresh meadow rather than a broken one.
 
 **Wool is a body state, mood is a feeling state.** Nothing outside the mood
 system may write the happiness window — not the fleece, not the crossing.
