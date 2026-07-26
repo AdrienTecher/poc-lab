@@ -1,23 +1,26 @@
 // Walking from one place to the next.
 //
-// The whole point is that HE is the one moving. The obvious build — spring the
-// camera at the destination and spring him alongside it — makes him a passenger:
-// two clocks running the same distance keep him pinned near the middle of the
-// frame and only his legs move. So the camera is not driven at all. It is
-// derived from where he is, with a dead band either side of centre:
+// The whole point is that HE is the one moving. Spring the camera at the
+// destination and spring him alongside it and he becomes a passenger: two clocks
+// covering the same distance pin him near the middle of the frame with only his
+// legs moving.
 //
-//   he walks freely within ±BAND of the centre of the shot; past that he pushes
-//   the camera along, and the push is clamped to the two frames' home positions
-//   so you never see off the end of the road.
+// So both come off ONE clock — the trip spring — and differ only in their curve.
+// He crosses the ground linearly; the camera follows an S, lagging him early and
+// overtaking him late. The gap between them, which is exactly where he sits on
+// screen, therefore opens as he sets off and closes as he arrives: he walks out
+// ahead, the world catches up, and they land together.
 //
-// The result is that he crosses ground at both ends of the journey and the world
-// slides in the middle, which is what walking somewhere looks like. It is also
-// desync-proof by construction: his position and the camera's are read from the
-// same spring in the same frame, so there is no pair of clocks to drift apart.
+// A dead band round the centre of the shot was the first build and it is wrong
+// here for a reason worth recording: the camera can then only travel as far as
+// he does, and two doorways are much closer together than the frames they stand
+// in are wide. It left the destination 470 units off-centre on arrival. Deriving
+// the camera from trip PROGRESS rather than from his POSITION makes the arrival
+// framing exact by construction — g(1) = 1 — whatever the doors' spacing.
 import { clamp, lerp, now, REDUCED } from "../engine/math.js";
 import { springs, S, set, v, kick } from "../engine/spring.js";
 import { sfx } from "../engine/audio.js";
-import { PITCH, VB_W, home, at as camAt } from "../engine/camera.js";
+import { PITCH, home, panTo } from "../engine/camera.js";
 import { host } from "../world/host.js";
 import { announce } from "../ui/hint.js";
 import { release } from "../world/hands.js";
@@ -27,7 +30,6 @@ import { poke, refreshCTM } from "../world/pointer.js";
 import * as valley from "../world/valley.js";
 import { mount, depart, active, placeOf, roster } from "./registry.js";
 
-const BAND = 150;        // user units either side of centre he may roam before the camera moves
 const STRIDE = 74;       // user units per hoofbeat
 const TRIP_MS = 2600;    // the deadline floor: a backgrounded tab may never strand him
 
@@ -71,6 +73,7 @@ export const go = (id) => {
   cancelDrag();
   poke();
 
+  from.leave();                    // nothing it has in flight may land behind him
   to.wake();                       // the destination is drawn before it is on screen
   const a = doorOf(from), b = doorOf(to);
   trip = { from: a, to: b, place: to, left: from, until: now() + TRIP_MS / 1000, beat: 0 };
@@ -87,6 +90,7 @@ const arrive = () => {
   trip = null;
   springs.trip.v = springs.trip.target = 1;
   mount(place);
+  panTo(place.road);               // g(1) is exactly 1, but say so rather than imply it
   valley.arrive(place.id);
   left.sleep();                    // only now: it was on screen the whole way
   place.land();
@@ -98,14 +102,11 @@ export const step = (dt, t) => {
   const [ux, uy] = spot();
   host(ux, uy);
 
-  // the camera follows him rather than leading him: a dead band at the centre of
-  // the shot that he pushes when he leaves it, clamped to the road's two ends
-  const centre = camAt() + VB_W / 2;
-  const drift = ux - centre;
-  if (Math.abs(drift) > BAND) {
-    const push = camAt() + drift - Math.sign(drift) * BAND;
-    set("camX", clamp(push, home(0), home(trip.place.road)));
-  }
+  // smootherstep: flat at both ends, so the camera is still while he sets off
+  // and still again while he arrives, and does its travelling in between
+  const f = clamp(v("trip"), 0, 1);
+  const g = f * f * f * (f * (f * 6 - 15) + 10);
+  set("camX", lerp(home(trip.left.road), home(trip.place.road), g));
 
   // a hoofbeat every stride, so the gait comes from the distance covered and
   // not from a timer — he steps faster when he is moving faster

@@ -56,6 +56,7 @@
     --iso-barn:    color-mix(in oklab, #8f4f42 calc(var(--m) * 100%), #6a5f5d);
     --iso-barn-l:  color-mix(in oklab, #733f36 calc(var(--m) * 100%), #564e4c);
     --iso-stone:   color-mix(in oklab, #b9b2a4 calc(var(--m) * 100%), #8d8a8e);
+    --iso-sign-ink: color-mix(in oklab, #4a3524 calc(var(--m) * 100%), #3f3a3c);
     --iso-roof:    color-mix(in oklab, #4e3a30 calc(var(--m) * 100%), #3f3a3c);
     --cross-top: clamp(70px,11vh,110px);
     --cross-bot: clamp(78px,13vh,120px);
@@ -110,7 +111,7 @@
   .hill-mid{fill:var(--hill-mid)}
   .ground{fill:var(--grass)}
 
-  .cloudbank{position:absolute; inset:0}
+  .cloudbank{position:absolute; inset:0; pointer-events:none}
   .cloudbank .puff{fill:#fff; opacity:calc(.26 + (1 - var(--m)) * .30); animation:drift linear infinite}
   @keyframes drift{from{transform:translateX(-320px)} to{transform:translateX(1520px)}}
 
@@ -247,7 +248,8 @@
   #valleyFront{z-index:3}
   .stage{z-index:2}
   html[data-place] .valley-layer{opacity:1; visibility:visible; transition-delay:0s, 0s}
-  html[data-place] .tok:not([disabled]), html[data-place] #boat{pointer-events:auto; cursor:pointer}
+  html[data-place] .tok:not([disabled]), html[data-place] #boat,
+  html[data-place] .way__plank, html[data-place] .post:not([disabled]){pointer-events:auto; cursor:pointer}
   html[data-place] .meadow{opacity:0; transform:translateY(42%); pointer-events:none}
   .meadow{transition:opacity .52s ease, transform .52s ease, visibility 0s}
   html[data-place] .meadow{visibility:hidden; transition-delay:0s, 0s, .52s}
@@ -309,11 +311,14 @@
   .gate__halo{opacity:0}
   .gate.reveal .gate__halo{animation:halo .9s ease-out}
 
-  /* the way out of a place: stones underfoot and a sign above them */
-  .way{cursor:pointer; outline:none; transition:filter .3s}
-  .way:hover, .way:focus-visible{filter:drop-shadow(0 0 8px #fff)}
+  /* The signpost: navigation as an object in the world rather than a panel over
+     it. One plank per place you can walk to, and the bottom one always home. */
   .way__stone{opacity:.85}
-  .way:hover .way__stone, .way:focus-visible .way__stone{opacity:1}
+  .way__plank{cursor:pointer; outline:none; transition:transform .22s cubic-bezier(.2,1.7,.4,1)}
+  .way__board{transition:filter .25s}
+  .way__plank:hover, .way__plank:focus-visible{transform:translateY(-1.5px)}
+  .way__plank:hover .way__board, .way__plank:focus-visible .way__board{filter:drop-shadow(0 0 7px #fff)}
+  .way__name{pointer-events:none; font-weight:500; letter-spacing:.01em}
 
   /* la grange: a post lights up when the bale in his mouth may go there */
   .post{cursor:pointer; outline:none}

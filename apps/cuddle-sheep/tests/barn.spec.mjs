@@ -103,7 +103,7 @@ export default async ({ newPage, check, APP }) => {
     (await page.evaluate(() => JSON.parse(localStorage.getItem("nuage:save")).valley.solves.grange)) === 1);
 
   // --- leaving is always one button away, and puts him back in the meadow
-  await page.locator("#barnExit").click();
+  await page.locator(".way__plank").last().click();   // the plank home
   await page.waitForTimeout(900);
   check("the barn is left for the meadow",
     (await page.evaluate(() => document.documentElement.dataset.mode)) === undefined);

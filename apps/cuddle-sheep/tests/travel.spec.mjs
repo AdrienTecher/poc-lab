@@ -20,10 +20,14 @@ export default async ({ newPage, check, APP }) => {
   const mode = () => page.evaluate(() => document.documentElement.dataset.mode ?? "none");
   const bands = () => page.evaluate(() =>
     [...document.querySelectorAll("#valleyBack > g, #valleyFront > g")].map((g) => g.id).sort().join(","));
+  // the sign lists destinations first and home last, so the first plank is the
+  // way onward wherever you are standing
   const walkTo = async () => {
-    const way = await page.locator(".way").first().boundingBox();
-    await page.mouse.click(way.x + way.width / 2, way.y + way.height * 0.62);
+    const b = await page.locator(".way__plank").first().boundingBox();
+    await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
   };
+  const planks = (p) => p.evaluate(() =>
+    [...document.querySelectorAll(".way__plank .way__name")].map((t) => t.textContent));
 
   await seed(page, VALLEY);
   await page.goto(APP);
@@ -35,7 +39,8 @@ export default async ({ newPage, check, APP }) => {
   // A sleeping place must be OUT of the document, not merely hidden: an <svg>
   // clips to its CSS box and not its viewBox, so on a wide viewport the
   // letterbox margins would simply show the barn from the river.
-  check("the road east is drawn", (await page.locator(".way").count()) === 1);
+  check("the sign names where he can go", (await planks(page)).join("|") === "la grange|le pré",
+    (await planks(page)).join("|"));
 
   // sample his position on screen for the length of the walk
   const samples = [];
@@ -48,6 +53,15 @@ export default async ({ newPage, check, APP }) => {
 
   check("he arrives at the barn", (await mode()) === "barn", await mode());
   check("and the river goes dark behind him", (await bands()) === "back-grange,front-grange", await bands());
+
+  // The destination must be squarely in frame on arrival. It is not enough for
+  // the camera to have "followed him": two doorways are far closer together
+  // than the frames they stand in are wide, so a camera derived from his
+  // POSITION runs out of travel and leaves the barn hundreds of units off
+  // centre. This is the check that says the camera comes off trip progress.
+  const camera = await page.evaluate(() =>
+    Number(document.querySelector("#valleyBack").getAttribute("viewBox").split(" ")[0]));
+  check("and the barn is squarely in frame", Math.abs(camera - 924) < 2, `viewBox x = ${camera}, want 924`);
 
   // The camera is derived from him with a dead band rather than driven at the
   // destination: two independent springs would pin him near the centre of the
@@ -101,9 +115,8 @@ export default async ({ newPage, check, APP }) => {
   await shut.waitForTimeout(1000);
   await shut.keyboard.press("j");
   await shut.waitForTimeout(1500);
-  const shown = await shut.evaluate(() =>
-    [...document.querySelectorAll(".way")].filter((w) => getComputedStyle(w).display !== "none").length);
-  check("a way you have not earned is not drawn at all", shown === 0, `${shown} visible`);
+  const shutPlanks = await planks(shut);
+  check("a way you have not earned is not on the sign", shutPlanks.join("|") === "le pré", shutPlanks.join("|"));
   check("and the barn gate is not in the meadow either",
     await shut.locator(".gate").evaluate((n) => getComputedStyle(n).display === "none"));
   await shut.close();

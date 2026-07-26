@@ -28,7 +28,7 @@ import { HOME } from "../engine/save.js";
 import { POSTS, BALES, OPTIMAL, start, top, refuses, solved } from "../puzzles/meules.js";
 import { mount, unmount, enrol } from "./registry.js";
 import { dioramaFor } from "./diorama.js";
-import { wayTo } from "./signpost.js";
+import { signpost } from "./signpost.js";
 import { go } from "./travel.js";
 
 const stage = $("#stage");
@@ -247,8 +247,8 @@ const buildWorld = () => {
   }
 
   // the barn door, and the road back to the river
-  ways.west = wayTo(scene, -0.8, 4.1, -1, RIVIERE, go);
-  ways.west.sync();
+  ways.out = signpost(scene, 0.35, 4.3, place, go, exit);
+  ways.out.sync();
 };
 
 /* ---- drawing ---- */
@@ -373,10 +373,11 @@ const resetBoard = (animate = true) => {
 
 /* ---- the three beats of arriving somewhere ---- */
 const wake = () => { buildWorld(); scene.show(true); };
+const leave = () => { game.on = false; };
 const sleep = () => { scene.show(false); game.on = false; };
 const land = () => {
   game.on = true;
-  ways.west?.sync();
+  ways.out?.sync();
   setMoves(); syncPosts(); draw(); measureUI();
   setHint("Empile les trois ballots sur le dernier pieu — jamais un gros sur un petit",
     "stack all three on the last post — never a big one on a small one");
@@ -420,7 +421,6 @@ export const exit = () => {
 export const build = () => {
   $("#barnUndo").addEventListener("click", undo);
   $("#barnReset").addEventListener("click", () => { resetBoard(); sfx.flutter(); });
-  $("#barnExit").addEventListener("click", exit);
 
   addEventListener("keydown", (e) => {
     if (!game.on) return;
@@ -446,9 +446,9 @@ const place = {
   mode: "barn",
   road: 1,
   label: ["la grange", "the barn"],
-  doorway: () => [isoX(-0.8, 4.1), isoY(-0.8, 4.1, FLOOR)],
+  doorway: () => [isoX(0.35, 4.3), isoY(0.35, 4.3, FLOOR)],
   frame,
-  wake, sleep, land,
+  wake, leave, sleep, land,
   enter, exit,
   tapSheep: () => touchPost(game.at),
 };

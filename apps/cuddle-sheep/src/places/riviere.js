@@ -28,7 +28,7 @@ import { HOME } from "../engine/save.js";
 import { PIECES, OPTIMAL, unsafe, solved } from "../puzzles/traversee.js";
 import { mount, unmount, enrol } from "./registry.js";
 import { dioramaFor } from "./diorama.js";
-import { wayTo } from "./signpost.js";
+import { signpost } from "./signpost.js";
 import { go } from "./travel.js";
 
 const stage = $("#stage");
@@ -166,8 +166,8 @@ const buildWorld = () => {
   bindBoat();
 
   // the road east, out of the far corner of the right bank
-  ways.riviere = wayTo(scene, 9.4, 3.9, 1, GRANGE, go);
-  ways.riviere.sync();
+  ways.out = signpost(scene, 8.35, 4.3, place, go, exit);
+  ways.out.sync();
 };
 
 /* ---- placement: one rail for all three actors, so they never drift apart ---- */
@@ -227,13 +227,15 @@ const wake = () => { buildWorld(); scene.show(true); };
 
 /** Out of the document. Everything it knows is kept: walk away mid-crossing and
  *  the boat is where you left it when you come back. */
+/** He has set off. Nothing in flight may land on a board he has left. */
+const leave = () => { clearTimeout(game.rowTimer); game.on = false; };
 const sleep = () => { scene.show(false); game.on = false; };
 
 /** His. Accepting input, and saying where everything is. */
 const land = () => {
   game.on = true;
   if (game.phase === "rowing") game.phase = "idle";   // a crossing cannot outlive a walk
-  ways.riviere?.sync();
+  ways.out?.sync();
   setMoves(); syncTokens(); drawActors(); measureUI();
   setHint("Le loup mange le mouton, le mouton mange le chou — une seule place dans la barque",
     "wolf eats sheep, sheep eats cabbage — one seat in the boat");
@@ -437,7 +439,6 @@ export const build = () => {
   $("#crossRow").addEventListener("click", row);
   $("#crossUndo").addEventListener("click", undo);
   $("#crossReset").addEventListener("click", () => { resetBoard(); sfx.flutter(); });
-  $("#crossExit").addEventListener("click", exit);
 
   addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
@@ -491,9 +492,9 @@ const place = {
   mode: "cross",
   road: 0,                                  // frame on the filmstrip
   label: ["la rivière", "the river"],
-  doorway: () => [isoX(9.4, 3.9), isoY(9.4, 3.9, 1)],
+  doorway: () => [isoX(8.35, 4.3), isoY(8.35, 4.3, 1)],
   frame,
-  wake, sleep, land,
+  wake, leave, sleep, land,
   enter, exit,
   tapSheep: () => embark("mouton"),
 };
