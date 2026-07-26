@@ -55,13 +55,16 @@ Two caveats on that key, both deliberate and both reversible by deleting it: it 
 **no passphrase**, because a rebase of 26 commits cannot stop to prompt for one; and
 the git config above is **repo-local**, so nothing outside poc-lab was touched.
 
-**`--force-with-lease` does not protect this repo by default.** There was no
-`refs/remotes/origin/main` — only `origin/HEAD` and some stale `claude/*` branches
-— and with no baseline to compare, the lease silently degrades to a plain force.
-Both rewrites above were therefore unprotected (verified by hand with `git ls-remote`
-immediately before each). The ref exists now, so the lease works; if it ever goes
-missing again, `git fetch origin '+refs/heads/main:refs/remotes/origin/main'`
-restores it. **Check `git rev-parse origin/main` resolves before trusting a lease.**
+**`git rev-parse --short` takes exactly one revision.** Passing two — as in
+`git rev-parse --short origin/main HEAD` — fails with `fatal: Needed a single
+revision`, which reads exactly like a missing remote-tracking ref and is not one.
+Recorded because it caused a wrong diagnosis mid-session: paired with a
+`for-each-ref refs/remotes/ | head -3` that truncated before `origin/main` (it
+sorts after four `claude/*` refs), it looked as though the ref did not exist and
+therefore as though `--force-with-lease` was silently degrading to a plain force.
+It was not. `refs/remotes/origin/main` was present throughout — `git status -sb`
+prints `## main...origin/main` only when it is — so both rewrites above were
+lease-protected as intended. Drop `--short`, or ask one revision at a time.
 
 **pnpm is broken here.** `~/.local/share/pnpm/…/@pnpm/exe/pnpm` is literally the
 text `This file intentionally left blank`. `corepack pnpm` works; shim it onto
