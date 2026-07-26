@@ -220,13 +220,16 @@ as one voice.
   ever shears him still gets somewhere new. The signpost is the door.
 - **Hourly clover growth was cut.** It feeds the five-clover door, and
   `clovers.grow()` already reads `solves` — two causes for one signal.
-- **REVERSED: the map was a signpost; the way out is now the border of the frame.**
+- **REVERSED: the map was a signpost; the way out is now a flagstone in the ground.**
   Asked for explicitly — the Dofus/Wakfu system — and the filmstrip turned out to be
   already shaped for it, so `travel.toward(from, dir)` needed no change at all. What
-  this trades away is worth knowing: the signpost was *an object in the world* and
-  these markers are chrome, drawn in world space but styled in the HUD's frosted
-  glass. That is a real softening of "navigation is objects, not a panel", accepted
-  because a border cannot be an object — it is the absence of one.
+  The first pass DID soften "navigation is objects, not a panel" — frosted-glass
+  cartouches at the borders, which is the HUD's material in world space — and that
+  was rejected. They are flagstones now: set into each place's ground, filed at their
+  own depth so they are occluded like any other piece, so the old decision holds
+  after all. Exits are declared per place in tile space and must be: the ground is
+  not the same shape twice, and a generic border position lays a stone over le pont's
+  gorge or under one of la grange's post tap targets.
   * The signpost also let you jump anywhere open; an edge is one hop, so the valley
     is now WALKED. From la rivière, le pont is two hops east.
   * Adjacency is NOT strict, and must not become strict. The branches open roads

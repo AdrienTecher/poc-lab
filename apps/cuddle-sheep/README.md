@@ -38,9 +38,11 @@ scalar and Nuage's screen position is derived from that same number.
 | `la lisière` | 5 | gather three hens where the dog can watch them | le clocher solved |
 
 Only the first two have a door in the meadow, because the meadow has exactly two
-care rituals and both are spent. The rest open onto the **borders of the frame** —
-the way out of a place is its own edge, as in Dofus: a chevron west, a chevron
-east, and one pointing home. So a place further down the road costs *less* than the
+care rituals and both are spent. The rest open onto the **ways out**, which are
+flagstones set into each place's ground, as in Dofus: one west, one east, one
+pointing out of the front toward home. They are part of the landscape rather than
+chrome over it — occluded like any other piece, and declared per place, because the
+ground is not the same shape twice. So a place further down the road costs *less* than the
 second one did, not more.
 
 The valley is **walked**, one screen at a time: from la rivière, le pont is two
