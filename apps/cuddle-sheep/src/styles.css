@@ -1,0 +1,320 @@
+  /* ---------------------------------------------------------------------
+     Mood is one number: --m (0 sad → 1 happy), rewritten every frame by the
+     rig. Every colour in the scene is a mix keyed on it, so the whole world
+     warms up with the sheep instead of switching between two states.
+     --------------------------------------------------------------------- */
+  :root{
+    --m: 0;
+
+    --sky-top:  color-mix(in oklab, #74d2f2 calc(var(--m) * 100%), #6f7a8c);
+    --sky-mid:  color-mix(in oklab, #bfe9f6 calc(var(--m) * 100%), #98a1ae);
+    --sky-low:  color-mix(in oklab, #ffe6ad calc(var(--m) * 100%), #b9bfc8);
+    --hill-far: color-mix(in oklab, #8fcf78 calc(var(--m) * 100%), #6f7b74);
+    --hill-mid: color-mix(in oklab, #74be5f calc(var(--m) * 100%), #5f6c65);
+    --grass:    color-mix(in oklab, #5fac4c calc(var(--m) * 100%), #4f5d55);
+    --blade:    color-mix(in oklab, #86d06a calc(var(--m) * 100%), #66766c);
+
+    --wool:      color-mix(in oklab, #fffaf1 calc(var(--m) * 100%), #e3e1e7);
+    --wool-edge: color-mix(in oklab, #f0dfc9 calc(var(--m) * 100%), #c7c4d0);
+    --face:      color-mix(in oklab, #f9e7e0 calc(var(--m) * 100%), #e1d5d5);
+    --muzzle:    color-mix(in oklab, #fff4ee calc(var(--m) * 100%), #ebe2e2);
+    --ear:       color-mix(in oklab, #eccfc6 calc(var(--m) * 100%), #cec2c5);
+    --ear-in:    color-mix(in oklab, #dda9a4 calc(var(--m) * 100%), #b7a3aa);
+    --leg:       color-mix(in oklab, #d9b7ab calc(var(--m) * 100%), #b8acb0);
+    --hoof:      color-mix(in oklab, #b2887c calc(var(--m) * 100%), #938a90);
+    --blush:     color-mix(in oklab, #ff9db0 calc(var(--m) * 100%), #c9a6b0);
+
+
+    /* la traversée — every material is --m-keyed: left face = base x .86, right = base x .72 */
+    --iso-grass:   color-mix(in oklab, #7fae74 calc(var(--m) * 100%), #6a7570);
+    --iso-grass-l: color-mix(in oklab, #5f8a5c calc(var(--m) * 100%), #566057);
+    --iso-grass-r: color-mix(in oklab, #4b7049 calc(var(--m) * 100%), #454e46);
+    --iso-earth:   color-mix(in oklab, #8d6a4c calc(var(--m) * 100%), #6f6660);
+    --iso-earth-l: color-mix(in oklab, #6f523a calc(var(--m) * 100%), #5a534e);
+    --iso-earth-r: color-mix(in oklab, #57402d calc(var(--m) * 100%), #47423e);
+    --iso-water:   color-mix(in oklab, #5f8fc9 calc(var(--m) * 100%), #6a7280);
+    --iso-water-d: color-mix(in oklab, #4a76ad calc(var(--m) * 100%), #5b626e);
+    --iso-crest:   color-mix(in oklab, #9dc4ec calc(var(--m) * 100%), #8d95a0);
+    --iso-wood:    color-mix(in oklab, #d29a5c calc(var(--m) * 100%), #8e8580);
+    --iso-wood-l:  color-mix(in oklab, #b07c46 calc(var(--m) * 100%), #746d69);
+    --iso-wood-r:  color-mix(in oklab, #8e6438 calc(var(--m) * 100%), #5e5854);
+    --iso-pine:    color-mix(in oklab, #5f9c6d calc(var(--m) * 100%), #5c6a62);
+    --iso-pine-l:  color-mix(in oklab, #487f56 calc(var(--m) * 100%), #4a564f);
+    --iso-pine-r:  color-mix(in oklab, #376543 calc(var(--m) * 100%), #3c453f);
+    --fourleaf-rim: color-mix(in oklab, #f2d98a calc(var(--m) * 100%), #c6c1c8);
+    --cross-top: clamp(70px,11vh,110px);
+    --cross-bot: clamp(78px,13vh,120px);
+    --hud:      rgba(255,255,255,.15);
+    --hud-line: rgba(255,255,255,.28);
+    --display:'Fredoka', ui-rounded, system-ui, sans-serif;
+    --mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%; margin:0; overflow:hidden}
+  body{
+    font-family:var(--display); color:#fff; background:var(--sky-low);
+    -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+  }
+  button{font:inherit; color:inherit; background:none; border:0; padding:0; cursor:pointer}
+  :focus-visible{outline:3px solid #fff; outline-offset:4px; border-radius:12px}
+
+  /* ---------------- scene ---------------- */
+  .scene{position:fixed; inset:0; overflow:hidden; user-select:none}
+  .sky{
+    position:absolute; inset:0;
+    background:linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 52%, var(--sky-low) 100%);
+  }
+  /* Sun and overcast veil cross-fade on mood — what makes the sad scene read
+     as weather rather than as a dimmed screen. */
+  .sun{
+    position:absolute; top:7%; right:11%; width:min(30vmin,220px); aspect-ratio:1;
+    opacity:calc(var(--m) * .95);
+  }
+  .sun__core{
+    position:absolute; inset:27%; border-radius:50%;
+    background:radial-gradient(circle at 40% 38%, #fffbe8, #ffd977 62%, #ffc44d);
+    box-shadow:0 0 60px 18px rgba(255,214,120,.45);
+  }
+  .sun__rays{position:absolute; inset:0; animation:spin 48s linear infinite}
+  .sun__rays span{
+    position:absolute; left:50%; top:50%; width:3px; height:41%;
+    margin-left:-1.5px; transform-origin:50% 0; border-radius:3px;
+    background:linear-gradient(180deg, rgba(255,238,175,.9), rgba(255,238,175,0));
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .veil{
+    position:absolute; inset:0; opacity:calc(1 - var(--m));
+    background:
+      radial-gradient(120% 70% at 50% -10%, rgba(58,68,84,.36), transparent 62%),
+      linear-gradient(180deg, rgba(92,102,118,.32), rgba(120,128,142,.05) 62%);
+  }
+  .hills{position:absolute; left:0; right:0; bottom:0; width:100%; height:54%}
+  .hill-far{fill:var(--hill-far)}
+  .hill-mid{fill:var(--hill-mid)}
+  .ground{fill:var(--grass)}
+
+  .cloudbank{position:absolute; inset:0}
+  .cloudbank .puff{fill:#fff; opacity:calc(.26 + (1 - var(--m)) * .30); animation:drift linear infinite}
+  @keyframes drift{from{transform:translateX(-320px)} to{transform:translateX(1520px)}}
+
+  /* meadow: blades, flowers and the clovers you can pick */
+  .meadow{position:absolute; left:0; right:0; bottom:0; width:100%; height:27vh; overflow:visible; touch-action:none}
+  .blade{fill:var(--blade); transform-box:fill-box; transform-origin:50% 100%; animation:sway 4s ease-in-out infinite}
+  @keyframes sway{0%,100%{transform:rotate(-3.5deg)}50%{transform:rotate(3.5deg)}}
+  .flower{transform-box:fill-box; transform-origin:50% 100%; transform:scale(0); transition:transform .55s cubic-bezier(.2,1.7,.4,1)}
+  .flower.bloom{transform:scale(1)}
+  .clover{cursor:grab; outline:none; transform-box:fill-box; transform-origin:50% 100%; transition:opacity .3s, filter .25s}
+  .clover:focus-visible{filter:drop-shadow(0 0 7px #fff)}
+  .clover:focus-visible .clover__leaves{transform:scale(1.18)}
+  .clover:hover .clover__leaves{transform:scale(1.16) rotate(-5deg)}
+  .clover__leaves{transform-box:fill-box; transform-origin:50% 90%; transition:transform .4s cubic-bezier(.2,1.7,.4,1)}
+  .clover.picked{opacity:0; pointer-events:none}
+
+  /* the shears live in the grass; they glint once the fleece is ready */
+  .shears{cursor:pointer; outline:none; transition:opacity .3s, filter .3s}
+  .shears:hover, .shears:focus-visible{filter:drop-shadow(0 0 8px rgba(255,255,255,.9))}
+  .shears.ready{animation:glint 2.8s ease-in-out infinite}
+  .shears.held{opacity:0; pointer-events:none}
+  @keyframes glint{0%,100%{filter:drop-shadow(0 0 0 rgba(255,255,255,0))}50%{filter:drop-shadow(0 0 9px rgba(255,255,255,.95))}}
+  .pile{transform-box:fill-box; transform-origin:50% 100%; animation:drop-in .55s cubic-bezier(.2,1.6,.4,1) both}
+  @keyframes drop-in{from{transform:translateY(-30px) scale(.4)} to{transform:none}}
+  body.tooling, body.tooling .scene, body.tooling #hit{cursor:none}
+  .tool-cursor{position:fixed; left:0; top:0; z-index:6; width:84px; height:84px; margin:-42px 0 0 -42px; pointer-events:none}
+  .tool-cursor svg{width:100%; height:100%; filter:drop-shadow(0 5px 8px rgba(30,40,56,.35))}
+
+  /* ---------------- sheep ---------------- */
+  .stage{
+    position:absolute; left:50%; bottom:11vh; transform:translateX(-50%);
+    width:min(720px, 92vw, 95vh - 104px); pointer-events:none;
+  }
+  .sheep{display:block; width:100%; height:auto; overflow:visible; touch-action:none; pointer-events:none}
+  #hit, .bfly{pointer-events:auto}
+  html[data-mode="cross"] .bfly{pointer-events:none}
+  .wool{fill:var(--wool)}
+  .wool-edge{fill:var(--wool-edge)}
+  .face{fill:var(--face)}
+  .muzzle{fill:var(--muzzle)}
+  .ear{fill:var(--ear)}
+  .ear-in{fill:var(--ear-in)}
+  .leg{stroke:var(--leg); stroke-width:17; stroke-linecap:round}
+  .hoof{fill:var(--hoof)}
+  .eye{fill:#3b2f3f}
+  .glint{fill:#fff}
+  .brow{stroke:#b9958f; stroke-width:4.4; stroke-linecap:round; fill:none}
+  .mouth{stroke:#3b2f3f; stroke-width:4.6; stroke-linecap:round; stroke-linejoin:round}
+  .nose{fill:#d99a9a}
+  .blush{fill:var(--blush)}
+  .shadow{fill:#2c3a2e; opacity:.16}
+  #hit{fill:transparent; cursor:grab; outline:none}
+  .stage.cuddling #hit{cursor:grabbing}
+  /* focus follows his silhouette rather than boxing him in */
+  #hit:focus-visible{outline:none; fill:rgba(255,255,255,.10); stroke:#fff; stroke-width:3; stroke-dasharray:9 11}
+  .raincloud{opacity:calc(1 - var(--m))}
+  .raincloud .rc{fill:#8b94a5}
+  .raincloud .rc-base{fill:#6f7a8c; opacity:.55}
+  .drop{stroke:#b3c1d2; stroke-width:3; stroke-linecap:round}
+
+  /* ---------------- HUD ---------------- */
+  .hud{
+    position:absolute; top:0; left:0; right:0; z-index:3; pointer-events:none;
+    display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
+    padding:clamp(14px,2.4vw,26px);
+  }
+  .brand{text-shadow:0 2px 12px rgba(30,36,48,.32)}
+  .brand h1{margin:0; font-size:clamp(1.5rem,3.6vw,2.1rem); font-weight:600; letter-spacing:-.01em; line-height:1}
+  .brand p{margin:.3em 0 0; font-size:clamp(.74rem,1.5vw,.86rem); font-weight:400; opacity:.88}
+  .brand p .en{opacity:.6}
+  .hud__right{display:flex; align-items:center; gap:10px; pointer-events:auto}
+  .chip{
+    display:flex; align-items:center; gap:10px; padding:7px 15px 7px 8px;
+    background:var(--hud); border:1px solid var(--hud-line); border-radius:999px;
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    box-shadow:0 8px 24px rgba(28,38,54,.14);
+  }
+  .chip__ring{width:32px; height:32px; flex:none; transform:rotate(-90deg)}
+  .chip__ring circle{fill:none; stroke-width:3.4; stroke-linecap:round}
+  .chip__track{stroke:rgba(255,255,255,.26)}
+  .chip__fill{stroke:#fff; transition:stroke-dashoffset .25s linear}
+  .chip__text{display:flex; flex-direction:column; line-height:1.14}
+  .chip__state{font-size:.84rem; font-weight:500; white-space:nowrap}
+  .chip__time{font-family:var(--mono); font-size:.7rem; opacity:.72; letter-spacing:.01em; white-space:nowrap}
+  .chip--wool .chip__state{font-size:.8rem}
+  .chip--wool.ready{animation:pulse 2.6s ease-in-out infinite}
+  @keyframes pulse{0%,100%{background:var(--hud)}50%{background:rgba(255,255,255,.32)}}
+  .icon-btn{
+    width:44px; height:44px; display:grid; place-items:center; border-radius:50%;
+    background:var(--hud); border:1px solid var(--hud-line);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    transition:background .2s, transform .2s;
+  }
+  .icon-btn:hover{background:rgba(255,255,255,.26); transform:translateY(-1px)}
+  .icon-btn svg{width:20px; height:20px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
+  .icon-btn[aria-pressed="false"] .wave{opacity:.22}
+
+  .hint{
+    position:absolute; left:50%; bottom:clamp(14px,3.2vh,30px); transform:translateX(-50%);
+    z-index:3; display:flex; align-items:center; gap:10px; padding:9px 18px;
+    background:var(--hud); border:1px solid var(--hud-line); border-radius:999px;
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    font-size:.86rem; max-width:min(90vw, 880px); text-align:center; line-height:1.4;
+    pointer-events:none; transition:opacity .5s, transform .5s;
+  }
+  .hint .en{opacity:.58; font-size:.78rem}
+  .hint.gone{opacity:0; transform:translate(-50%,12px)}
+  .hint__hand{width:19px; height:19px; flex:none; animation:pet 2s ease-in-out infinite}
+  @keyframes pet{0%,100%{transform:translateX(-4px) rotate(-9deg)}50%{transform:translateX(4px) rotate(9deg)}}
+
+  .drag{position:fixed; left:0; top:0; z-index:5; width:64px; height:64px; margin:-32px 0 0 -32px; pointer-events:none}
+  .drag svg{width:100%; height:100%; filter:drop-shadow(0 6px 10px rgba(30,50,30,.3))}
+
+  .sr{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0}
+
+
+  /* ---------------- la traversée ---------------- */
+  /* Two layers share one projection: the world is painted behind Nuage and the
+     near cabbage in front of him. Depth is the static key gx+gy, never sorted at
+     runtime — a fourth actor, a drifting boat or a tree moved forward breaks it. */
+  .cross{
+    position:absolute; left:0; top:var(--cross-top);
+    width:100%; height:calc(100% - var(--cross-top) - var(--cross-bot));
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition:opacity .5s ease, visibility 0s .5s; overflow:visible; touch-action:none;
+  }
+  #crossBack{z-index:1}
+  #crossFront{z-index:3}
+  .stage{z-index:2}
+  html[data-mode="cross"] .cross{opacity:1; visibility:visible; transition-delay:0s, 0s}
+  html[data-mode="cross"] .tok:not([disabled]), html[data-mode="cross"] #boat{pointer-events:auto; cursor:pointer}
+  html[data-mode="cross"] .meadow{opacity:0; transform:translateY(42%); pointer-events:none}
+  .meadow{transition:opacity .52s ease, transform .52s ease, visibility 0s}
+  html[data-mode="cross"] .meadow{visibility:hidden; transition-delay:0s, 0s, .52s}
+  /* 94.35% is his hoof line, so the scale pivots on his feet and nothing drifts */
+  html[data-mode="cross"] .stage{
+    left:0; top:0; bottom:auto; width:min(720px, 92vw); transform-origin:50% 94.35%;
+    transform:translate(var(--x,0px), var(--y,0px)) scale(var(--k,1));
+    transition:transform .95s cubic-bezier(.45,.05,.35,1);
+  }
+  html[data-mode="cross"] .stage{transition:transform .5s cubic-bezier(.2,1.5,.4,1)}
+  html[data-mode="cross"] .stage.gliding{transition:transform .95s cubic-bezier(.45,.05,.35,1)}
+  html[data-mode="cross"] .stage.riding{transition:none}
+  html[data-mode="cross"] .hint{bottom:calc(var(--ui-h, 70px) + 12px)}
+  .tok{cursor:pointer; outline:none}
+  .tok[disabled]{cursor:default; pointer-events:none}
+  .tok:focus-visible > *{filter:drop-shadow(0 0 8px #fff)}
+  .tok:hover > *{filter:drop-shadow(0 0 6px rgba(255,255,255,.85))}
+  .tok.gone{opacity:.25; transition:opacity .5s ease}
+  #boat{cursor:pointer; outline:none}
+  #boat:focus-visible{filter:drop-shadow(0 0 8px #fff)}
+  .pennant{transform-box:fill-box; transform-origin:0% 50%; transform:scale(0); transition:transform .52s cubic-bezier(.2,1.7,.4,1)}
+  .pennant.up{transform:scale(1)}
+
+  .cross-ui{
+    position:absolute; left:50%; bottom:clamp(14px,3.2vh,30px); transform:translateX(-50%);
+    z-index:4; display:none; gap:8px; align-items:center; justify-content:center;
+    flex-wrap:wrap; max-width:96vw;
+  }
+  html[data-mode="cross"] .cross-ui{display:flex}
+  .cross-ui button{
+    padding:8px 16px; border-radius:999px; font-size:.84rem; font-weight:500;
+    background:var(--hud); border:1px solid var(--hud-line); color:#fff;
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    transition:background .2s, transform .2s, opacity .2s;
+  }
+  .cross-ui button:hover:not(:disabled){background:rgba(255,255,255,.26); transform:translateY(-1px)}
+  .cross-ui button:disabled{opacity:.4}
+  .cross-ui button.primary{background:rgba(255,255,255,.30); border-color:rgba(255,255,255,.5); font-weight:600}
+  .cross-ui button.primary:hover:not(:disabled){background:rgba(255,255,255,.42)}
+  .cross-ui .moves{font-family:var(--mono); font-size:.74rem; opacity:.75; padding:0 6px; white-space:nowrap}
+  /* the door: one member of the clover family, promoted */
+  .sprout{outline:none; transition:filter .3s}
+  .sprout:hover, .sprout:focus-visible{filter:drop-shadow(0 0 8px #fff)}
+  .sprout__leaves{transform-box:fill-box; transform-origin:50% 92%; transition:transform .55s cubic-bezier(.2,1.7,.4,1)}
+  .sprout__stem{transition:stroke-dashoffset .5s ease}
+  .sprout__rim{opacity:0; animation:shimmer 3.4s ease-in-out infinite}
+  .sprout.open .sprout__rim{opacity:1}
+  @keyframes shimmer{0%,100%{opacity:.35}50%{opacity:.7}}
+  .sprout__halo{opacity:0}
+  .sprout.reveal .sprout__halo{animation:halo .9s ease-out}
+  @keyframes halo{from{r:0; opacity:.55} to{r:46px; opacity:0}}
+
+  @media (max-height:560px){
+    :root{--cross-top:64px; --cross-bot:62px}
+    .hud{padding:10px 14px}
+    .brand p{display:none}
+    .hint{font-size:.76rem; padding:7px 13px}
+    .hint .en{display:none}
+    .cross-ui button{padding:6px 12px; font-size:.78rem}
+    .cross-ui{bottom:8px}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .sun__rays,.blade,.cloudbank .puff,.hint__hand{animation:none}
+  }
+  @media (max-width:720px){
+    .hud{gap:10px; padding:12px}
+    .chip{padding:6px 12px 6px 7px; gap:8px}
+    .chip__ring{width:28px; height:28px}
+    .hud__right{gap:8px}
+    .icon-btn{width:40px; height:40px}
+  }
+  @media (max-width:430px){
+    .brand p{display:none}
+    .chip--wool .chip__text{display:none}
+    .chip--wool{padding:6px}
+  }
+  @media (max-width:600px){
+    .brand p .en, .hint .en{display:none}
+    .brand h1{font-size:1.35rem}
+    .hint{white-space:normal; max-width:88vw; text-align:center; line-height:1.35}
+    .cross-ui button{padding:7px 12px; font-size:.78rem}
+    .hint{font-size:.78rem; padding:8px 14px}
+    .cross-ui .moves{width:100%; text-align:center; order:9}
+    .chip--wool .chip__state{display:none}
+    .chip--wool{padding-right:12px}
+  }
+  /* portrait: he takes the room the sky isn't using */
+  @media (max-aspect-ratio: 4/5){
+    .stage{width:min(660px, 116vw, 80vh - 104px); bottom:26vh}
+    .meadow{height:22vh}
+  }

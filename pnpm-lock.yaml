@@ -12,6 +12,12 @@ importers:
         specifier: ^8.17.1
         version: 8.20.0
 
+  apps/cuddle-sheep:
+    devDependencies:
+      vite:
+        specifier: ^5.4.10
+        version: 5.4.21
+
   apps/quiz-tnd:
     dependencies:
       react:
