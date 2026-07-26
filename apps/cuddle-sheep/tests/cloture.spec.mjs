@@ -85,7 +85,7 @@ export default async ({ newPage, check, APP }) => {
   await page.keyboard.press("j");
   await page.waitForTimeout(1500);
   const shut = await page.evaluate(() =>
-    [...document.querySelectorAll(".way__plank .way__name")].map((t) => t.textContent));
+    [...document.querySelectorAll(".edge__name")].map((t) => t.textContent));
   check("an unwalked bridge does not find the fence", !shut.includes("la clôture"), shut.join("|"));
   await page.close();
 
@@ -165,9 +165,9 @@ export default async ({ newPage, check, APP }) => {
   const fenceSep = await separation(page, SCENE);
   await page.evaluate(() => document.documentElement.style.removeProperty("--m"));
 
-  /* ---- leaving is always one plank away, even on a solved board ---- */
-  check("the way home is never taken away", (await page.locator(".way__plank").count()) >= 1);
-  await page.locator(".way__plank").last().click();
+  /* ---- leaving is always one border away, even on a solved board ---- */
+  check("the way home is never taken away", (await page.locator('.edge[data-dir="0"]').count()) === 1);
+  await page.locator('.edge[data-dir="0"]').click();
   await page.waitForTimeout(900);
   check("and the fence is left for the meadow",
     (await page.evaluate(() => document.documentElement.dataset.mode)) === undefined);

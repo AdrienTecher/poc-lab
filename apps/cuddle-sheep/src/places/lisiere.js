@@ -34,7 +34,7 @@ import { BOXES, HENS, SPAN, SPOTS, sorted, solved, fewest, refuses, start } from
 import { history, fanfare } from "../puzzles/board.js";
 import { mount, unmount, enrol } from "./registry.js";
 import { dioramaFor } from "./diorama.js";
-import { signpost } from "./signpost.js";
+import { edges } from "./edges.js";
 import { go } from "./travel.js";
 
 const stage = $("#stage");
@@ -181,7 +181,7 @@ const buildWorld = () => {
     if (e.key === " " || e.key === "Enter") { e.preventDefault(); touchDog(); }
   });
 
-  ways.out = signpost(scene, 9.0, 5.0, place, go, exit);
+  ways.out = edges(scene, place, isoY(4.5, 2.5, GROUND), go, exit);
   ways.out.sync();
 };
 
@@ -449,7 +449,7 @@ const place = {
   mode: "edge",
   road: 5,
   label: ["la lisière", "the wood's edge"],
-  doorway: () => [isoX(9.0, 5.0), isoY(9.0, 5.0, GROUND)],
+  doorway: (dir) => ways.out.doorAt(dir),
   frame,
   wake, leave, sleep, land,
   enter, exit,

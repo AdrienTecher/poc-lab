@@ -431,7 +431,7 @@
   .stage{z-index:2}
   html[data-place] .valley-layer{opacity:1; visibility:visible; transition-delay:0s, 0s}
   html[data-place] .tok:not([disabled]), html[data-place] #boat,
-  html[data-place] .way__plank, html[data-place] .post:not([disabled]){pointer-events:auto; cursor:pointer}
+  html[data-place] .post:not([disabled]){pointer-events:auto; cursor:pointer}
   html[data-place] .meadow{opacity:0; transform:translateY(42%); pointer-events:none}
   .meadow{transition:opacity .52s ease, transform .52s ease, visibility 0s}
   html[data-place] .meadow{visibility:hidden; transition-delay:0s, 0s, .52s}
@@ -553,14 +553,37 @@
   .gate__halo{opacity:0}
   .gate.reveal .gate__halo{animation:halo .9s ease-out}
 
-  /* The signpost: navigation as an object in the world rather than a panel over
-     it. One plank per place you can walk to, and the bottom one always home. */
-  .way__stone{opacity:.85}
-  .way__plank{cursor:pointer; outline:none; transition:transform .22s cubic-bezier(.2,1.7,.4,1)}
-  .way__board{transition:filter .25s}
-  .way__plank:hover, .way__plank:focus-visible{transform:translateY(-1.5px)}
-  .way__plank:hover .way__board, .way__plank:focus-visible .way__board{filter:drop-shadow(0 0 7px #fff)}
-  .way__name{pointer-events:none; font-weight:500; letter-spacing:.01em}
+  /* The way out is the border of the frame — the Dofus answer, and the one this
+     filmstrip was already shaped for. A chevron where the road continues, a second
+     fainter one behind it so it reads as a direction rather than as a button, and
+     the destination's name only once you look at it: six names shouting from the
+     edges of every frame is the clutter the signpost was already close to. */
+  html[data-place] .edge{pointer-events:auto; cursor:pointer}
+  .edge{outline:none}
+  .edge__lean{transition:transform .24s cubic-bezier(.2,1.7,.4,1)}
+  .edge__pad{
+    fill:rgba(255,255,255,.16); stroke:rgba(255,255,255,.3); stroke-width:1.4;
+    transition:fill .22s;
+  }
+  .edge__arrow{fill:#fff}
+  .edge__trail{fill:#fff; opacity:.34}
+  .edge__name{
+    fill:#fff; font-weight:500; letter-spacing:.01em; pointer-events:none;
+    opacity:0; transition:opacity .22s;
+    paint-order:stroke; stroke:rgba(38,44,56,.45); stroke-width:3.4; stroke-linejoin:round;
+  }
+  .edge:hover + .edge__name, .edge:focus-visible + .edge__name{opacity:1}
+  .edge:hover .edge__pad, .edge:focus-visible .edge__pad{fill:rgba(255,255,255,.34)}
+  /* the nudge outward is the whole invitation: it leans the way it will take you */
+  .edge[data-dir="1"]:hover .edge__lean,
+  .edge[data-dir="1"]:focus-visible .edge__lean{transform:translateX(5px)}
+  .edge[data-dir="-1"]:hover .edge__lean,
+  .edge[data-dir="-1"]:focus-visible .edge__lean{transform:translateX(-5px)}
+  .edge[data-dir="0"]:hover .edge__lean,
+  .edge[data-dir="0"]:focus-visible .edge__lean{transform:translateY(5px)}
+  /* and a slow drift at rest, so an edge that leads somewhere is never quite still */
+  .edge__trail{animation:edge-drift 2.6s ease-in-out infinite}
+  @keyframes edge-drift{0%,100%{opacity:.16}50%{opacity:.5}}
 
   /* le pont: who is coming along is shown on the walkers themselves rather than
      in the bar, because the bar has no room and the flock is right there. */

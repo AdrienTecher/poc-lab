@@ -102,8 +102,8 @@ export default async ({ newPage, check, APP }) => {
   check("the solve is remembered",
     (await page.evaluate(() => JSON.parse(localStorage.getItem("nuage:save")).valley.solves.grange)) === 1);
 
-  // --- leaving is always one button away, and puts him back in the meadow
-  await page.locator(".way__plank").last().click();   // the plank home
+  // --- leaving is always one border away, and puts him back in the meadow
+  await page.locator('.edge[data-dir="0"]').click();   // the border home
   await page.waitForTimeout(900);
   check("the barn is left for the meadow",
     (await page.evaluate(() => document.documentElement.dataset.mode)) === undefined);

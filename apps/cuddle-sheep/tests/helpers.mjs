@@ -97,21 +97,28 @@ export const geometryIssues = (page) => page.evaluate(() => {
     }
   }
 
-  // The signpost grows a plank per open place, so it is the one object whose size
-  // depends on how far through the game you are. A plank outside the frame keeps
+  // The ways out of a place are drawn at the borders of its frame, so they are the
+  // one chrome living in world space. A marker outside the frame keeps
   // its click target (overflow:hidden hides it but does not unhit it), which is how
   // the way home once ended up unreachable underneath a control bar.
   const layer = document.querySelector("#valleyFront");
   if (layer && getComputedStyle(layer).visibility !== "hidden") {
     const lb = layer.getBoundingClientRect();
-    for (const p of document.querySelectorAll(".way__plank")) {
+    for (const p of document.querySelectorAll(".edge")) {
       const r = p.getBoundingClientRect();
       const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-      const name = p.querySelector(".way__name")?.textContent ?? "?";
+      const name = p.nextElementSibling?.textContent ?? p.dataset.dir;
       if (cy < lb.top || cy > lb.bottom || cx < lb.left || cx > lb.right) {
-        issues.push(`the "${name}" plank is outside the frame`);
-      } else if (!document.elementFromPoint(cx, cy)?.closest(".way__plank")) {
-        issues.push(`the "${name}" plank is covered by something`);
+        issues.push(`the "${name}" edge is outside the frame`);
+      } else if (!document.elementFromPoint(cx, cy)?.closest(".edge")) {
+        issues.push(`the "${name}" edge is covered by something`);
+      }
+      // Reachable is not the same as tappable. A diorama is letterboxed to fit, so
+      // at 320px the projection scale is ~0.44 and these drew at 18px — hittable by
+      // a mouse, not by a thumb. They counter-scale for it now; this is the number
+      // that says so, rather than trusting that they do.
+      if (Math.min(r.width, r.height) < 38) {
+        issues.push(`the "${name}" edge is only ${Math.round(Math.min(r.width, r.height))}px across`);
       }
     }
   }

@@ -31,7 +31,7 @@ import { POSTS, toggle, solved, fewest, start } from "../puzzles/cloture.js";
 import { history, fanfare } from "../puzzles/board.js";
 import { mount, unmount, enrol } from "./registry.js";
 import { dioramaFor } from "./diorama.js";
-import { signpost } from "./signpost.js";
+import { edges } from "./edges.js";
 import { go } from "./travel.js";
 
 const stage = $("#stage");
@@ -133,7 +133,7 @@ const buildWorld = () => {
     });
   }
 
-  ways.out = signpost(scene, 8.6, 4.6, place, go, exit);
+  ways.out = edges(scene, place, isoY(4.5, 2.5, GROUND), go, exit);
   ways.out.sync();
 };
 
@@ -341,7 +341,7 @@ const place = {
   mode: "fence",
   road: 4,
   label: ["la clôture", "the fence"],
-  doorway: () => [isoX(8.6, 4.6), isoY(8.6, 4.6, GROUND)],
+  doorway: (dir) => ways.out.doorAt(dir),
   frame,
   wake, leave, sleep, land,
   enter, exit,

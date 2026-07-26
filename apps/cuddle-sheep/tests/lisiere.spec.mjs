@@ -226,37 +226,42 @@ export default async ({ newPage, check, APP }) => {
       && !n.hasAttribute("tabindex"))),
     "a fox that could take a hen would make this the one place where something is lost");
 
-  /* ---- the signpost with every way open: six planks, and all of them reachable ---- */
-  // This is the last place on the road, so its sign carries a plank for all five
-  // others plus home — the most a signpost ever has to hold. The post used to be a
-  // fixed 104 units with the first plank at -86, which fitted two planks and ran
-  // 170 units of board off the bottom at six. Nothing looked wrong: overflow:hidden
-  // hid the overflowing planks while leaving their click targets outside the frame,
-  // on top of the control bar. So what is checked is reachability, not appearance.
-  const planks = await page.evaluate(() => {
+  /* ---- the ways out at the end of the road, and both of them reachable ---- */
+  // This is the last place on the road, so there is nowhere further east: the ways
+  // out are back the way he came and home, and no more. Which is the point of the
+  // edges over the signpost — a sign grew a plank per place and ran off the bottom
+  // of the frame at six, while a border has room for exactly as many directions as
+  // it has. What is checked is reachability, not appearance: a marker drawn outside
+  // the frame keeps its click target, because overflow:hidden hides it without
+  // unhitting it, and that is how the way home once ended up under a control bar.
+  const ways = await page.evaluate(() => {
     const layer = document.querySelector("#valleyFront").getBoundingClientRect();
-    return [...document.querySelectorAll(".way__plank")].map((p) => {
+    return [...document.querySelectorAll(".edge")].map((p) => {
       const r = p.getBoundingClientRect();
       const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
       return {
-        name: p.querySelector(".way__name")?.textContent,
+        dir: p.dataset.dir,
+        name: p.nextElementSibling?.textContent,
         inside: cy > layer.top && cy < layer.bottom && cx > layer.left && cx < layer.right,
-        // and whatever is actually under the middle of it must be the plank itself
-        hits: document.elementFromPoint(cx, cy)?.closest(".way__plank") !== null,
+        // and whatever is actually under the middle of it must be the marker itself
+        hits: document.elementFromPoint(cx, cy)?.closest(".edge") !== null,
       };
     });
   });
-  check("the sign carries a plank for every way, and home", planks.length === 6,
-    planks.map((p) => p.name).join("|"));
-  check("every plank is inside the frame", planks.every((p) => p.inside),
-    planks.filter((p) => !p.inside).map((p) => p.name).join("|") || "none outside");
-  check("and every plank is what you actually hit when you tap it",
-    planks.every((p) => p.hits),
-    planks.filter((p) => !p.hits).map((p) => p.name).join("|") || "all reachable");
+  check("the last place on the road has a way back and a way home, and no way on",
+    ways.map((w) => w.dir).sort().join(",") === "-1,0",
+    ways.map((w) => `${w.dir}:${w.name}`).join(" | "));
+  check("the way back names the place before it", ways.find((w) => w.dir === "-1")?.name === "la clôture",
+    ways.map((w) => `${w.dir}:${w.name}`).join(" | "));
+  check("every way out is inside the frame", ways.every((w) => w.inside),
+    ways.filter((w) => !w.inside).map((w) => w.name).join("|") || "none outside");
+  check("and every way out is what you actually hit when you tap it",
+    ways.every((w) => w.hits),
+    ways.filter((w) => !w.hits).map((w) => w.name).join("|") || "all reachable");
 
-  /* ---- leaving is always one plank away, even on a solved board ---- */
-  check("the way home is never taken away", (await page.locator(".way__plank").count()) >= 1);
-  await page.locator(".way__plank").last().click();
+  /* ---- leaving is always one border away, even on a solved board ---- */
+  check("the way home is never taken away", (await page.locator('.edge[data-dir="0"]').count()) === 1);
+  await page.locator('.edge[data-dir="0"]').click();
   await page.waitForTimeout(900);
   check("and the wood's edge is left for the meadow",
     (await page.evaluate(() => document.documentElement.dataset.mode)) === undefined);

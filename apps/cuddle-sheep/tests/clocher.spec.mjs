@@ -28,8 +28,8 @@ const boot = async (page, APP, save) => {
   await page.waitForTimeout(1000);
 };
 
-const planks = (page) => page.evaluate(() =>
-  [...document.querySelectorAll(".way__plank .way__name")].map((t) => t.textContent));
+const wayNames = (page) => page.evaluate(() =>
+  [...document.querySelectorAll(".edge__name")].map((t) => t.textContent));
 
 const readout = (page) => page.locator("#bellRound").innerText();
 const live = (page) => page.locator("#live").innerText();
@@ -80,13 +80,13 @@ const giveBack = async (page, phrase) => {
 };
 
 export default async ({ newPage, check, APP }) => {
-  /* ---- the door: earned by stacking the barn, and it opens onto the sign ---- */
+  /* ---- the door: earned by stacking the barn, and it opens onto the borders ---- */
   let page = await newPage({ viewport: { width: 1280, height: 800 } });
   await boot(page, APP, SAVE());
   await page.keyboard.press("j");
   await page.waitForTimeout(1500);
   check("an unstacked barn does not ring the bells",
-    !(await planks(page)).includes("le clocher"), (await planks(page)).join("|"));
+    !(await wayNames(page)).includes("le clocher"), (await wayNames(page)).join("|"));
   await page.close();
 
   page = await newPage({ viewport: { width: 1280, height: 800 } });
@@ -148,9 +148,9 @@ export default async ({ newPage, check, APP }) => {
   check("and the solve is remembered",
     (await page.evaluate(() => JSON.parse(localStorage.getItem("nuage:save")).valley.solves.clocher)) === 1);
 
-  /* ---- leaving is always one plank away, even on a solved board ---- */
-  check("the way home is never taken away", (await page.locator(".way__plank").count()) >= 1);
-  await page.locator(".way__plank").last().click();
+  /* ---- leaving is always one border away, even on a solved board ---- */
+  check("the way home is never taken away", (await page.locator('.edge[data-dir="0"]').count()) === 1);
+  await page.locator('.edge[data-dir="0"]').click();
   await page.waitForTimeout(900);
   check("and the tower is left for the meadow",
     (await page.evaluate(() => document.documentElement.dataset.mode)) === undefined);

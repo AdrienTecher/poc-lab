@@ -39,8 +39,8 @@ const boot = async (page, APP, save) => {
   await page.waitForTimeout(1000);
 };
 
-const planks = (page) => page.evaluate(() =>
-  [...document.querySelectorAll(".way__plank .way__name")].map((t) => t.textContent));
+const wayNames = (page) => page.evaluate(() =>
+  [...document.querySelectorAll(".edge__name")].map((t) => t.textContent));
 
 /** Which side of the cleft everyone is on, read out of the world rather than out
  *  of its internals: each walker's centre against the screen position of the
@@ -90,16 +90,16 @@ const separation = async (page, box) => {
 };
 
 export default async ({ newPage, check, APP }) => {
-  /* ---- the door: a way you have not earned is not on the sign ---- */
+  /* ---- the door: a way you have not earned has no border ---- */
   let page = await newPage({ viewport: { width: 1280, height: 800 } });
   await boot(page, APP, SAVE());
   await page.keyboard.press("j");                 // into la rivière
   await page.waitForTimeout(1500);
   check("an unsolved crossing does not light the bridge",
-    !(await planks(page)).includes("le pont"), (await planks(page)).join("|"));
+    !(await wayNames(page)).includes("le pont"), (await wayNames(page)).join("|"));
   check("and there is no door for it in the meadow either",
     (await page.locator(".gate, .sprout").count()) === 2,
-    "le pont must cost no meadow prop — the signpost is its door");
+    "le pont must cost no meadow prop — the frame's own borders are its door");
   await page.close();
 
   /* ---- solved once, and the way is simply there ---- */
@@ -109,16 +109,26 @@ export default async ({ newPage, check, APP }) => {
   }));
   await page.keyboard.press("j");
   await page.waitForTimeout(1500);
-  const withPont = await planks(page);
-  check("a solved crossing lights the bridge", withPont.includes("le pont"), withPont.join("|"));
-  check("and the sign is still in road order", withPont.join("|") === "la grange|le pont|le pré", withPont.join("|"));
+  check("a solved crossing opens the road onward",
+    (await page.locator('.edge[data-dir="1"]').count()) === 1, (await wayNames(page)).join("|"));
 
-  /* ---- walking there ---- */
-  const plank = page.locator(".way__plank", { has: page.locator("text=le pont") });
-  const pb = await plank.boundingBox();
-  await page.mouse.click(pb.x + pb.width / 2, pb.y + pb.height / 2);
-  await page.waitForTimeout(3200);
-  check("the sign walks him onto the bridge",
+  /* ---- walking there, one screen at a time ---- */
+  // The signpost let you jump straight to any open place; an edge is the border of
+  // THIS frame, so from la rivière the way east leads to la grange and le pont is
+  // the hop after. That is the whole difference the edges make and it is worth
+  // asserting rather than working around: the valley is walked, not picked from a
+  // list. Two hops east, checking the intermediate stop is real.
+  const east = async () => {
+    const b = await page.locator('.edge[data-dir="1"]').boundingBox();
+    await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
+    await page.waitForTimeout(3200);
+  };
+  await east();
+  check("the way east from the river is the barn, not the bridge",
+    (await page.evaluate(() => document.documentElement.dataset.mode)) === "barn",
+    await page.evaluate(() => document.documentElement.dataset.mode ?? "none"));
+  await east();
+  check("and the hop after that is the bridge",
     (await page.evaluate(() => document.documentElement.dataset.mode)) === "bridge",
     await page.evaluate(() => document.documentElement.dataset.mode ?? "none"));
   check("and the save knows where he is",
@@ -221,7 +231,7 @@ export default async ({ newPage, check, APP }) => {
     bridgeSep > barnSep * 0.9,
     `${bridgeSep.toFixed(1)} in the cleft vs ${barnSep.toFixed(1)} in the barn`);
 
-  /* ---- leaving is always one plank away, even on a solved board ---- */
+  /* ---- leaving is always one border away, even on a solved board ---- */
   const out = await newPage({ viewport: { width: 1280, height: 800 } });
   await boot(out, APP, SAVE({
     valley: { at: "pont", visited: ["pre", "pont"], unlocked: ["riviere", "grange", "pont"], solves: { riviere: 1 }, boards: {} },
@@ -230,8 +240,8 @@ export default async ({ newPage, check, APP }) => {
   check("a reload puts him back on the bridge",
     (await out.evaluate(() => document.documentElement.dataset.mode)) === "bridge",
     await out.evaluate(() => document.documentElement.dataset.mode ?? "none"));
-  check("the way home is never taken away", (await out.locator(".way__plank").count()) >= 1);
-  await out.locator(".way__plank").last().click();
+  check("the way home is never taken away", (await out.locator('.edge[data-dir="0"]').count()) === 1);
+  await out.locator('.edge[data-dir="0"]').click();
   await out.waitForTimeout(900);
   check("and the bridge is left for the meadow",
     (await out.evaluate(() => document.documentElement.dataset.mode)) === undefined);

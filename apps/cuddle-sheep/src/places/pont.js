@@ -1,7 +1,7 @@
 // Le pont — a plank bridge over a cleft, one lantern, and four who have to be on
 // the far side. The third place, and the one that answers whether a place is
 // cheap: it needed no engine change and, unlike la grange, no door in the meadow
-// either. The signpost already lists anywhere that is open, so a place further
+// either. The edges of the frame lead anywhere that is open, so a place further
 // down the road opens onto the map for free. The cost went down, not up.
 //
 // It is dusk here whatever the hour, and it is dusk WITHOUT a grade. A multiply
@@ -37,7 +37,7 @@ import { WALKERS, PACE, SEATS, OPTIMAL, start, cost, refuses, solved } from "../
 import { history, fanfare } from "../puzzles/board.js";
 import { mount, unmount, enrol } from "./registry.js";
 import { dioramaFor } from "./diorama.js";
-import { signpost } from "./signpost.js";
+import { edges } from "./edges.js";
 import { go } from "./travel.js";
 
 const stage = $("#stage");
@@ -293,7 +293,7 @@ const buildWorld = () => {
   }
 
   // the road on, out of the far corner of the right ledge
-  ways.out = signpost(scene, 8.9, 5.4, place, go, exit);
+  ways.out = edges(scene, place, isoY(4.5, 2.5, LEDGE), go, exit);
   ways.out.sync();
 };
 
@@ -558,7 +558,7 @@ export const build = () => {
   });
 
   // What opens the way here: having ferried a flock across water once already.
-  // The signpost does the rest — there is no door in the meadow for le pont,
+  // The frame's own edges do the rest — there is no door in the meadow for le pont,
   // because a place further down the road does not need one.
   const watch = () => {
     if (valley.opened("pont") || valley.solves("riviere") < SOLVES_TO_OPEN_PONT) return;
@@ -598,7 +598,7 @@ const place = {
   mode: "bridge",
   road: 2,
   label: ["le pont", "the bridge"],
-  doorway: () => [isoX(8.9, 5.4), isoY(8.9, 5.4, LEDGE)],
+  doorway: (dir) => ways.out.doorAt(dir),
   frame,
   wake, leave, sleep, land,
   enter, exit,

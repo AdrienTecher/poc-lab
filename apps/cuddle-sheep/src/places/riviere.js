@@ -29,7 +29,7 @@ import { PIECES, OPTIMAL, unsafe, solved } from "../puzzles/traversee.js";
 import { history, fanfare } from "../puzzles/board.js";
 import { mount, unmount, enrol } from "./registry.js";
 import { dioramaFor } from "./diorama.js";
-import { signpost } from "./signpost.js";
+import { edges } from "./edges.js";
 import { go } from "./travel.js";
 
 const stage = $("#stage");
@@ -169,7 +169,7 @@ const buildWorld = () => {
   bindBoat();
 
   // the road east, out of the far corner of the right bank
-  ways.out = signpost(scene, 8.35, 4.3, place, go, exit);
+  ways.out = edges(scene, place, isoY(4.5, 2.5, 1), go, exit);
   ways.out.sync();
 };
 
@@ -522,7 +522,7 @@ const place = {
   mode: "cross",
   road: 0,                                  // frame on the filmstrip
   label: ["la rivière", "the river"],
-  doorway: () => [isoX(8.35, 4.3), isoY(8.35, 4.3, 1)],
+  doorway: (dir) => ways.out.doorAt(dir),
   frame,
   wake, leave, sleep, land,
   enter, exit,

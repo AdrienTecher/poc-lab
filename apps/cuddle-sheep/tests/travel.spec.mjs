@@ -20,14 +20,15 @@ export default async ({ newPage, check, APP }) => {
   const mode = () => page.evaluate(() => document.documentElement.dataset.mode ?? "none");
   const bands = () => page.evaluate(() =>
     [...document.querySelectorAll("#valleyBack > g, #valleyFront > g")].map((g) => g.id).sort().join(","));
-  // the sign lists destinations first and home last, so the first plank is the
-  // way onward wherever you are standing
-  const walkTo = async () => {
-    const b = await page.locator(".way__plank").first().boundingBox();
+  // The way out is a border now, so a walk has a DIRECTION rather than a position in
+  // a list. The signpost's first plank happened to be the way onward from the river
+  // and the way back from the barn; an edge has to be asked for by name.
+  const walk = async (dir) => {
+    const b = await page.locator(`.edge[data-dir="${dir}"]`).boundingBox();
     await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
   };
-  const planks = (p) => p.evaluate(() =>
-    [...document.querySelectorAll(".way__plank .way__name")].map((t) => t.textContent));
+  const wayNames = (p) => p.evaluate(() =>
+    [...document.querySelectorAll(".edge__name")].map((t) => t.textContent));
 
   await seed(page, VALLEY);
   await page.goto(APP);
@@ -39,12 +40,12 @@ export default async ({ newPage, check, APP }) => {
   // A sleeping place must be OUT of the document, not merely hidden: an <svg>
   // clips to its CSS box and not its viewBox, so on a wide viewport the
   // letterbox margins would simply show the barn from the river.
-  check("the sign names where he can go", (await planks(page)).join("|") === "la grange|le pré",
-    (await planks(page)).join("|"));
+  check("the borders name where he can go", (await wayNames(page)).join("|") === "la grange|le pré",
+    (await wayNames(page)).join("|"));
 
   // sample his position on screen for the length of the walk
   const samples = [];
-  await walkTo();
+  await walk(1);                             // east, to the barn
   for (const i of [...Array(22).keys()]) {
     samples.push(await page.evaluate(() => Math.round(document.querySelector("#sheep").getBoundingClientRect().x)));
     await page.waitForTimeout(70);
@@ -72,7 +73,7 @@ export default async ({ newPage, check, APP }) => {
   check("and he is moving for most of the walk", moving > samples.length * 0.4, `${moving}/${samples.length} frames`);
 
   // --- and back again, because a road only ever opens
-  await walkTo();
+  await walk(-1);                            // west, back to the river
   await page.waitForTimeout(3000);
   check("the road runs both ways", (await mode()) === "cross", await mode());
 
@@ -125,8 +126,8 @@ export default async ({ newPage, check, APP }) => {
   await shut.waitForTimeout(1000);
   await shut.keyboard.press("j");
   await shut.waitForTimeout(1500);
-  const shutPlanks = await planks(shut);
-  check("a way you have not earned is not on the sign", shutPlanks.join("|") === "le pré", shutPlanks.join("|"));
+  const shutWays = await wayNames(shut);
+  check("a way you have not earned has no border", shutWays.join("|") === "le pré", shutWays.join("|"));
   check("and the barn gate is not in the meadow either",
     await shut.locator(".gate").evaluate((n) => getComputedStyle(n).display === "none"));
   await shut.close();
@@ -152,7 +153,7 @@ export default async ({ newPage, check, APP }) => {
   check("the fleece curtain is built", (await cross.locator(".puff").count()) > 0);
   check("and he is at the river to start", (await mode2(cross)) === "cross", await mode2(cross));
 
-  const b = await cross.locator(".way__plank").first().boundingBox();
+  const b = await cross.locator('.edge[data-dir="1"]').boundingBox();
   await cross.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
   const duringWalk = await swept(cross, 45, 70);
   check("walking the valley is never curtained", !duringWalk,

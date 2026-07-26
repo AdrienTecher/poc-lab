@@ -29,7 +29,7 @@ import { POSTS, BALES, OPTIMAL, start, top, refuses, solved } from "../puzzles/m
 import { history, fanfare } from "../puzzles/board.js";
 import { mount, unmount, enrol } from "./registry.js";
 import { dioramaFor } from "./diorama.js";
-import { signpost } from "./signpost.js";
+import { edges } from "./edges.js";
 import { go } from "./travel.js";
 
 const stage = $("#stage");
@@ -250,7 +250,7 @@ const buildWorld = () => {
   }
 
   // the barn door, and the road back to the river
-  ways.out = signpost(scene, 0.35, 4.3, place, go, exit);
+  ways.out = edges(scene, place, isoY(4.5, 2.5, FLOOR), go, exit);
   ways.out.sync();
 };
 
@@ -472,7 +472,7 @@ const place = {
   mode: "barn",
   road: 1,
   label: ["la grange", "the barn"],
-  doorway: () => [isoX(0.35, 4.3), isoY(0.35, 4.3, FLOOR)],
+  doorway: (dir) => ways.out.doorAt(dir),
   frame,
   wake, leave, sleep, land,
   enter, exit,

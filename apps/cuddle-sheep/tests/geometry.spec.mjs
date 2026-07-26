@@ -1,6 +1,6 @@
 // Protects the window-sizing class of bug: a sheep cut off by a short window, a
 // hint line that makes the page scroll sideways, chrome that overlaps chrome, a
-// control bar off the bottom, a signpost plank you cannot reach.
+// control bar off the bottom, a way out of a place you cannot reach.
 //
 // It used to walk two rooms — the meadow and la rivière — because at the time
 // there were two. There are six places now, and five of them had never been looked
@@ -15,8 +15,8 @@ const PLACES = [
   ["la clôture", "cloture", "fence"], ["la lisière", "lisiere", "edge"],
 ];
 
-/** Everything open and every puzzle solved once, so the signpost is at its
- *  fullest — six planks — which is the hardest thing it ever has to fit. */
+/** Everything open and every puzzle solved once, so every border that can be drawn
+ *  is drawn: a way on, a way back, and the way home. */
 const SAVE = (at) => JSON.stringify({
   v: 4,
   sheep: { happyUntil: 0, woolFrom: Date.now() - 60 * 1000 },

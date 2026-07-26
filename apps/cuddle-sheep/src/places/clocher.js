@@ -2,7 +2,7 @@
 //
 // This is the place that tested the seam rather than confirming it. The
 // structural seam held completely: registry, diorama, depth, camera, travel,
-// save and the signpost are all untouched, exactly as for la grange and le pont.
+// save and the frame's own edges are all untouched, as for la grange and le pont.
 // But it needed one thing added to engine/audio.js — a bell voice that takes a
 // pitch — because the synth had only fixed gestures and a fixed arpeggio cannot
 // spell a phrase. That is a new capability in an engine-shaped library, not a
@@ -34,7 +34,7 @@ import { BELLS, PITCH, LENGTH, judge, grow, solved } from "../puzzles/carillon.j
 import { fanfare } from "../puzzles/board.js";
 import { mount, unmount, enrol } from "./registry.js";
 import { dioramaFor } from "./diorama.js";
-import { signpost } from "./signpost.js";
+import { edges } from "./edges.js";
 import { go } from "./travel.js";
 
 const stage = $("#stage");
@@ -182,7 +182,7 @@ const buildWorld = () => {
     layers.add(bell, () => gx + ROW_GY, `bell-${id}`);
   }
 
-  ways.out = signpost(scene, 7.2, 4.0, place, go, exit);
+  ways.out = edges(scene, place, isoY(4.5, 2.5, FLOOR), go, exit);
   ways.out.sync();
 };
 
@@ -449,7 +449,7 @@ const place = {
   mode: "bells",
   road: 3,
   label: ["le clocher", "the bell tower"],
-  doorway: () => [isoX(7.2, 4.0), isoY(7.2, 4.0, FLOOR)],
+  doorway: (dir) => ways.out.doorAt(dir),
   frame,
   wake, leave, sleep, land,
   enter, exit,

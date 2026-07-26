@@ -39,9 +39,15 @@ let trip = null;
 
 export const going = () => trip !== null;
 
-/** A place's doorway in SHARED user units. */
-const doorOf = (place) => {
-  const [ux, uy] = place.doorway();
+/** A place's doorway in SHARED user units, on the side he is actually using.
+ *
+ *  There used to be one doorway per place, which meant leaving east and leaving
+ *  west both began at the same spot. Now that the way out IS the border of the
+ *  frame, he leaves by the edge he is heading for and arrives at the opposite edge
+ *  of the next place — so a walk east goes out of the right of one screen and in at
+ *  the left of the next, which is the whole reading of the thing. */
+const doorOf = (place, dir) => {
+  const [ux, uy] = place.doorway(dir);
   return [ux + place.road * PITCH, uy];
 };
 
@@ -75,7 +81,9 @@ export const go = (id) => {
 
   from.leave();                    // nothing it has in flight may land behind him
   to.wake();                       // the destination is drawn before it is on screen
-  const a = doorOf(from), b = doorOf(to);
+  // out of the border he is heading for, in at the opposite border of the next
+  const dir = Math.sign(to.road - from.road) || 1;
+  const a = doorOf(from, dir), b = doorOf(to, -dir);
   trip = { from: a, to: b, place: to, left: from, until: now() + TRIP_MS / 1000, beat: 0 };
   depart();
   springs.trip.v = 0; springs.trip.vel = 0;
