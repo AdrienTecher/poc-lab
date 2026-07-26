@@ -38,9 +38,15 @@ scalar and Nuage's screen position is derived from that same number.
 | `la lisière` | 5 | gather three hens where the dog can watch them | le clocher solved |
 
 Only the first two have a door in the meadow, because the meadow has exactly two
-care rituals and both are spent. The rest open onto the **signpost**, which lists
-anywhere that is open — so a place further down the road costs *less* than the
-second one did, not more. Two branches of three: feeding leads to the river, the
+care rituals and both are spent. The rest open onto the **borders of the frame** —
+the way out of a place is its own edge, as in Dofus: a chevron west, a chevron
+east, and one pointing home. So a place further down the road costs *less* than the
+second one did, not more.
+
+The valley is **walked**, one screen at a time: from la rivière, le pont is two
+hops east. Adjacency is not strict, though — the branches open roads 0-2-4 and
+1-3-5, so an edge means "the nearest open place this way" rather than "the next
+frame", or a player who only ever feeds him would be walled in at the river. Two branches of three: feeding leads to the river, the
 bridge and the fence; shearing leads to the barn, the bells and the wood's edge.
 
 **Adding one costs:** a module in `places/`, a pure ruleset in `puzzles/`, a
@@ -103,14 +109,14 @@ uses. Install it where you run the tests (`pnpm add -Dw playwright`) and set
 
 | spec | what it protects |
 |---|---|
-| `geometry` | ten viewports × two modes: no sideways scroll, nothing overflowing, the sheep never cut off, chrome never overlapping |
+| `geometry` | seven rooms × ten viewports: no sideways scroll, nothing overflowing, the sheep never cut off, chrome never overlapping, and every way out both reachable and at least 38px across |
 | `interactions` | every verb, the shearing gate, hit-testing where things look clickable, and that nothing invisible is tabbable |
 | `puzzles` | the optimal solution wins, both illegal pairs are caught, and a mistake is always a rewind — never a loss |
 | `barn` | the door is earned by shearing, a big bale is refused kindly, and the optimal seven says so |
 | `pont` | two at a time, the minutes only add up, and — measured in composited pixels — the dark of the cleft costs the mood no more than the dimmest place already built |
 | `clocher` | the phrase is learned by ear and rung back, and a wrong bell costs a replay and nothing else |
 | `cloture` | all 128 fences finishable with a unique answer, and a fresh one never already lit |
-| `lisiere` | the closed-form minimum against an exhaustive search of all 336 boards, the dog on no clock, the fox untabbable, and every signpost plank reachable with all six ways open |
+| `lisiere` | the closed-form minimum against an exhaustive search of all 336 boards, the dog on no clock, the fox untabbable, and both ways out reachable at the end of the road |
 | `travel` | he crosses ground on screen rather than riding, the destination lands squarely in frame, and a stroke across his back is never a swipe |
 | `day` | noon costs nothing, night keeps two thirds of noon's mood separation, and la pelote rolls to a stop without leaving the meadow |
 | `save` | the clocks survive a reload and never rewind; a corrupt save still opens onto a meadow |

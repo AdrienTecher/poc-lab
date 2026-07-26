@@ -1,6 +1,6 @@
 # Nuage — handoff
 
-**Phase 3 is closed.** Six places on the road, two animals, **362/362 green**.
+**Phase 3 is closed.** Six places on the road, two animals, **363/363 green**.
 `la rivière`, `la grange`, `le pont`, `le clocher`, `la clôture`, `la lisière`.
 This is what a fresh session needs to pick it up.
 
@@ -124,7 +124,7 @@ server port and hang.
 6. **A clock earns a HUD readout only if you can act on it right now.** The day is
    drawn as the sky, not a chip. The HUD measured **−6px of slack at 320×568**
    before anything was added — it is full.
-7. **Keys only ever open.** Any place can be left at any moment; the signpost is
+7. **Keys only ever open.** Any place can be left at any moment; the way home is
    never disabled, not even on a solved board.
 8. **Painter order is computed.** He is a DOM actor between two SVG layers; every
    piece declares `gx + gy` and `engine/depth.js` files it.
@@ -180,13 +180,11 @@ each set their own bilingual hint on landing, and nobody has read them end to en
 as one voice.
 
 ### Worth doing next, from what building six places taught
-- **The signpost is now the busiest object in the game** and it grew from 2 planks
-  to 6 during this phase. It scales again to 7 or 8 (the post sizes itself), but at
-  some point a post taller than the frame is the wrong answer and it wants
-  grouping — "further up the valley" versus "back the way you came".
-- **Travel skips intermediate places**, which is right, but nobody has walked
-  `la rivière` → `la lisière` (five pitches) to see whether the pan is too long.
-  `TRIP_MS` is a flat 2600ms deadline regardless of distance.
+- **The borders take no room and no longer grow with the roster**, which retires the
+  signpost's scaling problem outright. A seventh place costs nothing here.
+- **Travel is now one hop, so nobody ever walks five pitches** — which retires that
+  worry too. But `TRIP_MS` is still a flat 2600ms deadline regardless of distance,
+  and a hop that skips a closed place covers two pitches rather than one.
 - **Six `.place-ui` bars now key off `html[data-mode]`.** That still measures
   clean, but `measureUI()` walks every bar looking for the one with a non-zero top,
   and the HUD had −6px of slack at 320×568 before any of this.
@@ -222,8 +220,21 @@ as one voice.
   ever shears him still gets somewhere new. The signpost is the door.
 - **Hourly clover growth was cut.** It feeds the five-clover door, and
   `clovers.grow()` already reads `solves` — two causes for one signal.
-- **The map is a signpost, not a panel.** Navigation is objects in the world; the
-  HUD has no room and a menu would be the one non-diegetic element.
+- **REVERSED: the map was a signpost; the way out is now the border of the frame.**
+  Asked for explicitly — the Dofus/Wakfu system — and the filmstrip turned out to be
+  already shaped for it, so `travel.toward(from, dir)` needed no change at all. What
+  this trades away is worth knowing: the signpost was *an object in the world* and
+  these markers are chrome, drawn in world space but styled in the HUD's frosted
+  glass. That is a real softening of "navigation is objects, not a panel", accepted
+  because a border cannot be an object — it is the absence of one.
+  * The signpost also let you jump anywhere open; an edge is one hop, so the valley
+    is now WALKED. From la rivière, le pont is two hops east.
+  * Adjacency is NOT strict, and must not become strict. The branches open roads
+    0-2-4 and 1-3-5, so a feeding-only player has le pont open with la grange shut
+    between them — "the next frame" would wall them in at the river. An edge means
+    "the nearest OPEN place this way".
+  * A world map was offered alongside and declined, so orientation is still the
+    hovered name on a border. With more than six places that may not be enough.
 - **The travel camera comes off trip progress, not his position.** A camera derived
   from where he *is* can only travel as far as he does, and two doorways are much
   closer together than the frames are wide — it left the barn 470 units
