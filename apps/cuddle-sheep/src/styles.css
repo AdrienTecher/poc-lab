@@ -105,6 +105,25 @@
     --pont-muzzle:  color-mix(in oklab, #fff3ec calc(var(--m) * 100%), #eae1e1);
     --pont-tag:     color-mix(in oklab, #86b6da calc(var(--m) * 100%), #8b9098);
     --pont-tag-ink: color-mix(in oklab, #1f3547 calc(var(--m) * 100%), #33363a);
+
+    /* le clocher — the only light in here comes through two arches, which is why
+       the bronze catches it and the stone does not. Same rule as le pont: both
+       ends of every mix are chosen, so the mood keeps its full swing indoors. */
+    --clocher-stone:   color-mix(in oklab, #b0a898 calc(var(--m) * 100%), #6e6b6e);
+    --clocher-stone-l: color-mix(in oklab, #8d8677 calc(var(--m) * 100%), #565357);
+    --clocher-joint:   color-mix(in oklab, #6d6659 calc(var(--m) * 100%), #454346);
+    --clocher-floor:   color-mix(in oklab, #b3854f calc(var(--m) * 100%), #807a76);
+    --clocher-floor-l: color-mix(in oklab, #916a3c calc(var(--m) * 100%), #65605d);
+    --clocher-floor-r: color-mix(in oklab, #75552e calc(var(--m) * 100%), #514d4b);
+    --clocher-beam:    color-mix(in oklab, #9a7042 calc(var(--m) * 100%), #6b6663);
+    --clocher-beam-l:  color-mix(in oklab, #7a5732 calc(var(--m) * 100%), #55514e);
+    --clocher-sky:     color-mix(in oklab, #9fd8ee calc(var(--m) * 100%), #83898f);
+    --clocher-bell:    color-mix(in oklab, #d8a441 calc(var(--m) * 100%), #86817b);
+    --clocher-bell-l:  color-mix(in oklab, #f0c76b calc(var(--m) * 100%), #a29d96);
+    --clocher-bell-r:  color-mix(in oklab, #9c7127 calc(var(--m) * 100%), #635f5b);
+    --clocher-mouth:   color-mix(in oklab, #5f4415 calc(var(--m) * 100%), #454340);
+    --clocher-rope:    color-mix(in oklab, #c9ab74 calc(var(--m) * 100%), #86817c);
+    --clocher-grip:    color-mix(in oklab, #b8483f calc(var(--m) * 100%), #6f6764);
     --cross-top: clamp(70px,11vh,110px);
     --cross-bot: clamp(78px,13vh,120px);
     --hud:      rgba(255,255,255,.15);
@@ -396,6 +415,7 @@
   html[data-mode="cross"] #crossUI{display:flex}
   html[data-mode="barn"] #barnUI{display:flex}
   html[data-mode="bridge"] #bridgeUI{display:flex}
+  html[data-mode="bells"] #bellsUI{display:flex}
   .place-ui button{
     padding:8px 16px; border-radius:999px; font-size:.84rem; font-weight:500;
     background:var(--hud); border:1px solid var(--hud-line); color:#fff;
@@ -455,6 +475,21 @@
   .lantern.ready{animation:lampcall 2.2s ease-in-out infinite}
   @keyframes lampcall{0%,100%{filter:none}50%{filter:drop-shadow(0 0 12px var(--pont-lamp))}}
   .lantern:hover, .lantern:focus-visible{filter:drop-shadow(0 0 10px #fff)}
+
+  /* le clocher: the rope is the target, because a bell up a tower is out of reach
+     and bringing it down to you is the entire point of a bell rope. */
+  html[data-place] .rope:not([disabled]){pointer-events:auto; cursor:pointer}
+  .rope{outline:none}
+  .rope[disabled]{cursor:default; pointer-events:none}
+  .rope__cord, .rope__grip{transition:filter .2s}
+  .rope:hover .rope__cord, .rope:focus-visible .rope__cord,
+  .rope:hover .rope__grip, .rope:focus-visible .rope__grip{filter:drop-shadow(0 0 6px #fff)}
+  /* a ringing bell is lit, not scaled: bronze catching the light through the arch */
+  .bell{transition:filter .28s}
+  .bell.lit{filter:drop-shadow(0 0 9px var(--clocher-bell-l))}
+  /* and the moment of the strike gets its own flash, so a phrase that rings the
+     same bell twice reads as two strikes rather than one long swing */
+  .bell.struck{filter:drop-shadow(0 0 16px var(--clocher-bell-l)) brightness(1.16)}
 
   /* la grange: a post lights up when the bale in his mouth may go there */
   .post{cursor:pointer; outline:none}

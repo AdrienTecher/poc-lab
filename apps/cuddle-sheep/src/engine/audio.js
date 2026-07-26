@@ -51,6 +51,36 @@ export const sfx = (() => {
         o.start(t + i * 0.075); o.stop(t + i * 0.075 + 0.62);
       });
     },
+    /* A struck bell, at whatever pitch is asked for — the one voice here that
+     * takes an argument, because le clocher rings phrases and a fixed arpeggio
+     * cannot spell one.
+     *
+     * What makes it a bell rather than a tone is that its partials are NOT
+     * harmonic: a cast bell rings at roughly x2.76 and x5.40 above its hum, which
+     * is why a bell is recognisable in one strike and why stacking octaves never
+     * sounds like one. `when` is an offset in seconds so a phrase is scheduled on
+     * the audio clock in one go, rather than walked out with setTimeout and left
+     * to drift against it. */
+    bell(freq, when = 0) {
+      const c = AC(); if (!c) return;
+      const t = c.currentTime + when;
+      for (const [ratio, peak, decay] of [[1, 0.10, 1.9], [2.76, 0.045, 1.15], [5.4, 0.021, 0.66]]) {
+        const o = c.createOscillator();
+        o.type = "sine";
+        o.frequency.value = freq * ratio;
+        env(c, o, t, 0.004, decay, peak);
+        o.start(t); o.stop(t + decay + 0.12);
+      }
+      // the strike: a short filtered knock, which is what says struck metal
+      const buf = c.createBuffer(1, 900, c.sampleRate);
+      const d = buf.getChannelData(0);
+      for (const k of [...Array(d.length).keys()]) d[k] = (Math.random() * 2 - 1) * (1 - k / d.length) ** 3;
+      const src = c.createBufferSource(); src.buffer = buf;
+      const bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = freq * 3.4; bp.Q.value = 2;
+      src.connect(bp);
+      env(c, bp, t, 0.002, 0.07, 0.05);
+      src.start(t);
+    },
     munch() {
       const c = AC(); if (!c) return;
       for (const i of [...Array(3).keys()]) {
