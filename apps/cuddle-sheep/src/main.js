@@ -13,6 +13,7 @@ import * as clovers from "./world/clovers.js";
 import * as wool from "./world/wool.js";
 import * as sprout from "./world/sprout.js";
 import * as gate from "./world/gate.js";
+import * as pelote from "./world/pelote.js";
 import * as butterflies from "./world/butterflies.js";
 import * as hands from "./world/hands.js";
 import * as mood from "./world/mood.js";
@@ -35,6 +36,7 @@ clovers.build();
 wool.build();
 sprout.build();
 gate.build();
+pelote.build();
 butterflies.build();
 hud.build();
 hands.build();
@@ -64,6 +66,7 @@ const frame = (ms) => {
   sheep.step(dt, t, m);          // steps every spring, the camera's included
   camera.paint();                // ...so the layers are framed before he is placed in them
   butterflies.step(dt, t, m);
+  pelote.step(dt);
   if (place) place.frame(dt, t);
   else if (travel.going()) { travel.scenery(dt, t); travel.step(dt, t); }
   stepParticles(dt);

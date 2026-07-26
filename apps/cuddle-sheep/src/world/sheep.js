@@ -14,6 +14,7 @@ import { DOZE_AFTER, SHEAR_CALM } from "../rules.js";
 import { active } from "../places/registry.js";
 import { ptr, decay, poke } from "./pointer.js";
 import { flying } from "./butterflies.js";
+import { rolling } from "./pelote.js";
 
 S("lean", 0, 90, 13);      // head tilt, degrees
 S("gazeX", 0, 110, 15);
@@ -110,8 +111,12 @@ export const step = (dt, t, m) => {
   /* ---- what he looks at: your hand, else a butterfly, else a slow drift ---- */
   let gx, gy;
   const bfly = flying();
+  const ball = rolling();
   if (state.dragging) {
     gx = 0; gy = 0.7;
+  } else if (ball) {
+    // a thing rolling past outranks everything: he tracks it across the meadow
+    gx = clamp((ball.x - 600) / 420, -1, 1); gy = 0.8;
   } else if (ptr.inside && now() - state.lastPointer < 2.2) {
     gx = clamp((ptr.x - 200) / 190, -1, 1);
     gy = clamp((ptr.y - 190) / 170, -1, 1);

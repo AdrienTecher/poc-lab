@@ -189,6 +189,18 @@
   .clover__leaves{transform-box:fill-box; transform-origin:50% 90%; transition:transform .4s cubic-bezier(.2,1.7,.4,1)}
   .clover.picked{opacity:0; pointer-events:none}
 
+  /* la pelote: wound from the fleece he shed, and the one thing in the meadow
+     that he plays with rather than you playing with him */
+  .pelote{cursor:pointer; outline:none; transition:filter .25s}
+  .pelote:hover, .pelote:focus-visible{filter:drop-shadow(0 0 8px #fff)}
+  .pelote__rim{fill:var(--wool-edge)}
+  .pelote__core{fill:var(--wool)}
+  .pelote__yarn{stroke:var(--wool-edge); stroke-width:1.6; fill:none; stroke-linecap:round}
+  /* the yarn turns with the roll; the group's transform attribute does the
+     travelling, so the spin has to live on a child or the two overwrite */
+  .pelote__yarn, .pelote__core{transform-box:fill-box; transform-origin:50% 50%;
+    transform:rotate(var(--spin, 0deg))}
+
   /* the shears live in the grass; they glint once the fleece is ready */
   .shears{cursor:pointer; outline:none; transition:opacity .3s, filter .3s}
   .shears:hover, .shears:focus-visible{filter:drop-shadow(0 0 8px rgba(255,255,255,.9))}

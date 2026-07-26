@@ -20,16 +20,25 @@ export const placeProp = (node, x, y, k) => {
   return node;
 };
 
-export const layoutProps = () => {
+/** The counter-scale a prop needs at the current meadow size. Exported because
+ *  anything that MOVES through the meadow has to recompute it per frame rather
+ *  than have layoutProps write it once. */
+export const propScale = () => {
   const box = meadow.getBoundingClientRect();
   const sx = (box.width || 1200) / 1200, sy = (box.height || 260) / 260;
   // props hold a fixed on-screen size, which crowds them together on a narrow
   // meadow — so they shrink with the width once there is no room to spare
-  const fit = clamp(box.width / 900, 0.6, 1);
-  for (const p of props) {
-    const k = p.k * fit;
-    p.node.setAttribute("transform", `translate(${p.x} ${p.y}) scale(${(k * sy / sx).toFixed(4)} ${k})`);
-  }
+  return { squash: sy / sx, fit: clamp(box.width / 900, 0.6, 1) };
+};
+
+export const placeAt = (node, x, y, k) => {
+  const { squash, fit } = propScale();
+  const s = k * fit;
+  node.setAttribute("transform", `translate(${x} ${y}) scale(${(s * squash).toFixed(4)} ${s.toFixed(4)})`);
+};
+
+export const layoutProps = () => {
+  for (const p of props) placeAt(p.node, p.x, p.y, p.k);
 };
 
 /** A shorn fleece floats off and joins the cloud bank — he is named after one. */

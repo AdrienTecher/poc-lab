@@ -97,6 +97,8 @@ export default async ({ newPage, check, APP }) => {
   check("and he can be made happy in the dark", (await night.locator("#chipState").innerText()) === "Heureux",
     await night.locator("#chipState").innerText());
   await night.close();
+
+  await pelote({ newPage, check, APP });
 };
 
 const page_positions = (page) => page.evaluate(() => {
@@ -109,3 +111,51 @@ const page_positions = (page) => page.evaluate(() => {
     moon: Number(getComputedStyle(document.querySelector(".moon")).opacity),
   };
 });
+
+/* ---- la pelote: the one thing he plays with, on no clock at all -------- */
+export const pelote = async ({ newPage, check, APP }) => {
+  const shorn = {
+    v: 4, sheep: { happyUntil: 0, woolFrom: Date.now() - 60000 }, care: { fed: 0, shorn: 1 },
+    valley: { at: "pre", visited: ["pre"], unlocked: [], solves: {}, boards: {} },
+    prefs: { sound: false },
+  };
+  const fresh = { ...shorn, care: { fed: 0, shorn: 0 } };
+
+  let page = await newPage({ viewport: { width: 1280, height: 800 } });
+  await page.addInitScript((s) => localStorage.setItem("nuage:save", s), JSON.stringify(fresh));
+  await page.goto(APP);
+  await page.waitForTimeout(800);
+  check("before a shearing there is no ball of wool",
+    await page.locator(".pelote").evaluate((n) => getComputedStyle(n).display === "none"));
+  await page.close();
+
+  page = await newPage({ viewport: { width: 1280, height: 800 } });
+  await page.addInitScript((s) => localStorage.setItem("nuage:save", s), JSON.stringify(shorn));
+  await page.goto(APP);
+  await page.waitForTimeout(800);
+  check("a fleece taken off leaves one in the grass",
+    await page.locator(".pelote").evaluate((n) => getComputedStyle(n).display !== "none"));
+
+  const where = async () => (await page.locator(".pelote").boundingBox()).x;
+  const before = await where();
+  const box = await page.locator(".pelote").boundingBox();
+  await page.mouse.click(box.x + box.width * 0.25, box.y + box.height * 0.6);
+  await page.waitForTimeout(700);
+  const after = await where();
+  check("pushing it sets it rolling", Math.abs(after - before) > 40, `${before} -> ${after}`);
+
+  // it must come to rest, and it must never leave the meadow
+  await page.waitForTimeout(2200);
+  const rest = await where();
+  await page.waitForTimeout(700);
+  check("and it rolls to a stop", Math.abs((await where()) - rest) < 3);
+  check("without ever leaving the meadow", rest > -20 && rest < 1280, `${rest}`);
+
+  // it costs nothing and buys nothing: playing is not a clock
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("nuage:save")));
+  check("playing with it changes no clock", saved.care.shorn === 1 && saved.sheep.happyUntil === 0,
+    JSON.stringify(saved.care));
+  check("and it never made him happy on its own",
+    (await page.locator("#chipState").innerText()) === "Il boude");
+  await page.close();
+};
