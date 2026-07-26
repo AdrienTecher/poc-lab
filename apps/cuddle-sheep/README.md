@@ -22,6 +22,30 @@ order — and runs the single frame loop.
 | `puzzles/` | the rules of a place, as pure functions of where the pieces are |
 | `ui/` | the chrome around the scene: the two clock rings, the hint bubble, the live region |
 
+## The valley
+
+Four places on one filmstrip, each a frame of the shared coordinate space. The
+camera is the viewBox min-x those frames share, so panning is a spring on one
+scalar and Nuage's screen position is derived from that same number.
+
+| place | road | the puzzle | what opens it |
+|---|---|---|---|
+| `la rivière` | 0 | wolf, sheep and cabbage — he is the piece | five clovers eaten |
+| `la grange` | 1 | hay-bale Hanoi — the bales ARE the fleeces, he is the crane | three fleeces shorn |
+| `le pont` | 2 | bridge-and-lantern — two at a time, at the slower one's pace | la rivière solved once |
+| `le clocher` | 3 | a phrase of five bells, given back | la grange solved once |
+
+The first two have a door in the meadow; the second two do not, and do not need
+one. The signpost lists anywhere that is open, so a place further down the road
+opens onto the map for free — which makes a third place cheaper than the second
+was, not dearer.
+
+**Adding one costs:** a module in `places/`, a pure ruleset in `puzzles/`, a
+palette block, a `.place-ui` bar plus its one `html[data-mode]` line, `road: <n>`,
+an import in `main.js`, and a watcher saying what opens it. No engine change —
+with one recorded exception, `le clocher`, which needed a synth voice that takes a
+pitch because a fixed arpeggio cannot spell a phrase.
+
 Two rules keep it from tangling. **Painter order is computed, not hand-wired** —
 he is a DOM actor between two SVG layers, and every piece declares its own depth
 (`engine/depth.js`). **The progression is a store, not a call** — the clover
@@ -64,4 +88,14 @@ uses. Install it where you run the tests (`pnpm add -Dw playwright`) and set
 | `geometry` | ten viewports × two modes: no sideways scroll, nothing overflowing, the sheep never cut off, chrome never overlapping |
 | `interactions` | every verb, the shearing gate, hit-testing where things look clickable, and that nothing invisible is tabbable |
 | `puzzles` | the optimal solution wins, both illegal pairs are caught, and a mistake is always a rewind — never a loss |
+| `barn` | the door is earned by shearing, a big bale is refused kindly, and the optimal seven says so |
+| `pont` | two at a time, the minutes only add up, and — measured in composited pixels — the dark of the cleft costs the mood no more than the dimmest place already built |
+| `clocher` | the phrase is learned by ear and rung back, and a wrong bell costs a replay and nothing else |
+| `travel` | he crosses ground on screen rather than riding, the destination lands squarely in frame, and a stroke across his back is never a swipe |
+| `day` | noon costs nothing, night keeps two thirds of noon's mood separation, and la pelote rolls to a stop without leaving the meadow |
 | `save` | the clocks survive a reload and never rewind; a corrupt save still opens onto a meadow |
+
+Two of these read actual pixels, because some questions can only be settled by
+looking at what the compositor did. A blend mode's effect on the distance between
+two palettes is one: modelling it means assuming a grade colour and ignoring every
+layer over it, and the modelled answer and the real one differ by a lot.

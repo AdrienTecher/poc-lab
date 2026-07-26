@@ -1,44 +1,59 @@
 # Nuage — handoff
 
-Everything through Phase 2 is on `main` at `fb918ae`, deployed, **136/136 green**.
+Everything through **Phase 3 in part** is on `main`, **177/177 green**.
+Four places on the road: `la rivière`, `la grange`, `le pont`, `le clocher`.
 This is what a fresh session needs to pick it up.
 
-## 1. First, the thing that is broken about this environment
+## 1. The two things that are wrong about this environment
 
-Commits made in the remote session are **unsigned**. Not fixable there:
-`/root/.gitconfig` sets `commit.gpgsign=true` with
-`user.signingkey=/home/claude/.ssh/commit_signing_key.pub`, and that file is
-**0 bytes with no private key beside it**; `ssh-keygen` is not installed either.
-Author and committer are already correct (`Claude <noreply@anthropic.com>`), so
-the usual `--reset-author` advice is a no-op.
-
-Locally, with a real key:
+**Commits are unsigned, and will stay unsigned until a key exists.** This machine
+has no signing key *of any kind*: the GPG keyring is empty (`pubring.kbx` is a
+32-byte header, `private-keys-v1.d/` empty), `~/.ssh/` holds only a 0-byte
+`authorized_keys`, and the agent reports no identities. `gh` is authenticated but
+its token scopes are `gist, read:org, repo, workflow` — no `admin:ssh_signing_key`
+or `admin:gpg_key` — so a key cannot be registered from a non-interactive session
+either. `git commit -S` therefore cannot run. With a real key:
 
 ```bash
-git rebase --exec "git commit --amend --no-edit -S" b225cd6   # last verified commit
+git rebase --exec "git commit --amend --no-edit -S" b225cd6
 git push --force-with-lease origin main
 ```
 
-`b225cd6` is the last commit before this run. Everything after it is unsigned.
-Rewriting is a force-push over published, deployed history — deliberate choice,
-not a cleanup.
+That is a **second** force-push of published history. The first already happened:
+
+**The author identity was wrong and has been rewritten.** Nineteen commits from
+`b225cd6` carried `Claude <noreply@anthropic.com>` as author *and* committer,
+which is an agent named in commit metadata — the one thing
+`.claude/atelier/conventions/git.md` calls absolute. So the earlier handoff's claim
+that `--reset-author` is a no-op was wrong; it was the half of the rewrite that
+could be done without a key, and it was done with `--author=` rather than
+`--reset-author`, because `--reset-author` collapses every author *date* to the
+moment of the rewrite. Trees were verified byte-identical against
+`backup/pre-author-rewrite`.
+
+**pnpm is broken here.** `~/.local/share/pnpm/…/@pnpm/exe/pnpm` is literally the
+text `This file intentionally left blank`. `corepack pnpm` works; shim it onto
+PATH so `build.mjs`'s own `spawnSync("pnpm", …)` resolves too.
 
 ## 2. Run it
 
 ```bash
-pnpm build                                        # from the repo root, into dist/
-CHROMIUM=/path/to/chrome node apps/cuddle-sheep/tests/run.mjs        # all specs
-CHROMIUM=... node apps/cuddle-sheep/tests/run.mjs day travel         # some specs
+pnpm build                                                    # from the repo root, into dist/
+CHROMIUM=/path/to/chrome node apps/cuddle-sheep/tests/run.mjs           # all specs
+CHROMIUM=... node apps/cuddle-sheep/tests/run.mjs pont clocher          # some specs
 ```
 
-The suite drives the **built** artifact over HTTP at the real
-`/poc-lab/cuddle-sheep/` base. Playwright is deliberately not a dependency of
-the package. Full run is ~7 minutes; run **one at a time** — concurrent runs
-fight over the server port and hang.
+Playwright is deliberately **not** a dependency of this package, and installing it
+must not touch `package.json` or `pnpm-lock.yaml` — CI installs it job-locally.
+Installing it into a scratch directory and symlinking `node_modules/playwright`
+keeps the tree clean.
+
+Full run is ~11 minutes. Run **one at a time** — concurrent runs fight over the
+server port and hang.
 
 ## 3. Shape
 
-`main.js` is a 70-line composition root: build in order, then one frame loop.
+`main.js` is a 75-line composition root: build in order, then one frame loop.
 
 | tree | what lives there |
 |---|---|
@@ -53,61 +68,110 @@ fight over the server port and hang.
 1. **`--m` is the spine.** Mood is the *distance* between the happy and sad
    palettes. Anything laid over the scene scales that distance too. `day.spec`
    screenshots the sky at both moods and requires night to keep ≥66% of noon's
-   separation (currently 70%). If you darken night, re-measure.
-2. **Wool is a body state, mood is a feeling state.** Nothing in `wool.js`
-   writes `happyUntil`, `cuddle` or `--m`. Shearing *reads* mood as a gate.
-3. **Only one clock may ever empty.** Happiness is it. Everything added since
-   only fills. An emptying clock is the only kind that can make you late, and
-   lateness is what a chore list is made of.
-4. **A clock earns a HUD readout only if you can act on it right now.** The day
-   is drawn as the sky, not as a chip. The HUD measured **−6px of slack at
-   320×568** before anything was added — it is full.
-5. **Keys only ever open.** Any place can be left at any moment; the signpost is
+   separation (currently 70%). **Avoiding a grade is not sufficient** — le pont's
+   first palette was dark at *both* ends and lost 65% of the swing with no grade
+   in sight. Both endpoints of every mix have to be chosen far apart.
+2. **A place is measured against the dimmest place already built, not the sky.**
+   At noon over the whole scene: meadow sky 140 levels, `la rivière` 86,
+   `la grange` 52, `le pont` 63. A sky goes saturated-cyan-to-grey and a barn goes
+   hay-to-grey; they cannot swing alike, so day.spec's 66%-of-the-sky is the right
+   bar for the sky and the wrong bar for a room. `pont.spec` measures both places
+   in one run and compares them, which cannot be unfair and tightens by itself.
+3. **Wool is a body state, mood is a feeling state.** Nothing in `wool.js` writes
+   `happyUntil`, `cuddle` or `--m`. Shearing *reads* mood as a gate.
+4. **Only one clock may ever empty.** Happiness is it. This killed the canonical
+   bridge-and-torch: a torch that burns down is an emptying clock that makes you
+   late, so le pont's lantern never goes out and its minutes only add up. The
+   result is a board with no failure state, and `OPTIMAL` as a boast rather than a
+   budget — which is the shape `la grange` already had.
+5. **A mistake is a rewind, never a loss.** A wrong bell costs a replay; the
+   phrase never shortens. A refused bale is a sentence. Nothing is taken away.
+6. **A clock earns a HUD readout only if you can act on it right now.** The day is
+   drawn as the sky, not a chip. The HUD measured **−6px of slack at 320×568**
+   before anything was added — it is full.
+7. **Keys only ever open.** Any place can be left at any moment; the signpost is
    never disabled, not even on a solved board.
-6. **Painter order is computed.** He is a DOM actor between two SVG layers;
-   every piece declares `gx + gy` and `engine/depth.js` files it.
-7. **A sleeping diorama leaves the document.** `overflow:hidden` on an `<svg>`
+8. **Painter order is computed.** He is a DOM actor between two SVG layers; every
+   piece declares `gx + gy` and `engine/depth.js` files it.
+9. **A sleeping diorama leaves the document.** `overflow:hidden` on an `<svg>`
    clips to the CSS box, *not* the viewBox — letterbox margins paint live user
    space (112 units at 1280×800, 359 at phone-landscape, against a 728 pitch).
-8. **Never `git add -A`.** Stage explicit paths. A background agent once edited
-   the tree mid-commit and it shipped.
+   For the same reason a place's own backdrop must be **exactly one `PITCH` wide**:
+   during travel both dioramas are live at once, and a wider one paints over its
+   neighbour. Use `VB_X`/`VB_W`, don't retype 728.
+10. **Never `git add -A`.** Stage explicit paths. A background agent once edited
+    the tree mid-commit and it shipped.
+11. **Tests assert what must become true, not when.** Three assertions once
+    sampled a position at a fixed instant inside a process that accelerates,
+    reverses and decays; the baseline was silently 134/136, and one assertion was
+    passing *vacuously* because its expected value equalled the failure state of
+    the check before it. Poll for the condition. Note the swipe has a real 0.6s
+    deadline in `hands.js`, so a test drag must be one continuous motion — putting
+    a sleep in the drag loop makes the app correctly refuse the gesture.
 
 ## 5. What is left
 
-### Phase 3 — the roster
-`le pont` (bridge-and-torch, at dusk), `la clôture` (lights-out fence),
-`le clocher` (bell melody, reuses the synth), `la lisière` (fox and hens), plus
-a second animal that is also a game piece. *Retires: can a place ship in a day?*
+### Phase 3, the rest of the roster — NOT DONE
+- **`la clôture`** — lights-out fence. Design note: make the goal *all lanterns
+  lit* rather than all out, so the clock fills (invariant 4). A linear run of
+  panels toggling self-and-neighbours is only solvable for some lengths — generate
+  the start by applying random toggles to the solved state, so it is solvable by
+  construction and the minimum is computable.
+- **`la lisière`** — fox and hens. Must be a genuinely *different* puzzle from
+  `la traversée`, which is already wolf/sheep/cabbage; fox-goose-corn is the same
+  puzzle wearing a different coat.
+- **A second animal that is also a game piece.** The sketch that survived review:
+  **`le chien`**, a sheepdog who is a presence in the meadow (a third thing to
+  touch) and the piece that makes `la lisière` solvable. Note the flock at le pont
+  are all sheep, so that deliverable is still open.
 
-Adding a place today costs: one module in `places/`, one pure ruleset in
-`puzzles/`, a palette block, a door in the meadow, and `road: <n>` on the
-filmstrip. `la grange` needed **zero** engine changes — that is the bar.
-
-The multi-plank signpost already scales; with 3+ places it becomes the map it
-was designed to be, and that is when to check whether walking through
-intermediate places is tedious.
+`road: 4` and `road: 5` are free. Neither needs a meadow door.
 
 ### Phase 4 — the object
-PWA manifest + offline cache, full i18n pass (copy is currently inline
-FR-with-EN), audio mix, reduced-motion pass, proper first-run.
+PWA manifest + offline cache, full i18n pass (copy is inline FR-with-EN), audio
+mix, reduced-motion pass, proper first-run.
 
 ### Carried-forward, smaller
 - **Arrow keys don't travel** — `la rivière` claims them for the boat. Travel is
   Tab-to-plank, swipe, or `Escape`. Unresolved, not urgent.
 - **`la grange`'s bale carry is a straight lerp** — he does not walk the arc a
   loaded animal would. Cosmetic.
+- **`day.spec`'s `dataset.pin` is dead code.** It sets `html[data-pin]` to stop the
+  frame loop moving `--m` under the shutter, but `writeMood` never reads it. It
+  works anyway, by accident: the dedupe in `mood.js` early-returns while he is
+  settled at 0, so an inline `--m` survives. `pont.spec` leans on the same
+  accident. Either implement the pin or drop the pretence — but a test hook in the
+  mood system is a real cost, which is why it was left alone.
+- **`la grange` is the dimmest place in the game** at 37% of the meadow sky's
+  swing. Not a bug — a barn interior is dim, and 52 levels still reads — but it is
+  now the floor every new place is measured against, so raising it raises the bar.
+- **`riviere.js` has a typo'd fill**, `#c9 efa0` with a space, on an element at
+  `opacity: 0`. Harmless, never painted, left alone.
 
 ## 6. Design decisions already made, with reasons
 
-- **Hourly clover growth was cut.** It feeds the five-clover door, and a key
-  that arrives by waiting is not care. Also: `clovers.grow()` already reads
-  `solves`, so a fuller patch already means "you solved something" — two causes
-  for one signal.
-- **The map is a signpost, not a panel.** Navigation is objects in the world;
-  the HUD has no room and a menu would be the one non-diegetic element.
-- **The travel camera comes off trip progress, not his position.** A camera
-  derived from where he *is* can only travel as far as he does, and two doorways
-  are much closer together than the frames are wide — it left the barn 470 units
+- **A place further down the road gets no meadow door.** The meadow has exactly
+  two care rituals and both already spend one. A third would need a third chore,
+  and hourly clover growth was already cut because a key that arrives by waiting
+  is not care. So `la rivière` solved opens `le pont`, `la grange` solved opens
+  `le clocher` — each existing door leads on to one more, and a player who only
+  ever shears him still gets somewhere new. The signpost is the door.
+- **Hourly clover growth was cut.** It feeds the five-clover door, and
+  `clovers.grow()` already reads `solves` — two causes for one signal.
+- **The map is a signpost, not a panel.** Navigation is objects in the world; the
+  HUD has no room and a menu would be the one non-diegetic element.
+- **The travel camera comes off trip progress, not his position.** A camera derived
+  from where he *is* can only travel as far as he does, and two doorways are much
+  closer together than the frames are wide — it left the barn 470 units
   off-centre. `smootherstep`, and `g(1) = 1` makes arrival framing exact.
-- **Undo and Rejouer stay as chrome.** They are meta actions; dressing them as
-  objects would be costume, not immersion.
+- **Undo and Rejouer stay as chrome.** Meta actions; dressing them as objects
+  would be costume, not immersion.
+- **A phrase is scheduled on the audio clock, not with a timer per note.**
+  `setTimeout` drifts against the audio clock, and a carillon out of tune with
+  itself is worse than none. The *visual* swings still use timers — a bell seen a
+  frame late is nothing, a bell heard late spoils the phrase.
+- **Le clocher's scale is pentatonic** so no two bells can clash: a wrong answer
+  is a different answer rather than an ugly noise, which matters where being wrong
+  has to feel survivable.
+- **The rope is the tap target, not the bell.** A bell up a tower is out of reach,
+  and bringing it down to you is the entire point of a bell rope.
