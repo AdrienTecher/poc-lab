@@ -23,6 +23,7 @@ import * as riviere from "./places/riviere.js";
 import * as grange from "./places/grange.js";
 import * as pont from "./places/pont.js";
 import * as clocher from "./places/clocher.js";
+import * as cloture from "./places/cloture.js";
 import * as camera from "./engine/camera.js";
 import { refreshCTM } from "./world/pointer.js";
 import { active, placeOf } from "./places/registry.js";
@@ -46,6 +47,7 @@ riviere.build();    // after hands: Escape drops the shears before it leaves a p
 grange.build();
 pont.build();
 clocher.build();
+cloture.build();
 clovers.settle();   // past solves may have earned more than the three he starts with
 mood.watch();
 

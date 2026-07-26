@@ -124,6 +124,24 @@
     --clocher-mouth:   color-mix(in oklab, #5f4415 calc(var(--m) * 100%), #454340);
     --clocher-rope:    color-mix(in oklab, #c9ab74 calc(var(--m) * 100%), #86817c);
     --clocher-grip:    color-mix(in oklab, #b8483f calc(var(--m) * 100%), #6f6764);
+
+    /* la clôture — outdoors, so the valley's own sky stands behind it and this is
+       only the field and the ironwork. The flame is the one colour that must stay
+       warm at both ends: an unlit lantern reads by the glass going dark, and if
+       the flame greyed out with his mood there would be nothing left to read. */
+    --cloture-grass:   color-mix(in oklab, #7cae6b calc(var(--m) * 100%), #667069);
+    --cloture-grass-l: color-mix(in oklab, #5e8a55 calc(var(--m) * 100%), #525b54);
+    --cloture-grass-r: color-mix(in oklab, #4a7044 calc(var(--m) * 100%), #434a44);
+    --cloture-mown:    color-mix(in oklab, #9dc98a calc(var(--m) * 100%), #7c847b);
+    --cloture-tuft:    color-mix(in oklab, #8fc274 calc(var(--m) * 100%), #6c756b);
+    --cloture-post:    color-mix(in oklab, #c08f5b calc(var(--m) * 100%), #857f7a);
+    --cloture-post-l:  color-mix(in oklab, #9c7146 calc(var(--m) * 100%), #6a6561);
+    --cloture-post-r:  color-mix(in oklab, #7b5731 calc(var(--m) * 100%), #524e4b);
+    --cloture-rail:    color-mix(in oklab, #b38352 calc(var(--m) * 100%), #7d7772);
+    --cloture-rail-l:  color-mix(in oklab, #8e6539 calc(var(--m) * 100%), #605c58);
+    --cloture-iron:    color-mix(in oklab, #4a4038 calc(var(--m) * 100%), #3d3b3d);
+    --cloture-glass:   color-mix(in oklab, #7d94a6 calc(var(--m) * 100%), #5f6266);
+    --cloture-flame:   #ffd071;
     --cross-top: clamp(70px,11vh,110px);
     --cross-bot: clamp(78px,13vh,120px);
     --hud:      rgba(255,255,255,.15);
@@ -416,6 +434,7 @@
   html[data-mode="barn"] #barnUI{display:flex}
   html[data-mode="bridge"] #bridgeUI{display:flex}
   html[data-mode="bells"] #bellsUI{display:flex}
+  html[data-mode="fence"] #fenceUI{display:flex}
   .place-ui button{
     padding:8px 16px; border-radius:999px; font-size:.84rem; font-weight:500;
     background:var(--hud); border:1px solid var(--hud-line); color:#fff;
@@ -490,6 +509,19 @@
   /* and the moment of the strike gets its own flash, so a phrase that rings the
      same bell twice reads as two strikes rather than one long swing */
   .bell.struck{filter:drop-shadow(0 0 16px var(--clocher-bell-l)) brightness(1.16)}
+
+  /* la clôture: lit and unlit have to be legible at a glance and at any mood, so
+     the difference is carried by the glass AND the spill on the grass, not by one
+     of them. The flame keeps its warmth at every mood for the same reason. */
+  html[data-place] .lamppost:not([disabled]){pointer-events:auto; cursor:pointer}
+  .lamppost{outline:none}
+  .lamppost[disabled]{cursor:default; pointer-events:none}
+  .lamppost__glow{opacity:0; transition:opacity .4s ease}
+  .lamppost__flame{opacity:0; transition:opacity .3s ease}
+  .lamppost.lit .lamppost__glow{opacity:calc(var(--flick, 1))}
+  .lamppost.lit .lamppost__flame{opacity:1}
+  .lamppost.lit .lamppost__lamp{filter:drop-shadow(0 0 7px var(--cloture-flame))}
+  .lamppost:hover .lamppost__lamp, .lamppost:focus-visible .lamppost__lamp{filter:drop-shadow(0 0 9px #fff)}
 
   /* la grange: a post lights up when the bale in his mouth may go there */
   .post{cursor:pointer; outline:none}

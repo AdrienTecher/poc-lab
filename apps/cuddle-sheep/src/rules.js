@@ -24,6 +24,8 @@ export const FLEECES_TO_UNLOCK = 3;         // fleeces shorn before the barn ope
 // what is nearer, and it opens onto the signpost rather than onto the grass.
 export const SOLVES_TO_OPEN_PONT = 1;       // crossings solved before the bridge is lit
 export const SOLVES_TO_OPEN_CLOCHER = 1;    // barns stacked before the bells are heard
+export const SOLVES_TO_OPEN_CLOTURE = 1;    // bridges walked before the fence is found
+export const SOLVES_TO_OPEN_LISIERE = 1;    // phrases rung before the wood's edge opens
 
 /* ---- the day ----------------------------------------------------------- *
  * The only clock in the game with no stored state: it is read from the
