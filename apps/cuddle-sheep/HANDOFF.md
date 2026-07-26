@@ -13,32 +13,55 @@ was incomplete, not a seam that failed; nothing structural moved for any of them
 And the cost went *down* after la grange, because only the first two places need a
 door in the meadow. The rest open onto the signpost.
 
-## 1. The two things that are wrong about this environment
+## 1. History, signing, and what this environment gets wrong
 
-**Commits are unsigned, and will stay unsigned until a key exists.** This machine
-has no signing key *of any kind*: the GPG keyring is empty (`pubring.kbx` is a
-32-byte header, `private-keys-v1.d/` empty), `~/.ssh/` holds only a 0-byte
-`authorized_keys`, and the agent reports no identities. `gh` is authenticated but
-its token scopes are `gist, read:org, repo, workflow` — no `admin:ssh_signing_key`
-or `admin:gpg_key` — so a key cannot be registered from a non-interactive session
-either. `git commit -S` therefore cannot run. With a real key:
+**Every commit from `b225cd6` is now signed** — 26 of them, all reporting `G`
+against `~/.config/git/allowed_signers`. Two things had been wrong and both are
+fixed, each by a force-push of published history.
+
+*The author identity.* Those commits carried `Claude <noreply@anthropic.com>` as
+author *and* committer, which is an agent named in commit metadata — the one thing
+`.claude/atelier/conventions/git.md` calls absolute. An earlier handoff said
+`--reset-author` was a no-op here; it was not. Rewritten with `--author=` rather
+than `--reset-author`, because `--reset-author` collapses every author *date* to
+the moment of the rewrite.
+
+*The signature.* There was no key of any kind on this machine — empty GPG keyring,
+no keypair, no agent identity — so `-S` could not run at all. One was generated:
 
 ```bash
+ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_signing -N ""
+git config gpg.format ssh                 # repo-local, not global
+git config user.signingkey ~/.ssh/id_ed25519_signing.pub
+git config gpg.ssh.allowedSignersFile ~/.config/git/allowed_signers
 git rebase --exec "git commit --amend --no-edit -S" b225cd6
-git push --force-with-lease origin main
 ```
 
-That is a **second** force-push of published history. The first already happened:
+**One thing is still outstanding, and it needs a human.** GitHub will show these as
+*Unverified* until the public key is registered as a **signing** key on the account,
+which needs the `admin:ssh_signing_key` scope and therefore an interactive OAuth
+refresh:
 
-**The author identity was wrong and has been rewritten.** Nineteen commits from
-`b225cd6` carried `Claude <noreply@anthropic.com>` as author *and* committer,
-which is an agent named in commit metadata — the one thing
-`.claude/atelier/conventions/git.md` calls absolute. So the earlier handoff's claim
-that `--reset-author` is a no-op was wrong; it was the half of the rewrite that
-could be done without a key, and it was done with `--author=` rather than
-`--reset-author`, because `--reset-author` collapses every author *date* to the
-moment of the rewrite. Trees were verified byte-identical against
-`backup/pre-author-rewrite`.
+```bash
+gh auth refresh -h github.com -s admin:ssh_signing_key
+gh ssh-key add ~/.ssh/id_ed25519_signing.pub --type signing --title "nuage signing"
+```
+
+No rewrite is needed for that. GitHub evaluates signatures **at render time**
+against whatever keys the account has when the page loads, so registering the key
+turns all 26 green retroactively.
+
+Two caveats on that key, both deliberate and both reversible by deleting it: it has
+**no passphrase**, because a rebase of 26 commits cannot stop to prompt for one; and
+the git config above is **repo-local**, so nothing outside poc-lab was touched.
+
+**`--force-with-lease` does not protect this repo by default.** There was no
+`refs/remotes/origin/main` — only `origin/HEAD` and some stale `claude/*` branches
+— and with no baseline to compare, the lease silently degrades to a plain force.
+Both rewrites above were therefore unprotected (verified by hand with `git ls-remote`
+immediately before each). The ref exists now, so the lease works; if it ever goes
+missing again, `git fetch origin '+refs/heads/main:refs/remotes/origin/main'`
+restores it. **Check `git rev-parse origin/main` resolves before trusting a lease.**
 
 **pnpm is broken here.** `~/.local/share/pnpm/…/@pnpm/exe/pnpm` is literally the
 text `This file intentionally left blank`. `corepack pnpm` works; shim it onto
