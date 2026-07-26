@@ -2,6 +2,8 @@
 
 Append-only, newest first: `## [YYYY-MM-DD] <type> | <summary>`.
 
+## [2026-07-26] build | cuddle-sheep becomes a buildable app — phase 0 of growing the toy into a game: index.html is a shell over src/, the Playwright suite (geometry over ten viewports, interactions, puzzles, save) is checked in and runs against the built artifact, and the five loose localStorage keys become one versioned save that migrates and degrades safely
+
 ## [2026-07-26] feat | lexicon: French bank taken to 500 words (200 English), and a share control — native sheet with the PNG where the browser takes files, otherwise X/Bluesky/LinkedIn/WhatsApp/Telegram plus copy link and image; entries addressable via ?w=<slug>
 
 ## [2026-07-25] feat | cuddle-sheep gains a fleece and a puzzle — wool grows on a 15-minute clock and is sheared with shears picked up from the grass; five clovers grow a four-leaf clover that opens "la traversée", an isometric wolf/sheep/cabbage crossing where Nuage himself is the piece
