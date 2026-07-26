@@ -58,22 +58,63 @@ export const geometryIssues = (page) => page.evaluate(() => {
     return r.width || r.height ? r : null;
   };
   if (document.documentElement.scrollWidth > vw + 1) issues.push("the page scrolls horizontally");
-  for (const sel of [".brand", ".hud__right", "#sound", ".hint", ".cross-ui"]) {
+  // `.cross-ui` was checked here for a long time and has never existed — the bars
+  // are `.place-ui`, and there are six of them now. So the control bar was the one
+  // piece of chrome the geometry sweep never actually looked at.
+  const bars = [...document.querySelectorAll(".place-ui")]
+    .filter((b) => getComputedStyle(b).display !== "none");
+  for (const sel of [".brand", ".hud__right", "#sound", ".hint"]) {
     const r = rect(sel);
     if (!r) continue;
     if (r.right > vw + 1) issues.push(`${sel} overflows right by ${Math.round(r.right - vw)}px`);
     if (r.left < -1) issues.push(`${sel} overflows left by ${Math.round(-r.left)}px`);
     if (r.bottom > vh + 1) issues.push(`${sel} overflows bottom by ${Math.round(r.bottom - vh)}px`);
   }
+  for (const bar of bars) {
+    const r = bar.getBoundingClientRect();
+    if (r.right > vw + 1) issues.push(`#${bar.id} overflows right by ${Math.round(r.right - vw)}px`);
+    if (r.left < -1) issues.push(`#${bar.id} overflows left by ${Math.round(-r.left)}px`);
+    if (r.bottom > vh + 1) issues.push(`#${bar.id} overflows bottom by ${Math.round(r.bottom - vh)}px`);
+    if (r.top < 0) issues.push(`#${bar.id} overflows top by ${Math.round(-r.top)}px`);
+  }
+  const boxes = (a, b) => {
+    const x = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+    const y = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+    return x > 4 && y > 4 ? `${Math.round(x)}x${Math.round(y)}px` : null;
+  };
   const overlap = (a, b) => {
     const ra = rect(a), rb = rect(b);
     if (!ra || !rb) return;
-    const x = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
-    const y = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
-    if (x > 4 && y > 4) issues.push(`${a} overlaps ${b} by ${Math.round(x)}x${Math.round(y)}px`);
+    const hit = boxes(ra, rb);
+    if (hit) issues.push(`${a} overlaps ${b} by ${hit}`);
   };
   overlap(".brand", ".hud__right");
-  overlap(".hint", ".cross-ui");
+  for (const bar of bars) {
+    const hint = rect(".hint");
+    if (hint) {
+      const hit = boxes(hint, bar.getBoundingClientRect());
+      if (hit) issues.push(`.hint overlaps #${bar.id} by ${hit}`);
+    }
+  }
+
+  // The signpost grows a plank per open place, so it is the one object whose size
+  // depends on how far through the game you are. A plank outside the frame keeps
+  // its click target (overflow:hidden hides it but does not unhit it), which is how
+  // the way home once ended up unreachable underneath a control bar.
+  const layer = document.querySelector("#valleyFront");
+  if (layer && getComputedStyle(layer).visibility !== "hidden") {
+    const lb = layer.getBoundingClientRect();
+    for (const p of document.querySelectorAll(".way__plank")) {
+      const r = p.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const name = p.querySelector(".way__name")?.textContent ?? "?";
+      if (cy < lb.top || cy > lb.bottom || cx < lb.left || cx > lb.right) {
+        issues.push(`the "${name}" plank is outside the frame`);
+      } else if (!document.elementFromPoint(cx, cy)?.closest(".way__plank")) {
+        issues.push(`the "${name}" plank is covered by something`);
+      }
+    }
+  }
   const sheep = rect("#sheep");
   if (sheep) {
     if (sheep.top < -2) issues.push(`the sheep is cut off at the top by ${Math.round(-sheep.top)}px`);
