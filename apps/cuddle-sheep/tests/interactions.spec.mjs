@@ -70,6 +70,9 @@ export default async ({ newPage, check, APP }) => {
   await page.waitForTimeout(1200);
   check("a settled sheep is shorn", Number((await page.locator("#woolPct").innerText()).replace(/\D/g, "")) <= 2);
   check("the fleece becomes a cloud", (await page.locator("#cloudbank .puff").count()) > 5);
+  // the tally the barn is built out of: a fleece taken off is care given, counted
+  const tally = await page.evaluate(() => JSON.parse(localStorage.getItem("nuage:save")).care.shorn);
+  check("a shorn fleece is counted", tally === 1, `shorn=${tally}`);
   await page.close();
 
   // --- the shears from the keyboard: t takes them, and anything else lets go

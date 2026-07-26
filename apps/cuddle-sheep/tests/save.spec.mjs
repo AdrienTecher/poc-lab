@@ -97,6 +97,25 @@ export default async ({ newPage, check, APP }) => {
       .filter((k) => localStorage.getItem(k) !== null),
   }));
   check("the old keys are cleared away", migrated.leftovers.length === 0, migrated.leftovers.join(","));
-  check("and the blob is v2", migrated.blob.v === 2 && migrated.blob.valley.unlocked.includes("riviere"));
+  check("and the blob is current", migrated.blob.v === 3 && migrated.blob.valley.unlocked.includes("riviere"));
+  await page.close();
+
+  // --- an older blob is climbed, not discarded: every v2 fixture above proves
+  // the fields it knew survive, so this proves the ones it never had appear
+  page = await newPage({ viewport: { width: 1280, height: 800 } });
+  await boot(page, APP, {
+    "nuage:save": JSON.stringify({
+      v: 2,
+      sheep: { happyUntil: 0, woolFrom: Date.now() - 3 * 60 * 1000 },
+      care: { fed: 2 },
+      valley: { unlocked: ["riviere"], solves: { riviere: 4 } },
+      prefs: { sound: true },
+    }),
+  });
+  const climbed = await page.evaluate(() => JSON.parse(localStorage.getItem("nuage:save")));
+  check("a v2 save is upgraded in place", climbed.v === 3, JSON.stringify(climbed).slice(0, 90));
+  check("the upgrade keeps what v2 knew", climbed.care.fed === 2 && climbed.valley.solves.riviere === 4);
+  check("and defaults what it did not", climbed.care.shorn === 0 && climbed.valley.at === "pre");
+  check("he has been where he is", climbed.valley.visited.includes("pre"));
   await page.close();
 };

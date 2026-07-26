@@ -16,6 +16,7 @@ import { state } from "../state.js";
 import { WOOL_FULL_MS, SHEAR_TARGET, WOOL_READY, SHEAR_MIN, SHEAR_CALM } from "../rules.js";
 import { announce, setHint } from "../ui/hint.js";
 import { meadow, placeProp, fleeceToCloud } from "./scenery.js";
+import * as valley from "./valley.js";
 import { lastClient, poke } from "./pointer.js";
 import { hit } from "./sheep.js";
 
@@ -79,6 +80,7 @@ export const dropShears = () => {
 const fleeceOff = () => {
   setWool(0);
   state.wool = 0;
+  valley.shear();   // the tally the barn is built out of
   state.shiverUntil = now() + 3.4;
   kick("hop", -250); kick("earL", -240); kick("earR", 240);
   sfx.chime(); sfx.bleat(state.mood > 0.5);

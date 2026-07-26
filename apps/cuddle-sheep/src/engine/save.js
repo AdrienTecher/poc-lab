@@ -5,8 +5,13 @@
 // rather than a broken one. A comfort toy does not greet you with an error.
 
 const KEY = "nuage:save";
-const VERSION = 2;
+const VERSION = 3;
 const THROTTLE = 500;
+
+// The meadow: where a new sheep starts, and where a save that has lost track of
+// him puts him back. A place id rather than a null, so "where is he" has one
+// answer everywhere instead of a special case for home.
+export const HOME = "pre";
 
 // v1 was five loose keys written by hand from wherever needed them
 const V1 = {
@@ -31,29 +36,38 @@ const num = (v) => {
   return Number.isFinite(n) && n >= 0 ? n : 0;
 };
 
+const ids = (v) => (Array.isArray(v) ? v.filter((id) => typeof id === "string") : []);
+
 const fresh = () => ({
   v: VERSION,
   sheep: { happyUntil: 0, woolFrom: 0 },
-  care: { fed: 0 },
-  valley: { unlocked: [], solves: {} },
+  care: { fed: 0, shorn: 0 },
+  valley: { at: HOME, visited: [HOME], unlocked: [], solves: {} },
   prefs: { sound: true },
 });
 
 /** Fold a parsed blob onto a fresh one, so a save written by an older build —
- *  missing a section this build expects — still opens. */
+ *  missing a section this build expects — still opens. This IS the upgrade
+ *  path: no field has ever changed meaning, so an older blob grafted onto a
+ *  fresh one carries everything it knew and defaults everything it did not. */
 const graft = (blob) => {
   const base = fresh();
   if (!blob || typeof blob !== "object") return base;
   const valley = blob.valley && typeof blob.valley === "object" ? blob.valley : {};
+  const at = typeof valley.at === "string" && valley.at ? valley.at : HOME;
+  // he has necessarily been where he is, and has necessarily been home
+  const visited = [...new Set([HOME, ...ids(valley.visited), at])];
   return {
     v: VERSION,
     sheep: {
       happyUntil: num(blob.sheep?.happyUntil),
       woolFrom: num(blob.sheep?.woolFrom),
     },
-    care: { fed: num(blob.care?.fed) },
+    care: { fed: num(blob.care?.fed), shorn: num(blob.care?.shorn) },
     valley: {
-      unlocked: Array.isArray(valley.unlocked) ? valley.unlocked.filter((id) => typeof id === "string") : [],
+      at,
+      visited,
+      unlocked: ids(valley.unlocked),
       solves: Object.fromEntries(
         Object.entries(valley.solves && typeof valley.solves === "object" ? valley.solves : {})
           .map(([place, count]) => [place, num(count)]),
@@ -80,10 +94,18 @@ const load = () => {
   if (raw !== null) {
     try {
       const parsed = JSON.parse(raw);
-      // An unknown version is not readable and not repairable. Starting fresh is
-      // the kind failure: the alternative is a world half-built from a shape we
-      // do not understand.
-      if (parsed?.v === VERSION) return graft(parsed);
+      // Backwards is repairable and forwards is not. A blob this build or an
+      // older one wrote is grafted; a blob from a NEWER build is a shape we do
+      // not understand, and half-reading it would build half a world. Starting
+      // fresh is the kind failure.
+      const v = parsed?.v;
+      if (Number.isInteger(v) && v >= 1 && v <= VERSION) {
+        const grafted = graft(parsed);
+        // an upgraded save is written back at once, so the next build up only
+        // ever has one version to climb
+        if (v !== VERSION) write(KEY, JSON.stringify(grafted));
+        return grafted;
+      }
     } catch { /* fall through */ }
     return fresh();
   }

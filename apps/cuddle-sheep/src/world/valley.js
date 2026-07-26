@@ -15,11 +15,32 @@ const changed = () => { for (const fn of watchers) fn(); };
 
 export const opened = (place) => save.data.valley.unlocked.includes(place);
 export const solves = (place) => save.data.valley.solves[place] ?? 0;
+export const shorn = () => save.data.care.shorn;
+export const at = () => save.data.valley.at;
+export const visited = (place) => save.data.valley.visited.includes(place);
+export const seen = () => save.data.valley.visited;
 
 /** One clover eaten. Capped: past the threshold the count means nothing more. */
 export const eat = () => {
   state.fed = Math.min(state.fed + 1, CLOVERS_TO_UNLOCK);
   save.data.care.fed = state.fed;
+  save.touch(true);
+  changed();
+};
+
+/** One fleece taken off. Uncapped — it is a tally of care given, and the barn
+ *  only asks whether it has passed a threshold. */
+export const shear = () => {
+  save.data.care.shorn += 1;
+  save.touch(true);
+  changed();
+};
+
+/** He is here now, and has been here. Written on arrival so a reload puts him
+ *  back where he was standing rather than marching him home. */
+export const arrive = (place) => {
+  save.data.valley.at = place;
+  if (!save.data.valley.visited.includes(place)) save.data.valley.visited.push(place);
   save.touch(true);
   changed();
 };
