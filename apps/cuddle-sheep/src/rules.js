@@ -16,3 +16,4 @@ export const SHEAR_CALM = 0.62;             // he only holds still for the blade
 export const FIRST_FLEECE = 0.45;           // a first visit starts mid-fleece: the look he shipped with
 
 export const CLOVERS_TO_UNLOCK = 5;         // clovers eaten before the river puzzle opens
+export const FLEECES_TO_UNLOCK = 3;         // fleeces shorn before the barn opens — they ARE the bales

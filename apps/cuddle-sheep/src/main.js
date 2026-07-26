@@ -12,10 +12,12 @@ import * as sheep from "./world/sheep.js";
 import * as clovers from "./world/clovers.js";
 import * as wool from "./world/wool.js";
 import * as sprout from "./world/sprout.js";
+import * as gate from "./world/gate.js";
 import * as butterflies from "./world/butterflies.js";
 import * as hands from "./world/hands.js";
 import * as mood from "./world/mood.js";
 import * as riviere from "./places/riviere.js";
+import * as grange from "./places/grange.js";
 import * as camera from "./engine/camera.js";
 import { refreshCTM } from "./world/pointer.js";
 import { active } from "./places/registry.js";
@@ -29,10 +31,12 @@ sheep.build();
 clovers.build();
 wool.build();
 sprout.build();
+gate.build();
 butterflies.build();
 hud.build();
 hands.build();
 riviere.build();    // after hands: Escape drops the shears before it leaves a place
+grange.build();
 clovers.settle();   // past solves may have earned more than the three he starts with
 mood.watch();
 

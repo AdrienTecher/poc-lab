@@ -42,6 +42,19 @@
     --iso-pine-l:  color-mix(in oklab, #487f56 calc(var(--m) * 100%), #4a564f);
     --iso-pine-r:  color-mix(in oklab, #376543 calc(var(--m) * 100%), #3c453f);
     --fourleaf-rim: color-mix(in oklab, #f2d98a calc(var(--m) * 100%), #c6c1c8);
+
+    /* la grange — the most faceted place in the game, because a barn is made
+       entirely of made things. The hay mixes toward the wool it came off. */
+    --iso-hay:     color-mix(in oklab, #efdcae calc(var(--m) * 100%), #c9c4c8);
+    --iso-hay-l:   color-mix(in oklab, #d8c08b calc(var(--m) * 100%), #adaab0);
+    --iso-hay-r:   color-mix(in oklab, #bda36e calc(var(--m) * 100%), #918e96);
+    --iso-straw:   color-mix(in oklab, #d9c48f calc(var(--m) * 100%), #a6a2a8);
+    --iso-twine:   color-mix(in oklab, #9a7c4e calc(var(--m) * 100%), #6f6a70);
+    --iso-plank:   color-mix(in oklab, #b98a5c calc(var(--m) * 100%), #857e7a);
+    --iso-plank-l: color-mix(in oklab, #9a7048 calc(var(--m) * 100%), #6d6763);
+    --iso-plank-r: color-mix(in oklab, #7d5936 calc(var(--m) * 100%), #575250);
+    --iso-barn:    color-mix(in oklab, #8f4f42 calc(var(--m) * 100%), #6a5f5d);
+    --iso-barn-l:  color-mix(in oklab, #733f36 calc(var(--m) * 100%), #564e4c);
     --cross-top: clamp(70px,11vh,110px);
     --cross-bot: clamp(78px,13vh,120px);
     --hud:      rgba(255,255,255,.15);
@@ -262,6 +275,7 @@
   }
   /* every place gets the same bar; only its own is shown */
   html[data-mode="cross"] #crossUI{display:flex}
+  html[data-mode="barn"] #barnUI{display:flex}
   .place-ui button{
     padding:8px 16px; border-radius:999px; font-size:.84rem; font-weight:500;
     background:var(--hud); border:1px solid var(--hud-line); color:#fff;
@@ -284,6 +298,22 @@
   .sprout__halo{opacity:0}
   .sprout.reveal .sprout__halo{animation:halo .9s ease-out}
   @keyframes halo{from{r:0; opacity:.55} to{r:46px; opacity:0}}
+
+  /* the other door: a gate that builds itself a plank per fleece */
+  .gate{outline:none; transition:filter .3s}
+  .gate:hover, .gate:focus-visible{filter:drop-shadow(0 0 8px #fff)}
+  .gate__plank{transition:opacity .55s cubic-bezier(.2,1.7,.4,1)}
+  .gate.open .gate__planks{animation:shimmer 3.4s ease-in-out infinite}
+  .gate__halo{opacity:0}
+  .gate.reveal .gate__halo{animation:halo .9s ease-out}
+
+  /* la grange: a post lights up when the bale in his mouth may go there */
+  .post{cursor:pointer; outline:none}
+  .post[disabled]{cursor:default; pointer-events:none}
+  .post__glow{opacity:0; transition:opacity .3s}
+  .post.open .post__glow{opacity:.34}
+  .post:hover .post__glow, .post:focus-visible .post__glow{opacity:.6}
+  .bale{transition:none}
 
   @media (max-height:560px){
     :root{--cross-top:64px; --cross-bot:62px}
