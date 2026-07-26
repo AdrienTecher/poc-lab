@@ -32,19 +32,37 @@ scalar and Nuage's screen position is derived from that same number.
 |---|---|---|---|
 | `la rivière` | 0 | wolf, sheep and cabbage — he is the piece | five clovers eaten |
 | `la grange` | 1 | hay-bale Hanoi — the bales ARE the fleeces, he is the crane | three fleeces shorn |
-| `le pont` | 2 | bridge-and-lantern — two at a time, at the slower one's pace | la rivière solved once |
-| `le clocher` | 3 | a phrase of five bells, given back | la grange solved once |
+| `le pont` | 2 | bridge-and-lantern — two at a time, at the slower one's pace | la rivière solved |
+| `le clocher` | 3 | a phrase of five bells, given back | la grange solved |
+| `la clôture` | 4 | lights-out reversed — light all seven, a post wakes its neighbours | le pont solved |
+| `la lisière` | 5 | gather three hens where the dog can watch them | le clocher solved |
 
-The first two have a door in the meadow; the second two do not, and do not need
-one. The signpost lists anywhere that is open, so a place further down the road
-opens onto the map for free — which makes a third place cheaper than the second
-was, not dearer.
+Only the first two have a door in the meadow, because the meadow has exactly two
+care rituals and both are spent. The rest open onto the **signpost**, which lists
+anywhere that is open — so a place further down the road costs *less* than the
+second one did, not more. Two branches of three: feeding leads to the river, the
+bridge and the fence; shearing leads to the barn, the bells and the wood's edge.
 
 **Adding one costs:** a module in `places/`, a pure ruleset in `puzzles/`, a
 palette block, a `.place-ui` bar plus its one `html[data-mode]` line, `road: <n>`,
-an import in `main.js`, and a watcher saying what opens it. No engine change —
-with one recorded exception, `le clocher`, which needed a synth voice that takes a
-pitch because a fixed arpeggio cannot spell a phrase.
+an import in `main.js`, and a watcher saying what opens it. Four of the five places
+after la rivière needed **no engine change**; the exception is `le clocher`, which
+needed a synth voice taking a pitch, because a fixed arpeggio cannot spell a phrase.
+
+## The animals
+
+| animal | where | what it is |
+|---|---|---|
+| Nuage | everywhere | the sheep, and a piece at la rivière and le pont |
+| `le chien` | the meadow, and la lisière | the second animal, and the piece the wood's edge turns on |
+| the flock | le pont | three lambs, each wearing its pace on an ear tag |
+| the fox | la lisière | scenery with a motive — he never takes anything |
+
+Le chien is drawn once, in [`world/chien.js`](src/world/chien.js), and la lisière
+asks for him — so the dog on the perch and the dog in the grass cannot drift into
+two animals that merely look alike. He runs on **no clock**: petting him fills
+nothing and is late for nothing, because happiness is the only clock allowed to
+empty and a companion who needed topping up would be a chore.
 
 Two rules keep it from tangling. **Painter order is computed, not hand-wired** —
 he is a DOM actor between two SVG layers, and every piece declares its own depth
@@ -91,6 +109,8 @@ uses. Install it where you run the tests (`pnpm add -Dw playwright`) and set
 | `barn` | the door is earned by shearing, a big bale is refused kindly, and the optimal seven says so |
 | `pont` | two at a time, the minutes only add up, and — measured in composited pixels — the dark of the cleft costs the mood no more than the dimmest place already built |
 | `clocher` | the phrase is learned by ear and rung back, and a wrong bell costs a replay and nothing else |
+| `cloture` | all 128 fences finishable with a unique answer, and a fresh one never already lit |
+| `lisiere` | the closed-form minimum against an exhaustive search of all 336 boards, the dog on no clock, the fox untabbable, and every signpost plank reachable with all six ways open |
 | `travel` | he crosses ground on screen rather than riding, the destination lands squarely in frame, and a stroke across his back is never a swipe |
 | `day` | noon costs nothing, night keeps two thirds of noon's mood separation, and la pelote rolls to a stop without leaving the meadow |
 | `save` | the clocks survive a reload and never rewind; a corrupt save still opens onto a meadow |

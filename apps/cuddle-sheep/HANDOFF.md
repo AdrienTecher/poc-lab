@@ -1,8 +1,17 @@
 # Nuage — handoff
 
-Everything through **Phase 3 in part** is on `main`, **177/177 green**.
-Four places on the road: `la rivière`, `la grange`, `le pont`, `le clocher`.
+**Phase 3 is closed.** Six places on the road, two animals, **231/231 green**.
+`la rivière`, `la grange`, `le pont`, `le clocher`, `la clôture`, `la lisière`.
 This is what a fresh session needs to pick it up.
+
+**The question Phase 3 retired: yes, a place ships in a day.** One module in
+`places/`, one pure ruleset in `puzzles/`, a palette block, a `.place-ui` bar and
+its one `html[data-mode]` line, `road: <n>`, an import in `main.js`, a watcher
+saying what opens it. Four of the five new places needed **no engine change**. The
+exception is `le clocher`, which needed a bell voice taking a pitch — a synth that
+was incomplete, not a seam that failed; nothing structural moved for any of them.
+And the cost went *down* after la grange, because only the first two places need a
+door in the meadow. The rest open onto the signpost.
 
 ## 1. The two things that are wrong about this environment
 
@@ -48,12 +57,12 @@ must not touch `package.json` or `pnpm-lock.yaml` — CI installs it job-locally
 Installing it into a scratch directory and symlinking `node_modules/playwright`
 keeps the tree clean.
 
-Full run is ~11 minutes. Run **one at a time** — concurrent runs fight over the
+Full run is ~15 minutes. Run **one at a time** — concurrent runs fight over the
 server port and hang.
 
 ## 3. Shape
 
-`main.js` is a 75-line composition root: build in order, then one frame loop.
+`main.js` is an 85-line composition root: build in order, then one frame loop.
 
 | tree | what lives there |
 |---|---|
@@ -101,7 +110,23 @@ server port and hang.
    neighbour. Use `VB_X`/`VB_W`, don't retype 728.
 10. **Never `git add -A`.** Stage explicit paths. A background agent once edited
     the tree mid-commit and it shipped.
-11. **Tests assert what must become true, not when.** Three assertions once
+11. **A piece drawn outside the frame keeps its click target.** `overflow:hidden`
+    hides it; `getBoundingClientRect()` still reports where it was. So an
+    overflowing piece is not merely ugly — it is an invisible tap target sitting
+    over whatever chrome is underneath. The signpost hit exactly this: a fixed
+    104-unit post fitted two planks and ran 170 units of board off the bottom at
+    six, and the way home became unreachable with nothing looking wrong. Anything
+    that grows with the roster must be sized to its contents, and checked with
+    `elementFromPoint` rather than by eye.
+12. **A board is provable, not plausible.** Both new puzzles ship with their
+    property checked rather than their construction trusted: all 128 fences
+    verified finishable with a unique answer against brute force, and la lisière's
+    closed-form minimum against an exhaustive Dijkstra over the real move set on
+    all 336 boards. `la clôture` has **seven** posts because the kernel of the
+    lights-out system is non-trivial only at 2 mod 3 — at seven the answer is
+    unique, which is the only reason a minimum can be claimed at all. Change the
+    count and that claim silently becomes a lie.
+13. **Tests assert what must become true, not when.** Three assertions once
     sampled a position at a fixed instant inside a process that accelerates,
     reverses and decays; the baseline was silently 134/136, and one assertion was
     passing *vacuously* because its expected value equalled the failure state of
@@ -111,29 +136,35 @@ server port and hang.
 
 ## 5. What is left
 
-### Phase 3, the rest of the roster — NOT DONE
-- **`la clôture`** — lights-out fence. Design note: make the goal *all lanterns
-  lit* rather than all out, so the clock fills (invariant 4). A linear run of
-  panels toggling self-and-neighbours is only solvable for some lengths — generate
-  the start by applying random toggles to the solved state, so it is solvable by
-  construction and the minimum is computable.
-- **`la lisière`** — fox and hens. Must be a genuinely *different* puzzle from
-  `la traversée`, which is already wolf/sheep/cabbage; fox-goose-corn is the same
-  puzzle wearing a different coat.
-- **A second animal that is also a game piece.** The sketch that survived review:
-  **`le chien`**, a sheepdog who is a presence in the meadow (a third thing to
-  touch) and the piece that makes `la lisière` solvable. Note the flock at le pont
-  are all sheep, so that deliverable is still open.
+`road: 6` onward is free, and a new place needs no meadow door.
 
-`road: 4` and `road: 5` are free. Neither needs a meadow door.
-
-### Phase 4 — the object
+### Phase 4 — the object, and the only phase left
 PWA manifest + offline cache, full i18n pass (copy is inline FR-with-EN), audio
 mix, reduced-motion pass, proper first-run.
+
+Phase 4 is also where the **hint copy** should be reviewed as a whole: six places
+each set their own bilingual hint on landing, and nobody has read them end to end
+as one voice.
+
+### Worth doing next, from what building six places taught
+- **The signpost is now the busiest object in the game** and it grew from 2 planks
+  to 6 during this phase. It scales again to 7 or 8 (the post sizes itself), but at
+  some point a post taller than the frame is the wrong answer and it wants
+  grouping — "further up the valley" versus "back the way you came".
+- **Travel skips intermediate places**, which is right, but nobody has walked
+  `la rivière` → `la lisière` (five pitches) to see whether the pan is too long.
+  `TRIP_MS` is a flat 2600ms deadline regardless of distance.
+- **Six `.place-ui` bars now key off `html[data-mode]`.** That still measures
+  clean, but `measureUI()` walks every bar looking for the one with a non-zero top,
+  and the HUD had −6px of slack at 320×568 before any of this.
 
 ### Carried-forward, smaller
 - **Arrow keys don't travel** — `la rivière` claims them for the boat. Travel is
   Tab-to-plank, swipe, or `Escape`. Unresolved, not urgent.
+- **Key collisions across places are now real.** `c` crosses at le pont and calls
+  the dog at la lisière; `1`–`8` mean a walker, a bell, a post or a box depending
+  on where he is. Each handler guards on its own `game.on`, so nothing misfires —
+  but there is no single place that lists what a key means where.
 - **`la grange`'s bale carry is a straight lerp** — he does not walk the arc a
   loaded animal would. Cosmetic.
 - **`day.spec`'s `dataset.pin` is dead code.** It sets `html[data-pin]` to stop the
@@ -175,3 +206,21 @@ mix, reduced-motion pass, proper first-run.
   has to feel survivable.
 - **The rope is the tap target, not the bell.** A bell up a tower is out of reach,
   and bringing it down to you is the entire point of a bell rope.
+- **Lights-out is reversed at la clôture.** The arcade goal is everything OFF, and
+  a board that empties is the shape invariant 4 forbids, so the fence asks that
+  every lantern be LIT. Touching a post twice still costs two touches — the tally
+  fills even when the fence returns to where it started.
+- **La lisière is deliberately not a second river crossing.** Fox-goose-corn *is*
+  wolf-sheep-cabbage with the pieces renamed, so the fox is scenery with a motive
+  rather than a rule, and the puzzle is a gathering problem instead. The spec
+  asserts the fox is `aria-hidden` and untabbable: a fox who could take a hen would
+  make this the one place in the valley where something is lost.
+- **Le chien is on no clock, and that is the design.** Petting him fills nothing,
+  buys nothing and is late for nothing. Happiness is the only clock allowed to
+  empty, so a second animal must not arrive with a second thing to keep topped up —
+  he is company, like la pelote is play. His drawing lives in `world/chien.js` and
+  la lisière asks for it, so there is only ever one dog.
+- **A second animal arrives for having finished something, not for a chore.** The
+  meadow's two rituals are both spent on doors, and hourly clover growth was
+  already cut because a key that arrives by waiting is not care. He turns up
+  because you did something together, which is the only honest key left.
