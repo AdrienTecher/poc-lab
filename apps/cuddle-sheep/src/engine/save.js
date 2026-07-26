@@ -54,7 +54,10 @@ const graft = (blob) => {
     care: { fed: num(blob.care?.fed) },
     valley: {
       unlocked: Array.isArray(valley.unlocked) ? valley.unlocked.filter((id) => typeof id === "string") : [],
-      solves: valley.solves && typeof valley.solves === "object" ? valley.solves : {},
+      solves: Object.fromEntries(
+        Object.entries(valley.solves && typeof valley.solves === "object" ? valley.solves : {})
+          .map(([place, count]) => [place, num(count)]),
+      ),
     },
     prefs: { sound: blob.prefs?.sound !== false },
   };
@@ -86,8 +89,10 @@ const load = () => {
   }
   const migrated = migrate();
   if (!migrated) return fresh();
-  for (const key of Object.values(V1)) drop(key);
+  // write first, then clear: a storage that refuses the new blob must not also
+  // have eaten the old keys
   write(KEY, JSON.stringify(migrated));
+  if (read(KEY) !== null) for (const key of Object.values(V1)) drop(key);
   return migrated;
 };
 

@@ -3,13 +3,13 @@ import { clamp, lerp, rand, now, REDUCED } from "./engine/math.js";
 import { $, el, tapTarget } from "./engine/svg.js";
 import { springs, S, set, v, kick, stepSpring, stepSprings } from "./engine/spring.js";
 import { sfx } from "./engine/audio.js";
-import { attachParticles, spawn, heart, sparkle, crumb, tear, tuft, zzz, stepParticles } from "./engine/particles.js";
-import { IW, IH, IZ, IOX, IOY, isoX, isoY, pt, poly, boxAt, pine } from "./engine/iso.js";
+import { attachParticles, heart, sparkle, crumb, tear, tuft, zzz, stepParticles } from "./engine/particles.js";
+import { isoX, isoY, pt, poly, boxAt, pine } from "./engine/iso.js";
 import { depthLayers } from "./engine/depth.js";
 import { state } from "./state.js";
 import {
   HAPPY_MS, FADE_MS, PET_TARGET, DOZE_AFTER,
-  WOOL_FULL_MS, SHEAR_TARGET, WOOL_READY, SHEAR_MIN, SHEAR_CALM, FIRST_FLEECE,
+  WOOL_FULL_MS, SHEAR_TARGET, WOOL_READY, SHEAR_MIN, SHEAR_CALM,
   CLOVERS_TO_UNLOCK,
 } from "./rules.js";
 
@@ -19,7 +19,6 @@ import {
   const svg = $("#sheep"), stage = $("#stage"), fx = $("#fx");
   const live = $("#live"), hintEl = $("#hint"), hintText = $("#hintText");
   attachParticles(fx);
-
 
   // restore an in-flight happiness window so a reload doesn't betray him
   if (save.data.sheep.happyUntil > Date.now()) {
@@ -45,11 +44,6 @@ import {
   };
   addEventListener("pagehide", () => saveWool(true));
   state.wool = woolNow();
-
-  /* ------------------------------------------------------------------ *
-   * Springs — every limb is a mass on a spring, which is what sells "alive"
-   * ------------------------------------------------------------------ */
-
 
   S("lean", 0, 90, 13);      // head tilt, degrees
   S("gazeX", 0, 110, 15);
@@ -240,16 +234,6 @@ import {
     g.addEventListener("pointerdown", (e) => { e.stopPropagation(); b.flee = 2.6; poke(); sfx.flutter(); });
     butterflies.push(b);
   }
-
-  /* ------------------------------------------------------------------ *
-   * Sound — a tiny synth; nothing ever plays without a gesture behind it
-   * ------------------------------------------------------------------ */
-
-
-  /* ------------------------------------------------------------------ *
-   * Particles
-   * ------------------------------------------------------------------ */
-
 
   /* ------------------------------------------------------------------ *
    * Interaction
@@ -449,6 +433,7 @@ import {
     if (state.fed >= CLOVERS_TO_UNLOCK) setTimeout(unlockRiver, 700);
     if (state.happyUntil > Date.now()) {
       state.happyUntil = Math.min(state.happyUntil + 30000, Date.now() + HAPPY_MS);
+      save.data.sheep.happyUntil = state.happyUntil;
       setTimeout(() => heart(200, 172), 900);
       announce("Nuage croque le trèfle : trente secondes de bonheur en plus.");
     } else {
@@ -560,15 +545,18 @@ import {
 
   /* ---- sound toggle ---- */
   const soundBtn = $("#sound");
-  soundBtn.addEventListener("click", () => {
-    state.sound = !state.sound;
+  const paintSound = () => {
     soundBtn.setAttribute("aria-pressed", String(state.sound));
     soundBtn.setAttribute("aria-label", state.sound ? "Couper le son — mute" : "Activer le son — unmute");
+  };
+  paintSound();   // he may have been muted last visit; the control has to say so
+  soundBtn.addEventListener("click", () => {
+    state.sound = !state.sound;
+    paintSound();
     save.data.prefs.sound = state.sound;
     save.touch();
     if (state.sound) sfx.flutter();
   });
-
 
   /* ------------------------------------------------------------------ *
    * La traversée — le loup, le mouton et le chou
@@ -594,7 +582,7 @@ import {
   const PAIRS = [["loup", "mouton"], ["mouton", "chou"]];
 
   const game = {
-    on: false, built: false, phase: "idle",
+    on: false, built: false, phase: "idle", rowTimer: 0, pose: {},
     boat: "L", where: { loup: "L", mouton: "L", chou: "L" },
     aboard: null, moves: 0, stack: [], rowUntil: 0, rowing: 0,
     solves: save.data.valley.solves.riviere ?? 0,
@@ -662,7 +650,7 @@ import {
     const oarFar = el("line", { id: "oarFar", x1: -8, y1: -12, x2: -38, y2: -2, stroke: "var(--iso-wood-l)", "stroke-width": 4.5, "stroke-linecap": "round" });
     hull.appendChild(oarNear); hull.appendChild(oarFar);
     boat.appendChild(hull);
-    crossBack.appendChild(boat);
+    layers.add(boat, () => v("boatX") + BOAT_GY, "boat");
     game.boatNode = boat; game.oarNear = oarNear; game.oarFar = oarFar; game.hull = hull;
 
     /* ---- the wolf: rounded, like every living thing in this app ---- */
@@ -707,11 +695,10 @@ import {
       <path d="M-38,-34 Q0,-14 38,-34" stroke="#5faa46" stroke-width="3.4" fill="none" stroke-linecap="round"/>
       <ellipse cx="-16" cy="-68" rx="10" ry="6.5" fill="#c9 efa0" opacity="0"/>
       <ellipse cx="-16" cy="-68" rx="10" ry="6.5" fill="#c8efa2" opacity=".45"/>`;
-    layers.add(chou, () => depthOf("chou"), "chou");
+    layers.add(chou, () => (game.where.chou === "boat" ? -1000 : 1000), "chou");   // OLD RULE EMULATION
     game.tok = { loup: wolf, chou };
     bindTok("loup"); bindTok("chou"); bindBoat();
   };
-
 
   /* ---- placement: one rail for all three actors, so they never drift apart ---- */
   const VB_X = 196, VB_Y = 44, VB_W = 728, VB_H = 452;   // must match the two .cross viewBoxes
@@ -748,8 +735,9 @@ import {
   };
 
   const drawActors = () => {
-    for (const id of ["loup", "chou"]) placeTok(id, ...spot(id), TOK_SCALE[id]);
-    const [mx, my] = spot("mouton");
+    // a choreography may pin a piece somewhere the board model does not know about
+    for (const id of ["loup", "chou"]) placeTok(id, ...(game.pose[id] ?? spot(id)), TOK_SCALE[id]);
+    const [mx, my] = game.pose.mouton ?? spot("mouton");
     placeSheepAt(mx, my);
     layers.sort(depthOf("mouton"));
   };
@@ -801,6 +789,7 @@ import {
 
   const exitCross = () => {
     if (!game.on) return;
+    clearTimeout(game.rowTimer);
     game.on = false;
     game.phase = "idle";
     delete document.documentElement.dataset.mode;
@@ -814,6 +803,8 @@ import {
   };
 
   const resetBoard = (animate = true) => {
+    clearTimeout(game.rowTimer);   // a crossing in flight must not land on a fresh board
+    game.pose = {};
     game.boat = "L";
     game.where = { loup: "L", mouton: "L", chou: "L" };
     game.aboard = null;
@@ -863,7 +854,8 @@ import {
     sfx.row();
     poke();
     setMoves(); syncTokens();
-    setTimeout(() => arrive(from), (game.rowUntil - now()) * 1000);
+    clearTimeout(game.rowTimer);
+    game.rowTimer = setTimeout(() => arrive(from), (game.rowUntil - now()) * 1000);
   };
 
   const arrive = (from) => {
@@ -890,11 +882,13 @@ import {
     if (pair.includes("loup")) {
       // the wolf commits an unauthorised cuddle and carries him off
       const [wx, wy] = spot("mouton");
-      placeTok("loup", wx - 26, wy, TOK_SCALE.loup);
+      game.pose.loup = [wx - 26, wy];
       kick("earL", -320); kick("earR", 320);
       setTimeout(() => {
+        if (game.phase !== "failed") return;   // reset or undo already moved on
         game.tok.loup.classList.add("gone");
-        stage.style.setProperty("--y", `${parseFloat(stage.style.getPropertyValue("--y")) - 18}px`);
+        game.pose.loup = [wx - 40, wy - 18];
+        game.pose.mouton = [wx + 6, wy - 18];
         for (const i of [...Array(3).keys()]) {
           setTimeout(() => {
             const [px, py] = spot("mouton");
@@ -939,6 +933,8 @@ import {
 
   const undo = () => {
     if (!game.on || !game.stack.length || game.phase === "rowing") return;
+    clearTimeout(game.rowTimer);
+    game.pose = {};
     const prev = game.stack.pop();
     game.boat = prev.boat;
     game.where = { ...prev.where };
@@ -952,7 +948,6 @@ import {
     stage.classList.remove("riding");
     setMoves(); syncTokens(); drawActors(); readout();
   };
-
 
   /* ---- the door: a four-leaf clover, one member of the family promoted ---- */
   const sprout = el("g", { class: "sprout", role: "button", tabindex: "-1" });

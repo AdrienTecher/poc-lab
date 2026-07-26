@@ -2,6 +2,8 @@
 
 Append-only, newest first: `## [YYYY-MM-DD] <type> | <summary>`.
 
+## [2026-07-26] refactor | cuddle-sheep engine lifted out — ten modules (math, svg, spring, audio, particles, iso, depth, save, rules, state) leave main.js as the composition root; painter order around the sheep becomes computed instead of four hand-written re-parentings, and an adversarial review of the refactor found six real defects (a mute that inverted on reload, a lost +30s top-up, focus destroyed by re-parenting, a crossing that could land on a reset board) plus four tests that would have passed on a broken app
+
 ## [2026-07-26] build | cuddle-sheep becomes a buildable app — phase 0 of growing the toy into a game: index.html is a shell over src/, the Playwright suite (geometry over ten viewports, interactions, puzzles, save) is checked in and runs against the built artifact, and the five loose localStorage keys become one versioned save that migrates and degrades safely
 
 ## [2026-07-26] feat | lexicon: French bank taken to 500 words (200 English), and a share control — native sheet with the PNG where the browser takes files, otherwise X/Bluesky/LinkedIn/WhatsApp/Telegram plus copy link and image; entries addressable via ?w=<slug>

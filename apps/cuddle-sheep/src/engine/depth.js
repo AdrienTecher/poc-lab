@@ -30,7 +30,11 @@ export const depthLayers = (back, front) => {
     const next = ranked.map((p) => `${p.id}${p.behind ? "<" : ">"}`).join(",");
     if (next === signature) return;
     signature = next;
+    // appendChild moves the node, and moving the focused node blurs it — so a
+    // player tabbed onto the wolf does not lose him when the boat drifts past
+    const focused = document.activeElement;
     for (const p of ranked) (p.behind ? back : front).appendChild(p.node);
+    if (focused && focused !== document.activeElement && focused.isConnected) focused.focus?.();
   };
 
   const reset = () => { signature = ""; };

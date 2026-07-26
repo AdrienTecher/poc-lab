@@ -213,9 +213,11 @@
 
 
   /* ---------------- la traversée ---------------- */
-  /* Two layers share one projection: the world is painted behind Nuage and the
-     near cabbage in front of him. Depth is the static key gx+gy, never sorted at
-     runtime — a fourth actor, a drifting boat or a tree moved forward breaks it. */
+  /* Two layers share one projection, with Nuage between them: pieces further from
+     the camera than he is are painted in #crossBack, nearer ones in #crossFront.
+     Which is which is decided by engine/depth.js from each piece's own gx+gy, so
+     adding an actor needs no change here. Scenery is static and stays in the
+     decor group behind everything. */
   .cross{
     position:absolute; left:0; top:var(--cross-top);
     width:100%; height:calc(100% - var(--cross-top) - var(--cross-bot));

@@ -10,10 +10,30 @@ export default async ({ newPage, check, APP }) => {
   await page.waitForTimeout(1200);
   check("the happy window survives a reload", (await page.locator("#chipState").innerText()) === "Heureux");
 
-  // the fleece is a wall-clock: it must never rewind, and it keeps ticking
-  // through the reload itself, so the invariant is "forward, by a little"
+  // A cuddle buys exactly five minutes and a reload must not top it up: read the
+  // countdown, reload, and require it to have gone DOWN. Measured against a fresh
+  // boot this would pass on a save that hands out a new window every time.
+  const secondsLeft = async () => {
+    const [, m, sec] = (await page.locator("#chipTime").innerText()).match(/(\d+):(\d+)/) ?? [];
+    return Number(m) * 60 + Number(sec);
+  };
+  const leftBefore = await secondsLeft();
+  await page.reload();
+  await page.waitForTimeout(1200);
+  const leftAfter = await secondsLeft();
+  check("a reload never hands out more happiness", leftAfter < leftBefore, `${leftBefore}s -> ${leftAfter}s`);
+  check("and it does not lose the window either", leftAfter > leftBefore - 20, `${leftBefore}s -> ${leftAfter}s`);
+  await page.close();
+
+  // The fleece is a wall-clock. Start it somewhere a non-persisting boot could
+  // never produce (a fresh save always reads 45%), so "it survived" is provable.
+  page = await newPage({ viewport: { width: 1280, height: 800 } });
+  await boot(page, APP, {
+    "nuage:save": JSON.stringify({ v: 2, sheep: { happyUntil: 0, woolFrom: Date.now() - 12 * 60 * 1000 } }),
+  });
   const pct = async () => Number((await page.locator("#woolPct").innerText()).replace(/\D/g, ""));
   const before = await pct();
+  check("a stored fleece is read back, not defaulted", before >= 78 && before <= 82, `${before}%`);
   await page.reload();
   await page.waitForTimeout(1000);
   const after = await pct();
@@ -32,9 +52,30 @@ export default async ({ newPage, check, APP }) => {
   check("unreadable json opens a fresh meadow", (await page.locator("#sheep").isVisible()));
   await page.close();
 
+  // a fixture that would visibly differ if the version gate were dropped: without
+  // it, graft() would read this window and he would open the page already happy
   page = await newPage({ viewport: { width: 1280, height: 800 } });
-  await boot(page, APP, { "nuage:save": '{"v":99,"sheep":{"happyUntil":1}}' });
-  check("a save from a future build does not half-open", (await page.locator("#chipState").innerText()) === "Il boude");
+  await boot(page, APP, {
+    "nuage:save": JSON.stringify({ v: 99, sheep: { happyUntil: Date.now() + 4 * 60 * 1000 } }),
+  });
+  check("a save from a future build is not half-read", (await page.locator("#chipState").innerText()) === "Il boude");
+  await page.close();
+
+  // --- the v2 read path, which every other fixture skips by going through v1
+  page = await newPage({ viewport: { width: 1280, height: 800 } });
+  await boot(page, APP, {
+    "nuage:save": JSON.stringify({
+      v: 2,
+      sheep: { happyUntil: 0, woolFrom: Date.now() - 3 * 60 * 1000 },
+      care: { fed: 5 },
+      valley: { unlocked: ["riviere"], solves: { riviere: 1 } },
+      prefs: { sound: false },
+    }),
+  });
+  check("v2 carries the unlock", (await page.locator(".sprout.open").count()) === 1);
+  check("v2 carries the reward clovers", (await page.locator(".clover").count()) === 4);
+  check("v2 carries the mute, and the button says so",
+    (await page.locator("#sound").getAttribute("aria-pressed")) === "false");
   await page.close();
 
   // --- v1 was five loose keys; a returning player keeps everything

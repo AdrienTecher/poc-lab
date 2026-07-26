@@ -1,0 +1,35 @@
+# The cuddle-sheep suite drives the BUILT artifact in a real browser, so it needs
+# Chromium — which the deploy job must never pay for. It therefore lives in its
+# own workflow, scoped to that app, and installs Playwright inside the job so the
+# committed lockfile (and every deploy) stays free of it.
+name: cuddle-sheep tests
+
+on:
+  push:
+    paths:
+      - "apps/cuddle-sheep/**"
+      - ".github/workflows/test-cuddle-sheep.yml"
+  pull_request:
+    paths:
+      - "apps/cuddle-sheep/**"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      # job-local only: never written back to the repo
+      - run: pnpm add -Dw --no-frozen-lockfile playwright
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - run: node apps/cuddle-sheep/tests/run.mjs

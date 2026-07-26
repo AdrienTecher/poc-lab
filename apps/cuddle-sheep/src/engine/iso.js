@@ -2,7 +2,6 @@
 // draws. One function, no matrices — fractional grid coordinates are legal
 // everywhere, and every rig is authored in tile space rather than pixels.
 import { el } from "./svg.js";
-import { rand } from "./math.js";
 
 export const IW = 46, IH = 23, IZ = 30, IOX = 468, IOY = 134;   // 2:1 dimetric, one function, no matrices
 export const isoX = (gx, gy) => IOX + (gx - gy) * IW;

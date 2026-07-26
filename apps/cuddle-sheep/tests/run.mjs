@@ -24,6 +24,10 @@ try {
 const SPECS = ["geometry", "interactions", "puzzles", "save"];
 const only = process.argv.slice(2);
 const picked = only.length ? SPECS.filter((s) => only.some((o) => s.includes(o))) : SPECS;
+if (!picked.length) {
+  console.error(`no spec matches ${only.join(" ")} — known specs: ${SPECS.join(", ")}`);
+  process.exit(2);
+}
 
 const results = [];
 export const check = (name, ok, detail = "") => {

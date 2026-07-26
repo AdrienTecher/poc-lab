@@ -11,12 +11,32 @@ export default async ({ newPage, check, APP }) => {
   await cuddle(page);
   check("stroking him makes him happy", (await page.locator("#chipState").innerText()) === "Heureux");
   const left = await page.locator("#chipTime").innerText();
-  check("the window is five minutes", /^4:5\d restantes$/.test(left), left);
+  check("the window is five minutes", /^(5:00|4:5\d) restantes$/.test(left), left);
 
-  // --- feeding tops up but never creates happiness
+  // --- feeding tops up a running window and may never start one
+  const seconds = async () => {
+    const [, m, sec] = (await page.locator("#chipTime").innerText()).match(/(\d+):(\d+)/) ?? [];
+    return m === undefined ? 0 : Number(m) * 60 + Number(sec);
+  };
   await page.keyboard.press("f");
   await page.waitForTimeout(1200);
   check("a clover is eaten", (await page.locator("#live").innerText()).includes("trèfle"));
+  const fedWhileHappy = await seconds();
+  check("feeding a happy sheep never passes the five-minute cap", fedWhileHappy <= 300, `${fedWhileHappy}s`);
+  await page.close();
+
+  page = await newPage({ viewport: { width: 1280, height: 800 } });
+  await boot(page, APP);
+  await page.keyboard.press("f");
+  await page.waitForTimeout(1400);
+  check("feeding a sad sheep does not make him happy", (await page.locator("#chipState").innerText()) === "Il boude");
+  check("and starts no window at all", (await page.locator("#chipTime").innerText()) === "—:—");
+  check("he says so himself", (await page.locator("#live").innerText()).includes("câlins qui le rendent heureux"));
+  await page.close();
+
+  page = await newPage({ viewport: { width: 1280, height: 800 } });
+  await boot(page, APP);
+  await cuddle(page);
 
   // --- everything in the meadow is clickable where it looks clickable
   // the one just eaten is deliberately inert, so ask a clover still in the grass
@@ -55,11 +75,15 @@ export default async ({ newPage, check, APP }) => {
   // --- keyboard only
   page = await newPage({ viewport: { width: 1280, height: 800 } });
   await boot(page, APP, { "nuage:unlocked": 1 });
+  // the hold accumulates dt, not wall-clock, so a busy machine fills it slower —
+  // wait for the state rather than guessing a duration
   await page.locator("#hit").focus();
   await page.keyboard.down(" ");
-  await page.waitForTimeout(2100);
+  const held = await page
+    .waitForFunction(() => document.querySelector("#chipState").textContent === "Heureux", null, { timeout: 10000 })
+    .then(() => true, () => false);
   await page.keyboard.up(" ");
-  check("holding Space cuddles him", (await page.locator("#chipState").innerText()) === "Heureux");
+  check("holding Space cuddles him", held);
 
   // --- nothing invisible is reachable by Tab, in either mode
   const order = async (n) => {
