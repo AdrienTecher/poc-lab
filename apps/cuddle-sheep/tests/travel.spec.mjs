@@ -70,6 +70,28 @@ export default async ({ newPage, check, APP }) => {
   await page.reload();
   await page.waitForTimeout(1800);
   check("a reload leaves him where he was standing", (await mode()) === "cross", await mode());
+
+  // --- a thumb dragged across the sky walks him; one dragged across his back
+  // is a cuddle and must never be mistaken for one
+  const drag = async (from, to, y) => {
+    await page.mouse.move(from, y);
+    await page.mouse.down();
+    for (const i of [...Array(8).keys()]) {
+      await page.mouse.move(from + (to - from) * ((i + 1) / 8), y, { steps: 2 });
+      await page.waitForTimeout(12);
+    }
+    await page.mouse.up();
+    await page.waitForTimeout(2600);
+  };
+  await drag(900, 640, 150);                 // across the sky, right to left
+  check("a swipe walks him east", (await mode()) === "barn", await mode());
+  await drag(500, 800, 150);                 // and back
+  check("and the other way walks him west", (await mode()) === "cross", await mode());
+
+  const sheepBox = await page.locator("#sheep").boundingBox();
+  const cy = sheepBox.y + sheepBox.height * 0.62;
+  await drag(sheepBox.x + sheepBox.width * 0.25, sheepBox.x + sheepBox.width * 0.75, cy);
+  check("a stroke across his back is never a swipe", (await mode()) === "cross", await mode());
   await page.close();
 
   // --- a place he has not opened has no road to it

@@ -25,7 +25,7 @@ import { dropShears } from "../world/wool.js";
 import { cancelDrag } from "../world/clovers.js";
 import { poke, refreshCTM } from "../world/pointer.js";
 import * as valley from "../world/valley.js";
-import { mount, depart, active, placeOf } from "./registry.js";
+import { mount, depart, active, placeOf, roster } from "./registry.js";
 
 const BAND = 150;        // user units either side of centre he may roam before the camera moves
 const STRIDE = 74;       // user units per hoofbeat
@@ -47,6 +47,15 @@ const doorOf = (place) => {
 const spot = () => {
   const f = clamp(v("trip"), 0, 1);
   return [lerp(trip.from[0], trip.to[0], f), lerp(trip.from[1], trip.to[1], f)];
+};
+
+/** The nearest open place in a direction: +1 east, -1 west. What a swipe and an
+ *  arrow key mean, neither of which knows the name of anywhere. */
+export const toward = (from, dir) => {
+  const next = roster()
+    .filter((p) => p !== from && valley.opened(p.id) && Math.sign(p.road - from.road) === dir)
+    .sort((a, b) => Math.abs(a.road - from.road) - Math.abs(b.road - from.road))[0];
+  if (next) go(next.id);
 };
 
 export const go = (id) => {

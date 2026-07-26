@@ -12,6 +12,7 @@ import { sparkle } from "../engine/particles.js";
 import { state } from "../state.js";
 import { PET_TARGET } from "../rules.js";
 import { active } from "../places/registry.js";
+import * as travel from "../places/travel.js";
 import { ptr, toSvg, track, poke } from "./pointer.js";
 import { onSheep, hit, bleat } from "./sheep.js";
 import { goHappy } from "./mood.js";
@@ -129,5 +130,28 @@ export const build = () => {
     if (!state.tool) return;
     if (svg.contains(e.target) || shearsNode.contains(e.target)) return;
     dropShears();
+  });
+
+  /* ---- swipe the valley, on a phone ---- */
+  // The guard is what makes this safe: hands sets state.petting on a pointerdown
+  // ON HIM, so a 200px stroke across his back can never be read as a swipe. A
+  // swipe therefore only ever begins on sky, hills or ground.
+  let swipe = null;
+  addEventListener("pointerdown", (e) => {
+    if (state.petting || state.shearing || state.dragging || state.tool) return;
+    if (svg.contains(e.target)) return;
+    swipe = { x: e.clientX, y: e.clientY, at: now() };
+  });
+  addEventListener("pointerup", (e) => {
+    if (!swipe) return;
+    const { x, y, at } = swipe;
+    swipe = null;
+    const dx = e.clientX - x, dy = e.clientY - y;
+    if (now() - at > 0.6 || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 2) return;
+    const place = active();
+    if (!place) return;
+    // swiping left drags the world left, which walks him east — the direction
+    // your thumb pushes the ground, not the direction he faces
+    travel.toward(place, dx < 0 ? 1 : -1);
   });
 };
