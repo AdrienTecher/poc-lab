@@ -83,30 +83,36 @@ export default async ({ newPage, check, APP }) => {
   // off the arrival one the instant it ended: 258px and 159px of jump, with a
   // beautifully rendered crossing in between. The walk is three legs now — where he
   // stands, to the threshold, across, to where he will stand — so both ends are
-  // continuous. The return journey doubles as the measurement, rather than adding a
-  // third trip: from the barn the way on is WEST, so this is walk(-1) with a
-  // stopwatch on it.
+  // continuous. The return journey doubles as the measurement rather than adding a
+  // third trip: from the barn the way on is WEST.
+  //
+  // Compared by SHAPE, not by distance. "Moved less than 60px in 130ms" is a speed
+  // assertion dressed as a continuity one — CI runs slower, covers more ground in the
+  // same wall clock, and failed at 72px on a walk that was perfectly continuous. What
+  // actually separates a teleport from a walk is that he accelerates from REST, so his
+  // first step is among the smallest; a teleport makes it the largest by an order of
+  // magnitude. That holds on any machine at any frame rate.
   const at = () => page.evaluate(() => {
     const r = document.querySelector("#sheep").getBoundingClientRect();
     return { x: r.x + r.width / 2, y: r.y + r.height / 2,
       mode: document.documentElement.dataset.mode ?? "none" };
   });
-  const before = await at();
+  const path = [await at()];
   await walk(-1);
-  await page.waitForTimeout(130);
-  const just = await at();
-  let prev = just, acrossArrival = 0;
-  for (const i of [...Array(45).keys()]) {
+  for (const i of [...Array(30).keys()]) {
     await page.waitForTimeout(80);
-    const now = await at();
-    if (now.mode !== prev.mode) { acrossArrival = Math.hypot(now.x - prev.x, now.y - prev.y); break; }
-    prev = now;
+    path.push(await at());
+    if (path.length > 6 && path.at(-1).mode !== path.at(-2).mode) break;
   }
+  const steps = path.slice(1).map((p, i) => Math.hypot(p.x - path[i].x, p.y - path[i].y));
+  const median = [...steps].sort((a, b) => a - b)[Math.floor(steps.length / 2)];
+  const acrossArrival = path.at(-1).mode !== path.at(-2).mode ? steps.at(-1) : 0;
+
   check("setting off does not teleport him onto the threshold",
-    Math.hypot(just.x - before.x, just.y - before.y) < 60,
-    `${Math.round(Math.hypot(just.x - before.x, just.y - before.y))}px in the first 130ms — it was 258`);
-  check("and arriving does not teleport him off it", acrossArrival > 0 && acrossArrival < 60,
-    `${Math.round(acrossArrival)}px across the change of place — it was 159`);
+    steps[0] <= median, `first step ${Math.round(steps[0])}px against a median of ${Math.round(median)}px`);
+  check("and arriving does not teleport him off it",
+    acrossArrival > 0 && acrossArrival <= median * 1.5,
+    `${Math.round(acrossArrival)}px across the change of place, median step ${Math.round(median)}px`);
   await page.waitForTimeout(1800);
 
   check("the road runs both ways", (await mode()) === "cross", await mode());
