@@ -601,6 +601,7 @@ const place = {
   road: 2,
   label: ["le pont", "the bridge"],
   doorway: (dir) => ways.out.doorAt(dir),
+  standsAt: () => spotOf("nuage"),
   frame,
   wake, leave, sleep, land,
   enter, exit,

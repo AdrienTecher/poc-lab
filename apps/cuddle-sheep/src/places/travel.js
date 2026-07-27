@@ -31,9 +31,12 @@ import * as valley from "../world/valley.js";
 import { mount, depart, active, placeOf, roster } from "./registry.js";
 
 const STRIDE = 74;       // user units per hoofbeat
-const TRIP_MS = 2600;    // the deadline floor: a backgrounded tab may never strand him
+const TRIP_MS = 3400;    // the deadline floor: a backgrounded tab may never strand him
 
-S("trip", 1, 30, 11);    // 0 at the door he left, 1 at the door he is walking to
+// Softer than it was, because the path is three legs now rather than one: the same
+// spring over three times the distance made him sprint. ζ = 7.6/(2√15) = 0.98, just
+// under critical, so he arrives without overshooting and without a bounce.
+S("trip", 1, 15, 7.6);   // 0 where he was standing, 1 where he will be standing
 
 let trip = null;
 
@@ -46,15 +49,49 @@ export const going = () => trip !== null;
  *  frame, he leaves by the edge he is heading for and arrives at the opposite edge
  *  of the next place — so a walk east goes out of the right of one screen and in at
  *  the left of the next, which is the whole reading of the thing. */
-const doorOf = (place, dir) => {
-  const [ux, uy] = place.doorway(dir);
-  return [ux + place.road * PITCH, uy];
-};
+const doorOf = (place, dir) => shift(place, place.doorway(dir));
 
-/** Where he is right now, between the two doors. */
+/** A point authored in one place's own tile space, moved to its stretch of the road. */
+const shift = (place, [ux, uy]) => [ux + place.road * PITCH, uy];
+
+/** Where he is right now, along the whole walk.
+ *
+ *  A THREE-legged path, and that is the fix for the thing that looked wrong: he used
+ *  to be dropped onto the departure threshold the instant a trip began and lifted off
+ *  the arrival one the instant it ended — measured at 258px and 159px of teleport,
+ *  with the crossing in between rendered perfectly. So the walk now starts where he
+ *  is actually standing, goes to the threshold, crosses, and finishes by walking to
+ *  where he will stand. Nothing about him jumps any more.
+ *
+ *  Parameterised by ARC LENGTH rather than by leg, so his pace is even throughout
+ *  instead of hurrying through whichever leg happens to be short. */
 const spot = () => {
   const f = clamp(v("trip"), 0, 1);
-  return [lerp(trip.from[0], trip.to[0], f), lerp(trip.from[1], trip.to[1], f)];
+  const want = f * trip.total;
+  let run = 0;
+  for (let i = 1; i < trip.path.length; i++) {
+    const seg = trip.legs[i - 1];
+    if (want <= run + seg || i === trip.path.length - 1) {
+      const t = seg > 0 ? clamp((want - run) / seg, 0, 1) : 1;
+      const a = trip.path[i - 1], b = trip.path[i];
+      return [lerp(a[0], b[0], t), lerp(a[1], b[1], t)];
+    }
+    run += seg;
+  }
+  return trip.path.at(-1);
+};
+
+/** How far through the CROSSING he is, 0 before it and 1 after.
+ *
+ *  The camera keys on this rather than on the whole walk, so it holds still while he
+ *  crosses his own frame to the threshold, pans while he is between the two, and
+ *  holds again while he walks in on the other side. Which is also what a screen does
+ *  in Dofus: it changes while you are at the border, not while you are wandering
+ *  toward it. */
+const crossing = () => {
+  const f = clamp(v("trip"), 0, 1);
+  const [a, b] = trip.gate;
+  return b > a ? clamp((f - a) / (b - a), 0, 1) : 1;
 };
 
 /** The nearest open place in a direction: +1 east, -1 west. What a swipe and an
@@ -84,7 +121,19 @@ export const go = (id) => {
   // out of the border he is heading for, in at the opposite border of the next
   const dir = Math.sign(to.road - from.road) || 1;
   const a = doorOf(from, dir), b = doorOf(to, -dir);
-  trip = { from: a, to: b, place: to, left: from, until: now() + TRIP_MS / 1000, beat: 0 };
+  // Where he IS, and where he will STAND. A place knows both; standsAt is optional
+  // and falls back to the threshold, which is what every place did implicitly before.
+  const here = shift(from, from.standsAt?.() ?? from.doorway(dir));
+  const there = shift(to, to.standsAt?.() ?? to.doorway(-dir));
+  const path = [here, a, b, there];
+  const legs = path.slice(1).map((q, i) => Math.hypot(q[0] - path[i][0], q[1] - path[i][1]));
+  const total = legs.reduce((n, d) => n + d, 0) || 1;
+  // where the crossing begins and ends as a fraction of the whole walk, for the camera
+  const gate = [legs[0] / total, (legs[0] + legs[1]) / total];
+  trip = {
+    path, legs, total, gate, from: a, to: b,
+    place: to, left: from, until: now() + TRIP_MS / 1000, beat: 0,
+  };
   depart();
   springs.trip.v = 0; springs.trip.vel = 0;
   set("trip", 1);
@@ -110,9 +159,10 @@ export const step = (dt, t) => {
   const [ux, uy] = spot();
   host(ux, uy);
 
-  // smootherstep: flat at both ends, so the camera is still while he sets off
-  // and still again while he arrives, and does its travelling in between
-  const f = clamp(v("trip"), 0, 1);
+  // smootherstep over the CROSSING, so the camera is still while he walks his own
+  // frame to the threshold, travels while he is between the two, and is still again
+  // while he walks in on the far side
+  const f = crossing();
   const g = f * f * f * (f * (f * 6 - 15) + 10);
   set("camX", lerp(home(trip.left.road), home(trip.place.road), g));
 

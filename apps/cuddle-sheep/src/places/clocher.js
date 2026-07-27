@@ -453,6 +453,7 @@ const place = {
   road: 3,
   label: ["le clocher", "the bell tower"],
   doorway: (dir) => ways.out.doorAt(dir),
+  standsAt: () => [isoX(...HIS), isoY(HIS[0], HIS[1], FLOOR)],
   frame,
   wake, leave, sleep, land,
   enter, exit,

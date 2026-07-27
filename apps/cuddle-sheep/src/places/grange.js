@@ -476,6 +476,7 @@ const place = {
   road: 1,
   label: ["la grange", "the barn"],
   doorway: (dir) => ways.out.doorAt(dir),
+  standsAt: () => { const [gx, gy] = hisSpot(); return [isoX(gx, gy), isoY(gx, gy, FLOOR)]; },
   frame,
   wake, leave, sleep, land,
   enter, exit,

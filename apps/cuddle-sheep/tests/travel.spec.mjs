@@ -72,9 +72,37 @@ export default async ({ newPage, check, APP }) => {
   check("he crosses ground on screen rather than riding", span > 120, `${span}px of travel across the frame`);
   check("and he is moving for most of the walk", moving > samples.length * 0.4, `${moving}/${samples.length} frames`);
 
-  // --- and back again, because a road only ever opens
-  await walk(-1);                            // west, back to the river
-  await page.waitForTimeout(3000);
+  /* ---- and the way back is measured, because both ends of it used to teleport ---- */
+  // He was dropped onto the departure threshold the instant a trip began and lifted
+  // off the arrival one the instant it ended: 258px and 159px of jump, with a
+  // beautifully rendered crossing in between. The walk is three legs now — where he
+  // stands, to the threshold, across, to where he will stand — so both ends are
+  // continuous. The return journey doubles as the measurement, rather than adding a
+  // third trip: from the barn the way on is WEST, so this is walk(-1) with a
+  // stopwatch on it.
+  const at = () => page.evaluate(() => {
+    const r = document.querySelector("#sheep").getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2,
+      mode: document.documentElement.dataset.mode ?? "none" };
+  });
+  const before = await at();
+  await walk(-1);
+  await page.waitForTimeout(130);
+  const just = await at();
+  let prev = just, acrossArrival = 0;
+  for (const i of [...Array(45).keys()]) {
+    await page.waitForTimeout(80);
+    const now = await at();
+    if (now.mode !== prev.mode) { acrossArrival = Math.hypot(now.x - prev.x, now.y - prev.y); break; }
+    prev = now;
+  }
+  check("setting off does not teleport him onto the threshold",
+    Math.hypot(just.x - before.x, just.y - before.y) < 60,
+    `${Math.round(Math.hypot(just.x - before.x, just.y - before.y))}px in the first 130ms — it was 258`);
+  check("and arriving does not teleport him off it", acrossArrival > 0 && acrossArrival < 60,
+    `${Math.round(acrossArrival)}px across the change of place — it was 159`);
+  await page.waitForTimeout(1800);
+
   check("the road runs both ways", (await mode()) === "cross", await mode());
 
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("nuage:save")).valley);

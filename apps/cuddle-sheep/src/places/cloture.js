@@ -344,6 +344,7 @@ const place = {
   road: 4,
   label: ["la clôture", "the fence"],
   doorway: (dir) => ways.out.doorAt(dir),
+  standsAt: () => [isoX(...HIS), isoY(HIS[0], HIS[1], GROUND)],
   frame,
   wake, leave, sleep, land,
   enter, exit,

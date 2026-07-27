@@ -525,6 +525,8 @@ const place = {
   road: 0,                                  // frame on the filmstrip
   label: ["la rivière", "the river"],
   doorway: (dir) => ways.out.doorAt(dir),
+  // where he ends up standing here, so a walk in or out starts and finishes on him
+  standsAt: () => game.pose.mouton ?? spot("mouton"),
   frame,
   wake, leave, sleep, land,
   enter, exit,
