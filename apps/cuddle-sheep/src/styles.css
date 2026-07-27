@@ -671,9 +671,31 @@
     .place-ui button{padding:6px 12px; font-size:.78rem}
     .place-ui{bottom:8px}
   }
+  /* ---- reduced motion ------------------------------------------------------
+     A blanket rule rather than a list of selectors, and that is the point: the
+     list version named eight things and MISSED ten, including four that loop
+     forever — the shears' glint, the wool chip's pulse, the sprout and gate
+     shimmer, and every wagging tail. A list is a thing each new place has to
+     remember to join, and this one had already been forgotten twice.
+
+     Animation DURATIONS collapse rather than the animations being removed, so
+     anything using `both` still lands on its final frame instead of never arriving.
+
+     Transitions are switched off by property, not shortened. Shortening them was
+     tried and was actively harmful: `transition-property` defaults to `all`, so
+     setting a duration on `*` GIVES every element a transition it never had — and
+     the rig rewrites transform, cx, cy and r on the sheep sixty times a second, so
+     the browser was left permanently mid-transition on the very thing that is
+     supposed to be calm. Nothing here waits on transitionend, so nothing strands.
+
+     The rig itself is separately handled: engine/math.js exports REDUCED, travel
+     snaps on it, and the fleece curtain is not even built. */
   @media (prefers-reduced-motion: reduce){
-    .sun__rays,.blade,.cloudbank .puff,.hint__hand,
-    .walker__tag,.lantern__glow,.lantern.ready,.edge__mark{animation:none}
+    *, *::before, *::after{
+      animation-duration:1ms !important;
+      animation-iteration-count:1 !important;
+      transition-property:none !important;
+    }
   }
   @media (max-width:720px){
     .hud{gap:10px; padding:12px}
