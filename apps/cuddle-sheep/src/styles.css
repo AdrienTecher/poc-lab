@@ -541,6 +541,46 @@
   @keyframes fleece-in{0%,52%{opacity:0} 100%{opacity:1}}
   @keyframes fleece-out{from{opacity:1} to{opacity:0}}
 
+  /* ---- la carte -------------------------------------------------------------
+     The map is the shot widening until the whole valley is in it, so almost nothing
+     here is chrome: the names and the frames they label live INSIDE the front layer
+     and scale with the view, because they are labelling places in the world rather
+     than rows in a panel.
+
+     The control does not go in the HUD. The HUD measured -6px of slack at 320x568
+     before any of this was added, and a fourth chip would not fit — so it sits by
+     itself, and only while he is somewhere there is a valley to look at. */
+  .map-btn{
+    position:absolute; z-index:4; right:clamp(12px,2.4vw,26px); bottom:clamp(64px,12vh,104px);
+    width:44px; height:44px; display:none; place-items:center; border-radius:50%;
+    background:var(--hud); border:1px solid var(--hud-line);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    transition:background .2s, transform .2s;
+  }
+  html[data-place] .map-btn{display:grid}
+  .map-btn svg{width:21px; height:21px; fill:none; stroke:#fff; stroke-width:1.9;
+    stroke-linecap:round; stroke-linejoin:round}
+  .map-btn:hover{background:rgba(255,255,255,.26); transform:translateY(-1px)}
+  html[data-carte] .map-btn{background:rgba(255,255,255,.34)}
+  /* the place bars have nothing to say while the whole valley is on screen */
+  html[data-carte] .place-ui{opacity:0; pointer-events:none; transition:opacity .3s}
+
+  /* the layer is pointer-events:none, so a place on the map has to opt in the way
+     every other reachable thing in the valley does */
+  html[data-carte] .carte__spot{pointer-events:auto}
+  .carte__field{fill:#fff; opacity:0; transition:opacity .25s}
+  .carte__spot{cursor:pointer; outline:none}
+  .carte__spot:hover .carte__field, .carte__spot:focus-visible .carte__field{opacity:.07}
+  .carte__pad{
+    fill:rgba(28,36,50,.42); stroke:rgba(255,255,255,.34); stroke-width:2;
+  }
+  .carte__name{fill:#fff; font-family:var(--display); font-weight:500; letter-spacing:.01em}
+  .carte__plate{transition:transform .25s cubic-bezier(.2,1.7,.4,1)}
+  .carte__spot:hover .carte__plate, .carte__spot:focus-visible .carte__plate{transform:translateY(-4px)}
+  /* where he actually is, said once and quietly */
+  .carte__spot.here .carte__pad{fill:rgba(255,246,205,.5); stroke:#fff}
+  .carte__spot.here .carte__name{fill:#2c3a2e}
+
   .place-ui{
     position:absolute; left:50%; bottom:clamp(14px,3.2vh,30px); transform:translateX(-50%);
     z-index:4; display:none; gap:8px; align-items:center; justify-content:center;

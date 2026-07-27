@@ -31,6 +31,7 @@ import * as camera from "./engine/camera.js";
 import { refreshCTM } from "./world/pointer.js";
 import { active, placeOf } from "./places/registry.js";
 import * as travel from "./places/travel.js";
+import * as carte from "./places/map.js";
 
 attachParticles($("#fx"));
 
@@ -54,6 +55,7 @@ pont.build();
 clocher.build();
 cloture.build();
 lisiere.build();
+carte.bind();       // after the places: it asks the registry what is open
 clovers.settle();   // past solves may have earned more than the three he starts with
 mood.watch();
 
