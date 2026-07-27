@@ -1,7 +1,7 @@
 # Nuage — handoff
 
-**Phase 3 closed, Phase 4 three-fifths done, plus a map.** Six places, two animals,
-an installable offline app, **416/416 green**.
+**Phase 3 closed, Phase 4 three-fifths done, plus a map and a continuous valley.**
+Six places, two animals, an installable offline app, **419/419 green**.
 `la rivière`, `la grange`, `le pont`, `le clocher`, `la clôture`, `la lisière`.
 This is what a fresh session needs to pick it up.
 
@@ -145,12 +145,25 @@ server port and hang.
    never disabled, not even on a solved board.
 8. **Painter order is computed.** He is a DOM actor between two SVG layers; every
    piece declares `gx + gy` and `engine/depth.js` files it.
-9. **A sleeping diorama leaves the document.** `overflow:hidden` on an `<svg>`
-   clips to the CSS box, *not* the viewBox — letterbox margins paint live user
-   space (112 units at 1280×800, 359 at phone-landscape, against a 728 pitch).
-   For the same reason a place's own backdrop must be **exactly one `PITCH` wide**:
-   during travel both dioramas are live at once, and a wider one paints over its
-   neighbour. Use `VB_X`/`VB_W`, don't retype 728.
+9. **A sleeping diorama leaves the document — but its NEIGHBOURS stay.**
+   `overflow:hidden` on an `<svg>` clips to the CSS box, *not* the viewBox, so
+   letterbox margins paint live user space (112 units at 1280×800, 359 at
+   phone-landscape, against a 728 pitch). That is why a place further than one step
+   away is detached, and it is still why.
+   What changed: those margins are now where the two open neighbours are deliberately
+   drawn, so the valley reads as continuous — the bleed is the feature. The rule is
+   therefore *bleed is forbidden by accident, permitted where a neighbour is being
+   shown on purpose*. Three bands at rest, six on the map, never more.
+   A neighbour is **`inert`**, which is load-bearing: a live band brings its bales and
+   bell ropes with it, and they would otherwise be clickable and tabbable from a place
+   away. `.peeking` alone was not enough — `html[data-place] .edge{pointer-events:auto}`
+   is a descendant rule and happily re-enabled them, which the ultrawide geometry sweep
+   caught as *the "le pré" edge is covered by something*. Hence
+   `g[data-layer][inert] *{pointer-events:none !important}`.
+   For the same reason a place's own backdrop must be **exactly one `PITCH` wide** and
+   feathered at its ends: le pont is the only place that paints its own sky, and with
+   the neighbours visible its backdrop stopped being the screen and became a rectangle
+   you could see the edge of.
 10. **Never `git add -A`.** Stage explicit paths. A background agent once edited
     the tree mid-commit and it shipped.
 11. **A piece drawn outside the frame keeps its click target.** `overflow:hidden`
@@ -252,23 +265,17 @@ Phase 4 is also where the **hint copy** should be reviewed as a whole: six place
 each set their own bilingual hint on landing, and nobody has read them end to end
 as one voice.
 
-### The thing still worth doing: make the borders seamless
-The flagstone thresholds say "a way out is here" but the frame still ends at a hard
-edge, so they read as markers ON a place rather than as part of a continuous valley.
-Dofus solved exactly this in its 16:9 rework by showing a live PREVIEW of the adjacent
-map in the border strip — real scenery, real state, no NPCs.
+### DONE: the borders are seamless
+The two open neighbours are drawn, inert, in the letterbox margins that were already
+there and already empty — 150px either side at 1280×800, 595px at ultrawide. It cost
+nothing in framing: the place he is in is composed exactly as before. `neighbours.js`
+owns the rule, `diorama.peek()` does the inerting, and every place calls
+`neighbours.settle(place)` at the end of `land()`.
 
-That is now cheap, because `map.js` already does every hard part: it wakes the
-neighbours, sorts their pieces into the DOM, and puts them on screen in one shared
-shot. A border peek is the same machinery at a much smaller width — wake the two
-neighbours, widen the shot by a sliver rather than six frames, and let the letterbox
-bleed that invariant 9 exists to PREVENT become the thing on purpose, exactly as the
-map does. The threshold stones can then get quieter, or go.
-
-Two cautions. Invariant 9 is suspended in `map.js` and would be suspended here too, so
-it needs restating rather than deleting: bleed is forbidden EXCEPT where a wider shot
-is deliberately showing the neighbours. And the geometry sweep asserts one diorama in
-the document per room, which would have to become "one, or three while peeking".
+Specs that queried `.edge`, `.edge__name` or `.edge[data-dir]` globally had to be
+scoped to `g[data-layer]:not([inert])`, because a neighbour's ways out are in the
+document too — and its edges are legitimately *outside* the frame, which the geometry
+sweep was right to complain about until it was told whose edges to judge.
 
 ### Worth doing next, from what building six places taught
 - **The borders take no room and no longer grow with the roster**, which retires the

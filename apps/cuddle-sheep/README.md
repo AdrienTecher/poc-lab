@@ -45,6 +45,11 @@ chrome over it — occluded like any other piece, and declared per place, becaus
 ground is not the same shape twice. So a place further down the road costs *less* than the
 second one did, not more.
 
+You can also **see next door from where you are standing**: the two open neighbours
+are drawn, inert, in the letterbox margins that a 728-unit frame already leaves — so
+the valley reads as one continuous strip rather than a series of screens. And `M`
+opens the map, which is the same shot widened until all of it fits.
+
 The valley is **walked**, one screen at a time: from la rivière, le pont is two
 hops east. Adjacency is not strict, though — the branches open roads 0-2-4 and
 1-3-5, so an edge means "the nearest open place this way" rather than "the next
@@ -125,6 +130,7 @@ uses. Install it where you run the tests (`pnpm add -Dw playwright`) and set
 | `offline` | nothing loads from another origin, the manifest installs, and a cold reload with the network cut still opens a playable meadow — proven load-bearing by requiring a worker-less context to FAIL |
 | `calm` | with reduced motion asked for, `document.getAnimations()` holds nothing running in any of the seven rooms — and travel still arrives |
 | `firstrun` | no save at all: the one instruction stays up, nothing unearned is visible or tabbable, and the loop closes from cold |
+| `carte` | the map is the WORLD — the real dioramas are what is on screen, showing the state he left them in, and only what he has opened |
 
 Two of these read actual pixels, because some questions can only be settled by
 looking at what the compositor did. A blend mode's effect on the distance between
