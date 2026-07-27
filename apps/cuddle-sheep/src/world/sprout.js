@@ -4,6 +4,7 @@
 // It grows a notch per clover eaten, so the way in is visible long before it
 // opens — the care loop's progress bar, drawn as a plant.
 import { el } from "../engine/svg.js";
+import { say } from "../ui/copy.js";
 import { clamp, now } from "../engine/math.js";
 import { kick } from "../engine/spring.js";
 import { sfx } from "../engine/audio.js";
@@ -36,8 +37,8 @@ const reveal = () => {
   setTimeout(() => sfx.chime(), 350);
   // he notices it before you do
   setTimeout(() => { state.lookAt = now() + 1.4; kick("earL", -220); kick("earR", 220); }, 500);
-  setTimeout(() => setHint("Un trèfle à quatre feuilles — touche-le", "a four-leaf clover — tap it"), 900);
-  announce("Un trèfle à quatre feuilles a poussé dans le pré : touche-le pour la traversée.");
+  setTimeout(() => setHint(...say.sprout.grown), 900);
+  announce(say.sprout.grownSaid);
 };
 
 const sync = () => {

@@ -4,6 +4,7 @@
 // Two care rituals, two doors — which is the whole shape of the game stated in
 // the meadow, without a word of explanation.
 import { el } from "../engine/svg.js";
+import { say } from "../ui/copy.js";
 import { clamp, now } from "../engine/math.js";
 import { kick } from "../engine/spring.js";
 import { sfx } from "../engine/audio.js";
@@ -34,9 +35,8 @@ const reveal = () => {
   gate.classList.add("reveal");
   setTimeout(() => sfx.chime(), 350);
   setTimeout(() => { state.lookAt = now() + 1.4; kick("earL", -220); kick("earR", 220); }, 500);
-  setTimeout(() => setHint("La grange est ouverte — trois toisons y sont rangées",
-    "the barn is open — three fleeces are stored there"), 900);
-  announce("La grange s'ouvre au fond du pré : trois toisons y attendent d'être empilées.");
+  setTimeout(() => setHint(...say.gate.open), 900);
+  announce(say.gate.openSaid);
 };
 
 const sync = () => {

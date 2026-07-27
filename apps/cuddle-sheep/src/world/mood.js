@@ -5,6 +5,7 @@
 // bought. The window is wall-clock and stored, so it runs while the tab is
 // closed and can never be rewound by anything outside this module.
 import * as save from "../engine/save.js";
+import { say } from "../ui/copy.js";
 import { clamp, rand } from "../engine/math.js";
 import { springs, S, set, kick, stepSpring } from "../engine/spring.js";
 import { sfx } from "../engine/audio.js";
@@ -42,10 +43,10 @@ export const goHappy = (isRefresh) => {
     sfx.chime(); sfx.bleat(true);
     kick("hop", -330);
     for (const i of [...Array(14).keys()]) setTimeout(() => heart(rand(150, 250), rand(150, 235)), i * 55);
-    announce("Nuage sourit : il est heureux pour cinq minutes.");
+    announce(say.him.happy);
   } else if (isRefresh) {
     heart(rand(172, 228), 172);
-    announce("Câlin renouvelé : cinq minutes de plus.");
+    announce(say.him.happyAgain);
   }
   if (!state.everCuddled) { state.everCuddled = true; }
   hideHint();
@@ -95,8 +96,8 @@ export const watch = () => {
     const isHappy = state.happyUntil > Date.now();
     if (wasHappy && !isHappy) {
       sfx.bleat(false);
-      announce("Les cinq minutes sont passées : Nuage boude de nouveau.");
-      if (!active()) showHint("Encore un câlin ?", "one more cuddle?");
+      announce(say.him.windowClosed);
+      if (!active()) showHint(...say.him.again);
       save.data.sheep.happyUntil = 0;
       save.touch(true);
     }

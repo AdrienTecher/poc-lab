@@ -13,6 +13,7 @@
 // A mistake is a rewind here as everywhere: a wrong bell costs a replay and
 // nothing else. The phrase never shortens, and the tally of replays only fills.
 import { $, el } from "../engine/svg.js";
+import { say } from "../ui/copy.js";
 import { clamp, rand, now, REDUCED } from "../engine/math.js";
 import { kick } from "../engine/spring.js";
 import { sfx } from "../engine/audio.js";
@@ -256,12 +257,12 @@ const sing = () => {
       game.swing[id] = { at: now(), amp: 1 };
     }, i * BEAT * 1000);
   }
-  announce(`Le clocher sonne ${game.phrase.length} cloche${game.phrase.length > 1 ? "s" : ""}. Écoute, puis rends-la${game.phrase.length > 1 ? "-lui" : ""}.`);
+  announce(say.clocher.singing(game.phrase.length));
   setTimeout(() => {
     if (!game.on || game.phase !== "singing") return;
     game.phase = "yours";
     syncRopes();
-    setHint("À toi — tire les cordes dans le même ordre", "your turn — pull the ropes in the same order");
+    setHint(...say.clocher.yourTurn);
   }, (game.sungFor + 0.5) * 1000);
 };
 
@@ -278,8 +279,8 @@ const ring = (id) => {
     game.replays += 1;
     game.phase = "singing";
     syncRopes();
-    setHint("Pas celle-là — réécoute", "not that one — listen again");
-    announce(`Ce n'était pas ${NAME[id]}. Le clocher recommence la phrase.`);
+    setHint(...say.clocher.wrong);
+    announce(say.clocher.wrongSaid(NAME[id]));
     // a beat of silence, then the tower simply says it again. Nothing is lost.
     setTimeout(() => { if (game.on) sing(); }, 900);
     return;
@@ -291,7 +292,7 @@ const ring = (id) => {
   // one bell longer, and the tower takes the lead again
   game.rounds += 1;
   game.phrase = grow(game.phrase, Math.random());
-  setHint(`${game.phrase.length} cloches, maintenant`, `${game.phrase.length} bells now`);
+  setHint(...say.clocher.longer(game.phrase.length));
   setTimeout(() => { if (game.on) { sing(); remember(); } }, 800);
 };
 
@@ -300,9 +301,8 @@ const win = () => {
   syncRopes();
   fanfare("clocher");
   const clean = game.replays === 0 ? " Sans une seule reprise." : "";
-  announce(`La phrase entière est rendue : ${game.phrase.map((b) => NAME[b]).join(", ")}.${clean}`);
-  setHint(`La phrase entière, ${game.phrase.length} cloches${game.replays === 0 ? " — sans une reprise" : ""}`,
-    `the whole phrase, ${game.phrase.length} bells${game.replays === 0 ? " — first time" : ""}`);
+  announce(say.clocher.won(game.phrase.map((b) => NAME[b]).join(", "), clean));
+  setHint(...say.clocher.wonHint(game.phrase.length, game.replays === 0));
   // ring it once more, for the pleasure of it
   for (const [i, id] of game.phrase.entries()) {
     sfx.bell(PITCH[id], 0.7 + i * 0.2);
@@ -407,7 +407,7 @@ export const exit = () => {
   stage.classList.remove("gliding");
   setTimeout(refreshCTM, 60);
   setTimeout(refreshCTM, 700);
-  announce("Retour au pré.");
+  announce(say.road.home);
 };
 
 /* ---- bound at boot; the tower is not built until the first visit ------- */
@@ -433,9 +433,8 @@ export const build = () => {
     if (!valley.open("clocher")) return;
     setTimeout(() => sfx.bell(PITCH.sol), 400);
     setTimeout(() => sfx.bell(PITCH.do, 0), 1000);
-    setTimeout(() => setHint("Des cloches, plus loin dans la vallée — le clocher",
-      "bells, further down the valley — the bell tower"), 900);
-    announce("Le clocher est ouvert, au bout de la vallée : suis le panneau.");
+    setTimeout(() => setHint(...say.clocher.opensHint), 900);
+    announce(say.clocher.opens);
   };
   valley.watch(watch);
   watch();

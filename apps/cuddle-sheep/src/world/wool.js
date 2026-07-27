@@ -7,6 +7,7 @@
 // The fleece is one stored instant — when it was last taken to zero — so it
 // grows on wall-clock time whether the tab is open or not.
 import * as save from "../engine/save.js";
+import { say } from "../ui/copy.js";
 import { el, tapTarget } from "../engine/svg.js";
 import { clamp, rand, now } from "../engine/math.js";
 import { kick } from "../engine/spring.js";
@@ -52,8 +53,8 @@ export const takeShears = () => {
   if (state.tool === "shears") return;
   if (state.wool < SHEAR_MIN) {
     sfx.whiff();
-    setHint("Sa laine est trop courte — elle repousse", "his wool is too short — it is growing back");
-    announce("Sa laine est trop courte pour la tonte.");
+    setHint(...say.wool.tooShort);
+    announce(say.wool.tooShortSaid);
     return;
   }
   state.tool = "shears";
@@ -63,8 +64,8 @@ export const takeShears = () => {
   moveTool(lastClient.x, lastClient.y);
   sfx.snip();
   poke();
-  setHint("Passe les ciseaux sur sa laine", "run the shears over his wool");
-  announce("Ciseaux en main. Passe-les sur sa laine pour le tondre.");
+  setHint(...say.wool.inHand);
+  announce(say.wool.inHandSaid);
 };
 
 export const dropShears = () => {
@@ -88,8 +89,8 @@ const fleeceOff = () => {
   for (const i of [...Array(12).keys()]) setTimeout(() => tuft(rand(150, 250), rand(205, 265)), i * 45);
   for (const i of [...Array(6).keys()]) setTimeout(() => sparkle(rand(150, 250), rand(190, 250)), 300 + i * 90);
   setTimeout(fleeceToCloud, 900);
-  announce("La toison est tombée : Nuage est tout neuf, et un peu frileux.");
-  setHint("Nuage est tondu — trois câlins avant la prochaine tonte", "shorn: three cuddles until the next one");
+  announce(say.wool.shorn);
+  setHint(...say.wool.shornHint);
   setTimeout(dropShears, 800);
 };
 
@@ -100,8 +101,8 @@ const refuse = (sx) => {
   if (now() - refusedAt < 2.4) return;
   refusedAt = now();
   sfx.whiff(); sfx.bleat(false);
-  setHint("Rassure-le d'abord — un câlin, puis la tonte", "settle him with a cuddle first, then shear");
-  announce("Nuage se dérobe : il faut d'abord le rassurer avec un câlin.");
+  setHint(...say.wool.settleFirst);
+  announce(say.wool.settleFirstSaid);
 };
 
 /** One stroke of the blades over `d` svg units of his side. */

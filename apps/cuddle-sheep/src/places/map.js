@@ -25,6 +25,7 @@
 // This one shows it because it IS the place. And unlike Waven's graph it keeps the
 // geography — you can see that le pont is between la grange and le clocher.
 import { $, el } from "../engine/svg.js";
+import { say } from "../ui/copy.js";
 import { REDUCED } from "../engine/math.js";
 import { VB_X, VB_Y, VB_W, VB_H, PITCH, centre, view, wide } from "../engine/camera.js";
 import { announce, setHint } from "../ui/hint.js";
@@ -136,9 +137,8 @@ export const show = () => {
   paintLabels();
   setTimeout(refreshCTM, REDUCED ? 0 : 320);
   const names = shown().map((p) => p.label[0]).join(", ");
-  announce(`La carte de la vallée : ${names}. Nuage est à ${active().label[0]}.`);
-  setHint("Touche un endroit pour y aller — Échap pour revenir",
-    "touch a place to go there — Escape to come back");
+  announce(say.carte.said(names, active().label[0]));
+  setHint(...say.carte.how);
 };
 
 export const close = () => {

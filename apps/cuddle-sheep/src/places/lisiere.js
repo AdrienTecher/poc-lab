@@ -12,6 +12,7 @@
 // edge without one would be a lie about where you are, not because he is a threat.
 // Nothing in this place can be lost.
 import { $, el } from "../engine/svg.js";
+import { say } from "../ui/copy.js";
 import { rand, now, REDUCED } from "../engine/math.js";
 import { kick } from "../engine/spring.js";
 import { sfx } from "../engine/audio.js";
@@ -212,8 +213,8 @@ const readout = () => {
   const safe = game.hens.filter((at) => watched(at)).length;
   const held = game.pick?.kind === "hen" ? ` Poule ${game.pick.at + 1} choisie.`
     : game.pick?.kind === "dog" ? " Le chien est choisi." : "";
-  announce(`Le chien surveille les cases ${game.dog + 1} à ${game.dog + SPAN}. ` +
-    `Poules en case ${sorted(game.hens).map((a) => a + 1).join(", ")} — ${safe} sur ${HENS} à l'abri.${held}`);
+  announce(say.lisiere.watching(game.dog + 1, game.dog + SPAN,
+    sorted(game.hens).map((a) => a + 1).join(", "), safe, HENS, held));
 };
 
 const setMoves = () => {
@@ -254,7 +255,7 @@ const touchBox = (i) => {
     const on = game.hens.indexOf(i);
     if (on !== -1) return touchHen(on);
     sfx.whiff();
-    setHint("Choisis d'abord une poule, ou le chien", "pick a hen first, or the dog");
+    setHint(...say.lisiere.pickFirst);
     return;
   }
   poke();
@@ -275,9 +276,8 @@ const touchBox = (i) => {
   const why = refuses(game.hens, from, i);
   if (why) {
     sfx.whiff();
-    setHint(why === "taken" ? "Cette case est déjà prise" : "Elle y est déjà",
-      why === "taken" ? "that box is taken" : "she is already there");
-    announce(why === "taken" ? "Une autre poule occupe cette case." : "Elle est déjà dans cette case.");
+    setHint(...(why === "taken" ? say.lisiere.taken : say.lisiere.already));
+    announce(why === "taken" ? say.lisiere.takenSaid : say.lisiere.alreadySaid);
     return;
   }
   past.push({ hens: [...game.hens], dog: game.dog, moves: game.moves });
@@ -301,9 +301,8 @@ const win = () => {
   syncPieces();
   fanfare("lisiere");
   const best = game.moves === game.best ? " C'est le minimum." : "";
-  announce(`Les trois poules sont sous la garde du chien, en ${game.moves} pas.${best}`);
-  setHint(`Toutes gardées en ${game.moves} pas${game.moves === game.best ? ", le minimum" : ""}`,
-    `all watched in ${game.moves}${game.moves === game.best ? " — the minimum" : ""}`);
+  announce(say.lisiere.won(game.moves, best));
+  setHint(...say.lisiere.wonHint(game.moves, game.moves === game.best));
   if (!REDUCED) for (const k of [...Array(8).keys()]) setTimeout(() => sparkle(rand(160, 250), rand(150, 240)), k * 90);
   remember();
 };
@@ -370,8 +369,7 @@ const land = () => {
   game.pick = null;
   ways.out?.sync();
   syncPieces(); draw(); measureUI();
-  setHint("Rassemble les trois poules sous la garde du chien — il surveille trois cases",
-    "gather all three hens where the dog can watch — he sees three boxes at once");
+  setHint(...say.lisiere.how);
   setTimeout(() => { refreshCTM(); draw(); measureUI(); }, 20);
   setTimeout(refreshCTM, 1000);
   readout();
@@ -406,7 +404,7 @@ export const exit = () => {
   stage.classList.remove("gliding");
   setTimeout(refreshCTM, 60);
   setTimeout(refreshCTM, 700);
-  announce("Retour au pré.");
+  announce(say.road.home);
 };
 
 /* ---- bound at boot; the wood's edge is not built until the first visit -- */
@@ -430,9 +428,8 @@ export const build = () => {
     if (valley.opened("lisiere") || valley.solves("clocher") < SOLVES_TO_OPEN_LISIERE) return;
     if (!valley.open("lisiere")) return;
     setTimeout(() => sfx.chime(), 400);
-    setTimeout(() => setHint("Un chien vous attend à la lisière du bois",
-      "a dog is waiting at the edge of the wood"), 800);
-    announce("La lisière est ouverte, au bout de la vallée : suis le panneau.");
+    setTimeout(() => setHint(...say.lisiere.opensHint), 800);
+    announce(say.lisiere.opens);
   };
   valley.watch(watch);
   watch();

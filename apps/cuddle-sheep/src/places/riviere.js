@@ -9,6 +9,7 @@
 // Made things are faceted here, living things are rounded — the one rule that
 // keeps a hand-built diorama coherent.
 import { $, el } from "../engine/svg.js";
+import { say } from "../ui/copy.js";
 import { rand, now, REDUCED } from "../engine/math.js";
 import { springs, S, set, v, kick } from "../engine/spring.js";
 import { sfx } from "../engine/audio.js";
@@ -208,7 +209,7 @@ const drawActors = () => {
 const readout = () => {
   const list = (bank) => PIECES.filter((id) => game.where[id] === bank).map((id) => NAME[id]).join(", ") || "personne";
   const cargo = game.aboard ? ` ${NAME[game.aboard]} est dans la barque.` : "";
-  announce(`Rive gauche : ${list("L")}. Rive droite : ${list("R")}. La barque est à ${SIDE_FR[game.boat]}.${cargo}`);
+  announce(say.riviere.banks(list("L"), list("R"), SIDE_FR[game.boat], cargo));
 };
 const setMoves = () => {
   crossMoves.textContent = `${game.moves} passage${game.moves > 1 ? "s" : ""}`;
@@ -274,8 +275,7 @@ const land = () => {
   if (game.phase === "rowing") game.phase = "idle";   // a crossing cannot outlive a walk
   ways.out?.sync();
   setMoves(); syncTokens(); drawActors(); measureUI();
-  setHint("Le loup mange le mouton, le mouton mange le chou — une seule place dans la barque",
-    "wolf eats sheep, sheep eats cabbage — one seat in the boat");
+  setHint(...say.riviere.how);
   setTimeout(() => { refreshCTM(); drawActors(); measureUI(); }, 20);
   setTimeout(refreshCTM, 1000);
   readout();
@@ -310,7 +310,7 @@ export const exit = () => {
   stage.classList.remove("riding", "gliding");
   setTimeout(refreshCTM, 60);
   setTimeout(refreshCTM, 700);
-  announce("Retour au pré.");
+  announce(say.road.home);
 };
 
 const resetBoard = (animate = true) => {
@@ -411,16 +411,16 @@ const fail = (pair) => {
       }
     }, 700);
     sfx.bleat(false);
-    announce("Le loup a fait un câlin non autorisé au mouton. Annule le dernier passage.");
-    setHint("Le loup et le mouton, seuls…", "wolf and sheep, left alone…");
+    announce(say.riviere.wolfAte);
+    setHint(...say.riviere.wolfAteHint);
   } else {
     // entirely his own fault, and the funnier of the two
     state.chewUntil = now() + 2.1;   // borrowed ingredients, never feed() itself
     sfx.munch();
     for (const i of [...Array(10).keys()]) setTimeout(() => crumb(200 + rand(-16, 16), 206), i * 60);
     game.tok.chou.classList.add("gone");
-    announce("Le mouton a mangé le chou. Annule le dernier passage.");
-    setHint("Le mouton et le chou, seuls…", "sheep and cabbage, left alone…");
+    announce(say.riviere.sheepAte);
+    setHint(...say.riviere.sheepAteHint);
   }
 };
 
@@ -430,9 +430,8 @@ const win = () => {
   fanfare("riviere");
   setTimeout(() => game.pennant.classList.add("up"), 700);
   const best = game.moves === OPTIMAL ? " C'est la solution optimale." : "";
-  announce(`Tout le monde est passé en ${game.moves} passages.${best}`);
-  setHint(`Tout le monde est passé — ${game.moves} passages${game.moves === OPTIMAL ? ", le minimum" : ""}`,
-    `everyone crossed in ${game.moves}${game.moves === OPTIMAL ? " — the minimum" : ""}`);
+  announce(say.riviere.won(game.moves, best));
+  setHint(...say.riviere.wonHint(game.moves, game.moves === OPTIMAL));
 };
 
 const undo = () => {

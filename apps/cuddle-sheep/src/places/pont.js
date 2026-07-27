@@ -16,6 +16,7 @@
 // and it means the board can be solved with him standing still on a ledge
 // watching two lambs cross without him.
 import { $, el } from "../engine/svg.js";
+import { say } from "../ui/copy.js";
 import { clamp, lerp, rand, now, REDUCED } from "../engine/math.js";
 import { kick } from "../engine/spring.js";
 import { sfx } from "../engine/audio.js";
@@ -348,7 +349,7 @@ const readout = () => {
   const chosen = game.party.length
     ? ` Prêts à passer : ${game.party.map((w) => NAME[w]).join(" et ")}.`
     : " Personne n'est encore choisi.";
-  announce(`De ce côté : ${list("L")}. De l'autre : ${list("R")}. La lanterne est de ${SIDE_FR[game.lantern]}.${chosen}`);
+  announce(say.pont.sides(list("L"), list("R"), SIDE_FR[game.lantern], chosen));
 };
 
 const setMinutes = () => {
@@ -380,7 +381,7 @@ const join = (id) => {
   if (!game.on || game.phase !== "idle") return;
   if (game.where[id] !== game.lantern) {
     sfx.whiff();
-    setHint(`${NAME[id]} est de l'autre côté`, `${EN[id]} is on the other side`);
+    setHint(...say.pont.across(NAME[id], EN[id]));
     return;
   }
   poke();
@@ -404,9 +405,7 @@ const cross = () => {
       ? ["Choisis qui porte la lanterne", "pick who carries the lantern"]
       : ["Les planches n'en portent que deux", "the planks take only two"];
     setHint(...said);
-    announce(why === "empty"
-      ? "Personne ne peut traverser sans la lanterne : choisis d'abord."
-      : "Deux au plus sur les planches.");
+    announce(why === "empty" ? say.pont.nobodySaid : say.pont.crowdedSaid);
     return;
   }
 
@@ -449,9 +448,8 @@ const win = () => {
   syncWalkers();
   fanfare("pont");
   const best = game.minutes === OPTIMAL ? " C'est le minimum." : "";
-  announce(`Tout le monde est passé en ${game.minutes} minutes.${best}`);
-  setHint(`Tous passés en ${game.minutes} minutes${game.minutes === OPTIMAL ? ", le minimum" : ""}`,
-    `all across in ${game.minutes} minutes${game.minutes === OPTIMAL ? " — the minimum" : ""}`);
+  announce(say.pont.won(game.minutes, best));
+  setHint(...say.pont.wonHint(game.minutes, game.minutes === OPTIMAL));
 };
 
 const undo = () => {
@@ -522,8 +520,7 @@ const land = () => {
   if (game.phase === "crossing") { game.walking = []; game.phase = "idle"; }
   ways.out?.sync();
   draw(); syncWalkers(); measureUI();
-  setHint("Deux au plus, et la lanterne va avec eux — on marche au pas du plus lent",
-    "two at a time, and the lantern goes with them — you walk at the slower one's pace");
+  setHint(...say.pont.how);
   setTimeout(() => { refreshCTM(); draw(); measureUI(); }, 20);
   setTimeout(refreshCTM, 1000);
   readout();
@@ -558,7 +555,7 @@ export const exit = () => {
   stage.classList.remove("gliding", "chosen");
   setTimeout(refreshCTM, 60);
   setTimeout(refreshCTM, 700);
-  announce("Retour au pré.");
+  announce(say.road.home);
 };
 
 /* ---- bound at boot; the cleft itself is not built until the first visit -- */
@@ -587,9 +584,8 @@ export const build = () => {
     if (valley.opened("pont") || valley.solves("riviere") < SOLVES_TO_OPEN_PONT) return;
     if (!valley.open("pont")) return;
     setTimeout(() => sfx.chime(), 400);
-    setTimeout(() => setHint("Une lanterne s'allume au bout de la vallée — le pont",
-      "a lantern is lit down the valley — the bridge"), 800);
-    announce("Le pont est ouvert, plus loin dans la vallée : suis le panneau.");
+    setTimeout(() => setHint(...say.pont.opensHint), 800);
+    announce(say.pont.opens);
   };
   valley.watch(watch);
   watch();

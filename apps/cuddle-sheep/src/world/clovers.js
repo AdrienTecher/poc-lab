@@ -5,6 +5,7 @@
 // the four-leaf one that opens the river. Solving a place grows the patch back
 // wider, so the reward for a puzzle is a meadow with more in it, never a number.
 import { el, tapTarget } from "../engine/svg.js";
+import { say } from "../ui/copy.js";
 import { rand, now } from "../engine/math.js";
 import { kick } from "../engine/spring.js";
 import { sfx } from "../engine/audio.js";
@@ -70,9 +71,9 @@ export const feed = () => {
   valley.eat();
   if (topUp(30000)) {
     setTimeout(() => heart(200, 172), 900);
-    announce("Nuage croque le trèfle : trente secondes de bonheur en plus.");
+    announce(say.clover.topUp);
   } else {
-    announce("Nuage croque le trèfle, mais ce sont les câlins qui le rendent heureux.");
+    announce(say.clover.noWindow);
   }
 };
 

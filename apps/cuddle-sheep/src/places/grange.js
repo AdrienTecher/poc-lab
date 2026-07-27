@@ -9,6 +9,7 @@
 // bale, carrying exactly one at a time, walking it from post to post. The rule
 // that a big bale may not sit on a small one needs no explaining in a barn.
 import { $, el } from "../engine/svg.js";
+import { say } from "../ui/copy.js";
 import { rand, now, REDUCED } from "../engine/math.js";
 import { springs, S, set, v, kick } from "../engine/spring.js";
 import { sfx } from "../engine/audio.js";
@@ -277,7 +278,7 @@ const readout = () => {
   const list = game.stacks.map((stack, i) =>
     `${WHERE[i]} : ${stack.length ? stack.map((b) => NAME[b]).reverse().join(" sur ") : "vide"}`).join(". ");
   const held = game.carrying !== null ? ` Il porte ${NAME[game.carrying]}.` : "";
-  announce(`${list}.${held}`);
+  announce(say.grange.posts(list, held));
 };
 
 const setMoves = () => {
@@ -305,7 +306,7 @@ const touchPost = (post) => {
     const bale = top(game.stacks, post);
     if (bale === null) {
       sfx.whiff();
-      setHint("Ce pieu est vide", "that post is empty");
+      setHint(...say.grange.empty);
       return;
     }
     past.push({ stacks: game.stacks.map((s) => [...s]), carrying: null, moves: game.moves });
@@ -323,8 +324,8 @@ const touchPost = (post) => {
     // never a loss, only a sentence: he simply will not put it there
     sfx.whiff();
     kick("sway", post < game.at ? 90 : -90);
-    setHint("Un gros ballot écraserait le petit", "a big bale would flatten a small one");
-    announce("Trop gros pour ce pieu : pose-le ailleurs.");
+    setHint(...say.grange.tooBig);
+    announce(say.grange.tooBigSaid);
     return;
   }
 
@@ -344,9 +345,8 @@ const win = () => {
   syncPosts();
   fanfare("grange");
   const best = game.moves === OPTIMAL ? " C'est la solution optimale." : "";
-  announce(`Les trois ballots sont sur le dernier pieu, en ${game.moves} déplacements.${best}`);
-  setHint(`Rangé en ${game.moves} déplacements${game.moves === OPTIMAL ? ", le minimum" : ""}`,
-    `stacked in ${game.moves}${game.moves === OPTIMAL ? " — the minimum" : ""}`);
+  announce(say.grange.won(game.moves, best));
+  setHint(...say.grange.wonHint(game.moves, game.moves === OPTIMAL));
 };
 
 const undo = () => {
@@ -410,8 +410,7 @@ const land = () => {
   neighbours.settle(place);   // and what can be seen of next door
   ways.out?.sync();
   setMoves(); syncPosts(); draw(); measureUI();
-  setHint("Empile les trois ballots sur le dernier pieu — jamais un gros sur un petit",
-    "stack all three on the last post — never a big one on a small one");
+  setHint(...say.grange.how);
   setTimeout(() => { refreshCTM(); draw(); measureUI(); }, 20);
   setTimeout(refreshCTM, 1000);
   readout();
@@ -445,7 +444,7 @@ export const exit = () => {
   stage.classList.remove("gliding");
   setTimeout(refreshCTM, 60);
   setTimeout(refreshCTM, 700);
-  announce("Retour au pré.");
+  announce(say.road.home);
 };
 
 /* ---- bound at boot; the barn itself is not built until the first visit ---- */

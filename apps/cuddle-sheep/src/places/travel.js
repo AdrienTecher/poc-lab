@@ -18,6 +18,7 @@
 // the camera from trip PROGRESS rather than from his POSITION makes the arrival
 // framing exact by construction — g(1) = 1 — whatever the doors' spacing.
 import { clamp, lerp, now, REDUCED } from "../engine/math.js";
+import { say } from "../ui/copy.js";
 import { springs, S, set, v, kick } from "../engine/spring.js";
 import { sfx } from "../engine/audio.js";
 import { PITCH, home, panTo } from "../engine/camera.js";
@@ -138,7 +139,7 @@ export const go = (id) => {
   springs.trip.v = 0; springs.trip.vel = 0;
   set("trip", 1);
   sfx.flutter();
-  announce(`Nuage part vers ${to.label[0]}.`);
+  announce(say.road.setOff(to.label[0]));
   if (REDUCED) { springs.trip.v = 1; arrive(); }
 };
 

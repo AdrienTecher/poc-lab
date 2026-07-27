@@ -10,6 +10,7 @@
 // lanterns, so it can always be finished — see puzzles/cloture.js for why that
 // also hands over the minimum for free.
 import { $, el } from "../engine/svg.js";
+import { say } from "../ui/copy.js";
 import { rand, now, REDUCED } from "../engine/math.js";
 import { kick } from "../engine/spring.js";
 import { sfx } from "../engine/audio.js";
@@ -153,9 +154,7 @@ const draw = () => {
 const readout = () => {
   const on = game.lit.filter(Boolean).length;
   const dark = game.lit.map((v, i) => (v ? null : i + 1)).filter(Boolean);
-  announce(on === POSTS
-    ? `Les sept lanternes sont allumées.`
-    : `${on} lanterne${on > 1 ? "s" : ""} sur ${POSTS}. Éteinte${dark.length > 1 ? "s" : ""} : ${dark.join(", ")}.`);
+  announce(say.cloture.lit(on, POSTS, dark));
 };
 
 const setTouches = () => {
@@ -197,9 +196,8 @@ const win = () => {
   syncPosts();
   fanfare("cloture");
   const best = game.touches === game.best ? " C'est le minimum." : "";
-  announce(`Les sept lanternes sont allumées, en ${game.touches} touches.${best}`);
-  setHint(`Toute la clôture éclairée en ${game.touches} touches${game.touches === game.best ? ", le minimum" : ""}`,
-    `the whole fence lit in ${game.touches}${game.touches === game.best ? " — the minimum" : ""}`);
+  announce(say.cloture.won(game.touches, best));
+  setHint(...say.cloture.wonHint(game.touches, game.touches === game.best));
   remember();
 };
 
@@ -258,8 +256,7 @@ const land = () => {
   neighbours.settle(place);   // and what can be seen of next door
   ways.out?.sync();
   syncPosts(); draw(); measureUI();
-  setHint("Allume les sept — un poteau réveille aussi ses voisins",
-    "light all seven — a post wakes its neighbours too");
+  setHint(...say.cloture.how);
   setTimeout(() => { refreshCTM(); draw(); measureUI(); }, 20);
   setTimeout(refreshCTM, 1000);
   readout();
@@ -293,7 +290,7 @@ export const exit = () => {
   stage.classList.remove("gliding");
   setTimeout(refreshCTM, 60);
   setTimeout(refreshCTM, 700);
-  announce("Retour au pré.");
+  announce(say.road.home);
 };
 
 /* ---- bound at boot; the fence is not built until the first visit ------- */
@@ -317,9 +314,8 @@ export const build = () => {
     if (valley.opened("cloture") || valley.solves("pont") < SOLVES_TO_OPEN_CLOTURE) return;
     if (!valley.open("cloture")) return;
     setTimeout(() => sfx.chime(), 400);
-    setTimeout(() => setHint("Une clôture de lanternes, plus loin — la clôture",
-      "a fence of lanterns, further on — the fence"), 800);
-    announce("La clôture est ouverte, plus loin dans la vallée : suis le panneau.");
+    setTimeout(() => setHint(...say.cloture.opensHint), 800);
+    announce(say.cloture.opens);
   };
   valley.watch(watch);
   watch();
