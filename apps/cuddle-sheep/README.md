@@ -122,6 +122,9 @@ uses. Install it where you run the tests (`pnpm add -Dw playwright`) and set
 | `travel` | he crosses ground on screen rather than riding, the destination lands squarely in frame, and a stroke across his back is never a swipe |
 | `day` | noon costs nothing, night keeps two thirds of noon's mood separation, and la pelote rolls to a stop without leaving the meadow |
 | `save` | the clocks survive a reload and never rewind; a corrupt save still opens onto a meadow |
+| `offline` | nothing loads from another origin, the manifest installs, and a cold reload with the network cut still opens a playable meadow — proven load-bearing by requiring a worker-less context to FAIL |
+| `calm` | with reduced motion asked for, `document.getAnimations()` holds nothing running in any of the seven rooms — and travel still arrives |
+| `firstrun` | no save at all: the one instruction stays up, nothing unearned is visible or tabbable, and the loop closes from cold |
 
 Two of these read actual pixels, because some questions can only be settled by
 looking at what the compositor did. A blend mode's effect on the distance between
