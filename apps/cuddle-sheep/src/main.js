@@ -86,6 +86,24 @@ const frame = (ms) => {
   hud.paint(w);
 
   requestAnimationFrame(frame);
+
 };
 
 requestAnimationFrame(frame);
+
+// The offline cache. Registered at MODULE scope, after the loop is running — an
+// earlier edit landed this inside frame(), where it added a load listener sixty
+// times a second to an event that had already fired, so it silently never ran.
+// Nothing about the toy waits on it, and a browser without service workers (or a
+// page served insecurely) simply gets the online-only version.
+//
+// BASE_URL rather than a relative path, because the worker's SCOPE is its own
+// directory — registered from anywhere else it could not control the app it is
+// meant to keep working offline.
+if ("serviceWorker" in navigator) {
+  addEventListener("load", () => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {
+      /* an unregistered worker costs nothing: the app is fully playable online */
+    });
+  });
+}

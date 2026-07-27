@@ -1,3 +1,25 @@
+  /* ---- the typefaces, self-hosted ------------------------------------------
+     Three Google Fonts requests used to sit in index.html. They are gone: an app
+     that claims to work offline cannot have its lettering arrive from somebody
+     else's origin, and self-hosting is what the gallery and lexicon already do.
+
+     Fredoka is ONE file. Google serves byte-identical woff2 for 400, 500 and 600
+     because it is a variable font, so this declares the axis as a range and lets
+     the browser interpolate — three copies of the same 29KB would have bought
+     nothing. IBM Plex Mono genuinely is two files, being a static family. */
+  @font-face{
+    font-family:'Fredoka'; src:url('/fonts/fredoka-var.woff2') format('woff2-variations');
+    font-weight:400 600; font-style:normal; font-display:swap;
+  }
+  @font-face{
+    font-family:'IBM Plex Mono'; src:url('/fonts/plex-mono-400.woff2') format('woff2');
+    font-weight:400; font-style:normal; font-display:swap;
+  }
+  @font-face{
+    font-family:'IBM Plex Mono'; src:url('/fonts/plex-mono-500.woff2') format('woff2');
+    font-weight:500; font-style:normal; font-display:swap;
+  }
+
   /* ---------------------------------------------------------------------
      Mood is one number: --m (0 sad → 1 happy), rewritten every frame by the
      rig. Every colour in the scene is a mix keyed on it, so the whole world

@@ -5,12 +5,17 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { join, extname, normalize } from "node:path";
 
+// What Pages serves, because a harness that mistypes an asset hides the class of
+// bug where the real host does the same. The manifest type is not cosmetic: a
+// browser handed the wrong one may decline to treat the app as installable at all.
 const TYPES = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".webmanifest": "application/manifest+json; charset=utf-8",
   ".svg": "image/svg+xml",
+  ".png": "image/png",
   ".woff2": "font/woff2",
 };
 

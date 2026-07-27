@@ -1,0 +1,20 @@
+{
+  "name": "Nuage — le mouton à câliner",
+  "short_name": "Nuage",
+  "description": "Un mouton tout doux à caresser, et six endroits où l'emmener. A soft sheep to cuddle, and six places to take him.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": ".",
+  "scope": ".",
+  "id": "poc-lab-nuage",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#bfe9f6",
+  "theme_color": "#7e8798",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
