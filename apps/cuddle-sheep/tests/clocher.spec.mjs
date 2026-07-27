@@ -1,3 +1,4 @@
+import { liveBands, peeking } from "./helpers.mjs";
 // Le clocher: the tower rings a phrase and you give it back. What this spec has
 // to protect above everything is that being wrong costs nothing — the phrase
 // never shortens, nothing is taken away, and the tower simply says it again.
@@ -28,8 +29,11 @@ const boot = async (page, APP, save) => {
   await page.waitForTimeout(1000);
 };
 
+// Scoped to the band he is actually IN. The neighbours are in the document now, so a
+// bare .edge__name query returns their ways out as well as his — and `:not([inert])`
+// is exactly the distinction, since a place you are only looking at is inert.
 const wayNames = (page) => page.evaluate(() =>
-  [...document.querySelectorAll(".edge__name")].map((t) => t.textContent));
+  [...document.querySelectorAll("g[data-layer]:not([inert]) .edge__name")].map((t) => t.textContent));
 
 const readout = (page) => page.locator("#bellRound").innerText();
 const live = (page) => page.locator("#live").innerText();
@@ -102,8 +106,15 @@ export default async ({ newPage, check, APP }) => {
     await page.evaluate(() => document.documentElement.dataset.mode ?? "none"));
   const bands = await page.evaluate(() =>
     [...document.querySelectorAll("#valleyBack > g, #valleyFront > g")].map((g) => g.id).sort().join(","));
-  check("and no other diorama is left in the document", bands === "back-clocher,front-clocher", bands);
-  check("there is a rope for every bell", (await page.locator(".rope").count()) === BELLS.length);
+  // Invariant 9 changed shape: a sleeping place still leaves the document, but the
+  // two open NEIGHBOURS stay, inert, so the valley reads as continuous in the
+  // letterbox margins. What must still be gone is anything further than one step.
+  check("its open neighbour is here too, and nothing further",
+    (await liveBands(page)).join(",") === "clocher,grange", (await liveBands(page)).join(","));
+  // this save has solved la grange but not la rivière, so le pont was never opened and
+  // the nearest open place below the tower is the barn, two frames away
+  check("and it is only being looked at",
+    (await peeking(page)).join(",") === "grange", (await peeking(page)).join(","));
 
   /* ---- the tower leads, and hands over ---- */
   // It rings on arrival, ~620ms after landing — long before a spec can get a
@@ -149,8 +160,8 @@ export default async ({ newPage, check, APP }) => {
     (await page.evaluate(() => JSON.parse(localStorage.getItem("nuage:save")).valley.solves.clocher)) === 1);
 
   /* ---- leaving is always one border away, even on a solved board ---- */
-  check("the way home is never taken away", (await page.locator('.edge[data-dir="0"]').count()) === 1);
-  await page.locator('.edge[data-dir="0"]').click();
+  check("the way home is never taken away", (await page.locator('g[data-layer]:not([inert]) .edge[data-dir="0"]').count()) === 1);
+  await page.locator('g[data-layer]:not([inert]) .edge[data-dir="0"]').click();
   await page.waitForTimeout(900);
   check("and the tower is left for the meadow",
     (await page.evaluate(() => document.documentElement.dataset.mode)) === undefined);

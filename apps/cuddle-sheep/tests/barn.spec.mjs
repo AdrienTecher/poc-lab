@@ -1,6 +1,6 @@
 // La grange: the bales are the fleeces, a big one never sits on a small one,
 // and — as everywhere in this valley — a mistake is a sentence, never a loss.
-import { boot } from "./helpers.mjs";
+import { boot, liveBands, peeking } from "./helpers.mjs";
 
 const SAVE = (over = {}) => ({
   "nuage:save": JSON.stringify({
@@ -50,7 +50,15 @@ export default async ({ newPage, check, APP }) => {
   // --- the river is not merely hidden from the barn, it is out of the document
   const bands = await page.evaluate(() =>
     [...document.querySelectorAll("#valleyBack > g, #valleyFront > g")].map((g) => g.id));
-  check("no other diorama is in the document", !bands.some((id) => id.includes("riviere")), bands.join(","));
+  // Invariant 9 changed shape: a sleeping place still leaves the document, but the
+  // two open NEIGHBOURS stay, inert, so the valley reads as continuous in the
+  // letterbox margins. What must still be gone is anything further than one step.
+  // this save has only opened la grange, so there is no neighbour to see yet — which
+  // is itself the rule: a place you have not earned is not shown from next door either
+  check("with nothing open beside it, the barn is alone in the document",
+    (await liveBands(page)).join(",") === "grange", (await liveBands(page)).join(","));
+  check("and nothing is being merely looked at", (await peeking(page)).length === 0,
+    (await peeking(page)).join(","));
 
   check("all three bales start on the first post", (await stacks(page)) === "[[0,1,2],[],[]]", await stacks(page));
 
@@ -103,7 +111,7 @@ export default async ({ newPage, check, APP }) => {
     (await page.evaluate(() => JSON.parse(localStorage.getItem("nuage:save")).valley.solves.grange)) === 1);
 
   // --- leaving is always one border away, and puts him back in the meadow
-  await page.locator('.edge[data-dir="0"]').click();   // the border home
+  await page.locator('g[data-layer]:not([inert]) .edge[data-dir="0"]').click();   // the border home
   await page.waitForTimeout(900);
   check("the barn is left for the meadow",
     (await page.evaluate(() => document.documentElement.dataset.mode)) === undefined);

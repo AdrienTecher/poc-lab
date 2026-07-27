@@ -31,6 +31,7 @@ import { POSTS, toggle, solved, fewest, start } from "../puzzles/cloture.js";
 import { history, fanfare } from "../puzzles/board.js";
 import { mount, unmount, enrol } from "./registry.js";
 import { dioramaFor } from "./diorama.js";
+import * as neighbours from "./neighbours.js";
 import { edges } from "./edges.js";
 import { go } from "./travel.js";
 
@@ -254,6 +255,7 @@ const leave = () => { game.on = false; };
 const sleep = () => { scene.show(false); game.on = false; };
 const land = () => {
   game.on = true;
+  neighbours.settle(place);   // and what can be seen of next door
   ways.out?.sync();
   syncPosts(); draw(); measureUI();
   setHint("Allume les sept — un poteau réveille aussi ses voisins",
@@ -287,7 +289,7 @@ export const exit = () => {
   unmount();
   unhost();
   valley.arrive(HOME);
-  scene.show(false);
+  neighbours.clear();   // the neighbours go with him; nothing is left on screen
   stage.classList.remove("gliding");
   setTimeout(refreshCTM, 60);
   setTimeout(refreshCTM, 700);
@@ -344,6 +346,7 @@ const place = {
   road: 4,
   label: ["la clôture", "the fence"],
   doorway: (dir) => ways.out.doorAt(dir),
+  peek: (on) => scene.peek(on),
   standsAt: () => [isoX(...HIS), isoY(HIS[0], HIS[1], GROUND)],
   frame,
   wake, leave, sleep, land,

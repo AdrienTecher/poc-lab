@@ -104,7 +104,9 @@ export const geometryIssues = (page) => page.evaluate(() => {
   const layer = document.querySelector("#valleyFront");
   if (layer && getComputedStyle(layer).visibility !== "hidden") {
     const lb = layer.getBoundingClientRect();
-    for (const p of document.querySelectorAll(".edge")) {
+    // only HIS ways out — a neighbour's are legitimately outside the frame, which
+    // is the whole point of showing them in the letterbox margin
+    for (const p of document.querySelectorAll("g[data-layer]:not([inert]) .edge")) {
       const r = p.getBoundingClientRect();
       const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
       const name = p.nextElementSibling?.textContent ?? p.dataset.dir;
@@ -130,6 +132,21 @@ export const geometryIssues = (page) => page.evaluate(() => {
   }
   return issues;
 });
+
+/** Which dioramas are in the document, by place id.
+ *
+ *  Invariant 9 used to mean "exactly one". It now means "the one he is in, plus at
+ *  most its two open neighbours" — a sleeping place still LEAVES the document, but a
+ *  neighbour is deliberately shown in the letterbox margin, inert, so the valley reads
+ *  as continuous. Anything further away must still be gone. */
+export const liveBands = (page) => page.evaluate(() =>
+  [...new Set([...document.querySelectorAll("#valleyBack > g[data-layer], #valleyFront > g[data-layer]")]
+    .map((g) => g.id.replace(/^(back|front)-/, "")))].sort());
+
+/** ...and of those, the ones you are only looking at. */
+export const peeking = (page) => page.evaluate(() =>
+  [...new Set([...document.querySelectorAll("#valleyBack > g[data-layer][inert]")]
+    .map((g) => g.id.replace(/^back-/, "")))].sort());
 
 export const VIEWPORTS = [
   ["desktop-wide", 1920, 1080], ["desktop", 1280, 800], ["laptop-short", 1280, 560],

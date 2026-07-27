@@ -56,7 +56,7 @@ export default async ({ newPage, check, APP }) => {
   await calm.waitForTimeout(1500);
   check("he is still where the save left him",
     (await calm.evaluate(() => document.documentElement.dataset.mode)) === "cross");
-  const east = await calm.locator('.edge[data-dir="1"]').boundingBox();
+  const east = await calm.locator('g[data-layer]:not([inert]) .edge[data-dir="1"]').boundingBox();
   await calm.mouse.click(east.x + east.width / 2, east.y + east.height / 2);
   await calm.waitForTimeout(2200);
   check("and travel still arrives, without the walk",

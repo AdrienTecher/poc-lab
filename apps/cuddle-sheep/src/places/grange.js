@@ -29,6 +29,7 @@ import { POSTS, BALES, OPTIMAL, start, top, refuses, solved } from "../puzzles/m
 import { history, fanfare } from "../puzzles/board.js";
 import { mount, unmount, enrol } from "./registry.js";
 import { dioramaFor } from "./diorama.js";
+import * as neighbours from "./neighbours.js";
 import { edges } from "./edges.js";
 import { go } from "./travel.js";
 
@@ -406,6 +407,7 @@ const leave = () => { game.on = false; };
 const sleep = () => { scene.show(false); game.on = false; };
 const land = () => {
   game.on = true;
+  neighbours.settle(place);   // and what can be seen of next door
   ways.out?.sync();
   setMoves(); syncPosts(); draw(); measureUI();
   setHint("Empile les trois ballots sur le dernier pieu — jamais un gros sur un petit",
@@ -439,7 +441,7 @@ export const exit = () => {
   unmount();
   unhost();
   valley.arrive(HOME);
-  scene.show(false);
+  neighbours.clear();   // the neighbours go with him; nothing is left on screen
   stage.classList.remove("gliding");
   setTimeout(refreshCTM, 60);
   setTimeout(refreshCTM, 700);
@@ -476,6 +478,7 @@ const place = {
   road: 1,
   label: ["la grange", "the barn"],
   doorway: (dir) => ways.out.doorAt(dir),
+  peek: (on) => scene.peek(on),
   standsAt: () => { const [gx, gy] = hisSpot(); return [isoX(gx, gy), isoY(gx, gy, FLOOR)]; },
   frame,
   wake, leave, sleep, land,

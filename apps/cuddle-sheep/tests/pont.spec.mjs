@@ -7,7 +7,7 @@
 // scales the palette, because k·a − k·b = k(a−b). That gap is what --m means.
 // day.spec guards it for the meadow's sky; nothing guarded it for a place, and a
 // place is free to introduce its own darkness. So this does.
-import { patch } from "./helpers.mjs";
+import { patch, liveBands, peeking } from "./helpers.mjs";
 
 const SAVE = (over = {}) => ({
   "nuage:save": JSON.stringify({
@@ -39,8 +39,11 @@ const boot = async (page, APP, save) => {
   await page.waitForTimeout(1000);
 };
 
+// Scoped to the band he is actually IN. The neighbours are in the document now, so a
+// bare .edge__name query returns their ways out as well as his — and `:not([inert])`
+// is exactly the distinction, since a place you are only looking at is inert.
 const wayNames = (page) => page.evaluate(() =>
-  [...document.querySelectorAll(".edge__name")].map((t) => t.textContent));
+  [...document.querySelectorAll("g[data-layer]:not([inert]) .edge__name")].map((t) => t.textContent));
 
 /** Which side of the cleft everyone is on, read out of the world rather than out
  *  of its internals: each walker's centre against the screen position of the
@@ -110,7 +113,7 @@ export default async ({ newPage, check, APP }) => {
   await page.keyboard.press("j");
   await page.waitForTimeout(1500);
   check("a solved crossing opens the road onward",
-    (await page.locator('.edge[data-dir="1"]').count()) === 1, (await wayNames(page)).join("|"));
+    (await page.locator('g[data-layer]:not([inert]) .edge[data-dir="1"]').count()) === 1, (await wayNames(page)).join("|"));
 
   /* ---- walking there, one screen at a time ---- */
   // The signpost let you jump straight to any open place; an edge is the border of
@@ -119,7 +122,7 @@ export default async ({ newPage, check, APP }) => {
   // asserting rather than working around: the valley is walked, not picked from a
   // list. Two hops east, checking the intermediate stop is real.
   const east = async () => {
-    const b = await page.locator('.edge[data-dir="1"]').boundingBox();
+    const b = await page.locator('g[data-layer]:not([inert]) .edge[data-dir="1"]').boundingBox();
     await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
     await page.waitForTimeout(3200);
   };
@@ -135,7 +138,16 @@ export default async ({ newPage, check, APP }) => {
     (await page.evaluate(() => JSON.parse(localStorage.getItem("nuage:save")).valley.at)) === "pont");
   const bands = await page.evaluate(() =>
     [...document.querySelectorAll("#valleyBack > g, #valleyFront > g")].map((g) => g.id).sort().join(","));
-  check("and no other diorama is left in the document", bands === "back-pont,front-pont", bands);
+  // Invariant 9 changed shape: a sleeping place still leaves the document, but the
+  // two open NEIGHBOURS stay, inert, so the valley reads as continuous in the
+  // letterbox margins. What must still be gone is anything further than one step.
+  // le clocher is NOT a neighbour here, and that is the rule working: this save has
+  // solved la rivière but not la grange, so the bells have never been opened — and a
+  // place you have not earned is not shown from next door either.
+  check("its open neighbour is here too, and nothing further",
+    (await liveBands(page)).join(",") === "grange,pont", (await liveBands(page)).join(","));
+  check("and it is only being looked at",
+    (await peeking(page)).join(",") === "grange", (await peeking(page)).join(","));
 
   check("everyone starts on this side", (await sides(page)) === '{"nuage":"L","vif":"L","reveur":"L","ainee":"L"}',
     await sides(page));
@@ -240,8 +252,8 @@ export default async ({ newPage, check, APP }) => {
   check("a reload puts him back on the bridge",
     (await out.evaluate(() => document.documentElement.dataset.mode)) === "bridge",
     await out.evaluate(() => document.documentElement.dataset.mode ?? "none"));
-  check("the way home is never taken away", (await out.locator('.edge[data-dir="0"]').count()) === 1);
-  await out.locator('.edge[data-dir="0"]').click();
+  check("the way home is never taken away", (await out.locator('g[data-layer]:not([inert]) .edge[data-dir="0"]').count()) === 1);
+  await out.locator('g[data-layer]:not([inert]) .edge[data-dir="0"]').click();
   await out.waitForTimeout(900);
   check("and the bridge is left for the meadow",
     (await out.evaluate(() => document.documentElement.dataset.mode)) === undefined);

@@ -31,6 +31,7 @@ import { announce, setHint } from "../ui/hint.js";
 import { refreshCTM } from "../world/pointer.js";
 import * as valley from "../world/valley.js";
 import { active, roster, onSwap } from "./registry.js";
+import * as neighbours from "./neighbours.js";
 import { go } from "./travel.js";
 
 const root = document.documentElement;
@@ -120,17 +121,16 @@ export const show = () => {
   build();
   open = true;
   root.dataset.carte = "1";
-  // Every opened place goes live, which is the one moment invariant 9 is deliberately
-  // suspended: a sleeping diorama normally LEAVES the document so letterbox bleed
-  // cannot show the neighbours. Here the neighbours are the point, so the bleed
-  // becomes the feature and everything is put back on close.
-  // wake() builds a place and puts its bands in the document, but its PIECES are only
-  // registered with depth.js — they reach the DOM on the first sort(), which happens
-  // inside the mounted place's frame(). So the neighbours came up showing their decor
-  // and nothing else: a barn with no bales, a fence with no lanterns. One frame at
-  // dt=0 sorts them in without advancing anything: every step in every place scales
-  // its work by dt, and the crossing check is guarded on game.on.
-  for (const p of shown()) { p.wake(); p.frame(0, 0); }
+  // Every opened place goes live. Ordinarily only he and his two neighbours are in the
+  // document; here the whole valley is, because the whole valley is what a map is for.
+  //
+  // Three things each of these calls is doing. wake() builds a place and puts its
+  // bands in — but its PIECES are only registered with depth.js and reach the DOM on
+  // the first sort(), which lives in frame(), so a neighbour would come up as decor
+  // with no bales and no lanterns. frame(0, 0) sorts them in without advancing
+  // anything, since every step scales its work by dt. And peek(false) un-inerts them:
+  // a place you can travel to from here is not a place you are merely looking at.
+  for (const p of shown()) { p.wake(); p.frame(0, 0); p.peek?.(false); }
   const { width, centreX } = fit();
   view(centreX, width);
   paintLabels();
@@ -146,8 +146,8 @@ export const close = () => {
   open = false;
   delete root.dataset.carte;
   const here = active();
-  // ...and the neighbours leave the document again
-  for (const p of shown()) if (p !== here) p.sleep();
+  // ...and the view settles back to him and what is beside him
+  neighbours.settle(here);
   view(centre(here.road), VB_W);
   paintLabels();
   setTimeout(refreshCTM, REDUCED ? 0 : 320);

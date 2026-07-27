@@ -1,3 +1,4 @@
+import { liveBands, peeking } from "./helpers.mjs";
 // La lisière: gather three hens where the dog can watch them, and le chien — the
 // second animal, who is also the piece that makes the place solvable.
 //
@@ -118,7 +119,13 @@ export default async ({ newPage, check, APP }) => {
     await page.evaluate(() => document.documentElement.dataset.mode ?? "none"));
   const bands = await page.evaluate(() =>
     [...document.querySelectorAll("#valleyBack > g, #valleyFront > g")].map((g) => g.id).sort().join(","));
-  check("and no other diorama is left in the document", bands === "back-lisiere,front-lisiere", bands);
+  // Invariant 9 changed shape: a sleeping place still leaves the document, but the
+  // two open NEIGHBOURS stay, inert, so the valley reads as continuous in the
+  // letterbox margins. What must still be gone is anything further than one step.
+  check("its neighbours are here too, and nothing further",
+    (await liveBands(page)).join(",") === "cloture,lisiere", (await liveBands(page)).join(","));
+  check("and they are only being looked at",
+    (await peeking(page)).join(",") === "cloture", (await peeking(page)).join(","));
   check("there are eight boxes and three hens",
     (await page.locator(".nest").count()) === BOXES && (await page.locator(".hen").count()) === HENS);
   check("and it is the same dog as the one in the grass",
@@ -236,7 +243,7 @@ export default async ({ newPage, check, APP }) => {
   // unhitting it, and that is how the way home once ended up under a control bar.
   const ways = await page.evaluate(() => {
     const layer = document.querySelector("#valleyFront").getBoundingClientRect();
-    return [...document.querySelectorAll(".edge")].map((p) => {
+    return [...document.querySelectorAll("g[data-layer]:not([inert]) .edge")].map((p) => {
       const r = p.getBoundingClientRect();
       const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
       return {
@@ -260,8 +267,8 @@ export default async ({ newPage, check, APP }) => {
     ways.filter((w) => !w.hits).map((w) => w.name).join("|") || "all reachable");
 
   /* ---- leaving is always one border away, even on a solved board ---- */
-  check("the way home is never taken away", (await page.locator('.edge[data-dir="0"]').count()) === 1);
-  await page.locator('.edge[data-dir="0"]').click();
+  check("the way home is never taken away", (await page.locator('g[data-layer]:not([inert]) .edge[data-dir="0"]').count()) === 1);
+  await page.locator('g[data-layer]:not([inert]) .edge[data-dir="0"]').click();
   await page.waitForTimeout(900);
   check("and the wood's edge is left for the meadow",
     (await page.evaluate(() => document.documentElement.dataset.mode)) === undefined);

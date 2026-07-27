@@ -18,24 +18,30 @@ const seed = async (page, blob) => {
 export default async ({ newPage, check, APP }) => {
   const page = await newPage({ viewport: { width: 1280, height: 800 } });
   const mode = () => page.evaluate(() => document.documentElement.dataset.mode ?? "none");
+  // the one he is in plus its open neighbours, inert, so the valley reads as
+  // continuous — anything further than one step must still be out of the document
   const bands = () => page.evaluate(() =>
-    [...document.querySelectorAll("#valleyBack > g, #valleyFront > g")].map((g) => g.id).sort().join(","));
+    [...new Set([...document.querySelectorAll("#valleyBack > g[data-layer], #valleyFront > g[data-layer]")]
+      .map((g) => g.id.replace(/^(back|front)-/, "")))].sort().join(","));
   // The way out is a border now, so a walk has a DIRECTION rather than a position in
   // a list. The signpost's first plank happened to be the way onward from the river
   // and the way back from the barn; an edge has to be asked for by name.
   const walk = async (dir) => {
-    const b = await page.locator(`.edge[data-dir="${dir}"]`).boundingBox();
+    const b = await page.locator(`g[data-layer]:not([inert]) .edge[data-dir="${dir}"]`).boundingBox();
     await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
   };
+  // Scoped to the band he is actually IN. The neighbours are in the document now, so a
+// bare .edge__name query returns their ways out as well as his — and `:not([inert])`
+// is exactly the distinction, since a place you are only looking at is inert.
   const wayNames = (p) => p.evaluate(() =>
-    [...document.querySelectorAll(".edge__name")].map((t) => t.textContent));
+    [...document.querySelectorAll("g[data-layer]:not([inert]) .edge__name")].map((t) => t.textContent));
 
   await seed(page, VALLEY);
   await page.goto(APP);
   await page.waitForTimeout(1000);
   await page.keyboard.press("j");
   await page.waitForTimeout(1600);
-  check("the river is the only diorama in the document", (await bands()) === "back-riviere,front-riviere", await bands());
+  check("the river and what is next to it are in the document", (await bands()) === "grange,riviere", await bands());
 
   // A sleeping place must be OUT of the document, not merely hidden: an <svg>
   // clips to its CSS box and not its viewBox, so on a wide viewport the
@@ -53,7 +59,7 @@ export default async ({ newPage, check, APP }) => {
   await page.waitForTimeout(1500);
 
   check("he arrives at the barn", (await mode()) === "barn", await mode());
-  check("and the river goes dark behind him", (await bands()) === "back-grange,front-grange", await bands());
+  check("and the river stays as the neighbour he came from", (await bands()) === "grange,riviere", await bands());
 
   // The destination must be squarely in frame on arrival. It is not enough for
   // the camera to have "followed him": two doorways are far closer together
@@ -181,7 +187,7 @@ export default async ({ newPage, check, APP }) => {
   check("the fleece curtain is built", (await cross.locator(".puff").count()) > 0);
   check("and he is at the river to start", (await mode2(cross)) === "cross", await mode2(cross));
 
-  const b = await cross.locator('.edge[data-dir="1"]').boundingBox();
+  const b = await cross.locator('g[data-layer]:not([inert]) .edge[data-dir="1"]').boundingBox();
   await cross.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
   const duringWalk = await swept(cross, 45, 70);
   check("walking the valley is never curtained", !duringWalk,

@@ -37,6 +37,7 @@ import { WALKERS, PACE, SEATS, OPTIMAL, start, cost, refuses, solved } from "../
 import { history, fanfare } from "../puzzles/board.js";
 import { mount, unmount, enrol } from "./registry.js";
 import { dioramaFor } from "./diorama.js";
+import * as neighbours from "./neighbours.js";
 import { edges } from "./edges.js";
 import { go } from "./travel.js";
 
@@ -169,6 +170,25 @@ const buildWorld = () => {
   decor.appendChild(el("rect", {
     x: VB_X, y: VB_Y, width: VB_W, height: VB_H, fill: "var(--pont-sky)",
   }));
+  // Its two ends are feathered. This is the only place that paints its own sky, and
+  // now that the neighbours are visible in the letterbox margins the backdrop stops
+  // being the whole screen and starts being a rectangle you can see the edge of — a
+  // hard vertical line against the valley's real sky. Twenty-six units of fade turns
+  // that line into the mouth of a cleft, which is what it is meant to be.
+  const fade = el("defs");
+  fade.innerHTML = `
+    <linearGradient id="pontFadeL" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="var(--pont-sky)" stop-opacity="0"/>
+      <stop offset="1" stop-color="var(--pont-sky)" stop-opacity="1"/>
+    </linearGradient>
+    <linearGradient id="pontFadeR" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="var(--pont-sky)" stop-opacity="1"/>
+      <stop offset="1" stop-color="var(--pont-sky)" stop-opacity="0"/>
+    </linearGradient>`;
+  decor.appendChild(fade);
+  for (const [x, id] of [[VB_X - 26, "pontFadeL"], [VB_X + VB_W, "pontFadeR"]]) {
+    decor.appendChild(el("rect", { x, y: VB_Y, width: 26, height: VB_H, fill: `url(#${id})` }));
+  }
   // Three ridges darkening toward the near one. What is behind them is twilight
   // sky seen up between the walls, not a facing wall — which is what lets the far
   // end of the palette be luminous, and so lets his mood still swing in here.
@@ -496,6 +516,7 @@ const leave = () => { game.on = false; };
 const sleep = () => { scene.show(false); game.on = false; };
 const land = () => {
   game.on = true;
+  neighbours.settle(place);   // and what can be seen of next door
   // a crossing cannot outlive a walk away from here: the party is put back on the
   // side it set off from rather than teleported across while nobody was looking
   if (game.phase === "crossing") { game.walking = []; game.phase = "idle"; }
@@ -533,7 +554,7 @@ export const exit = () => {
   unmount();
   unhost();
   valley.arrive(HOME);
-  scene.show(false);
+  neighbours.clear();   // the neighbours go with him; nothing is left on screen
   stage.classList.remove("gliding", "chosen");
   setTimeout(refreshCTM, 60);
   setTimeout(refreshCTM, 700);
@@ -601,6 +622,7 @@ const place = {
   road: 2,
   label: ["le pont", "the bridge"],
   doorway: (dir) => ways.out.doorAt(dir),
+  peek: (on) => scene.peek(on),
   standsAt: () => spotOf("nuage"),
   frame,
   wake, leave, sleep, land,

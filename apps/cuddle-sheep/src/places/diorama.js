@@ -55,6 +55,22 @@ export const dioramaFor = (id, frame) => {
       if (on) { back.appendChild(backBand); front.appendChild(frontBand); }
       else { backBand.remove(); frontBand.remove(); }
     },
+    /** Seen from next door: on screen, but not somewhere you are.
+     *
+     *  `inert` is doing the real work — a live band brings its bales and bell ropes
+     *  with it, and without this they would be clickable and tabbable from a place
+     *  away. It takes the whole subtree out of hit-testing AND out of the
+     *  accessibility tree, which is exactly what "you can see it but you are not
+     *  there" means. The attribute is on the bands rather than a CSS rule, because
+     *  there is no CSS for "not focusable".
+     */
+    peek: (on) => {
+      for (const band of [backBand, frontBand]) {
+        band.toggleAttribute("inert", on);
+        band.classList.toggle("peeking", on);
+      }
+    },
+
     /** Put Nuage at a point in THIS place's tile space.
      *
      *  A place may try to move him after the player has walked away — a

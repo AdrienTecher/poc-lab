@@ -29,6 +29,7 @@ import { PIECES, OPTIMAL, unsafe, solved } from "../puzzles/traversee.js";
 import { history, fanfare } from "../puzzles/board.js";
 import { mount, unmount, enrol } from "./registry.js";
 import { dioramaFor } from "./diorama.js";
+import * as neighbours from "./neighbours.js";
 import { edges } from "./edges.js";
 import { go } from "./travel.js";
 
@@ -269,6 +270,7 @@ const sleep = () => { scene.show(false); game.on = false; };
 /** His. Accepting input, and saying where everything is. */
 const land = () => {
   game.on = true;
+  neighbours.settle(place);   // and what can be seen of next door
   if (game.phase === "rowing") game.phase = "idle";   // a crossing cannot outlive a walk
   ways.out?.sync();
   setMoves(); syncTokens(); drawActors(); measureUI();
@@ -304,7 +306,7 @@ export const exit = () => {
   unmount();
   unhost();
   valley.arrive(HOME);
-  scene.show(false);
+  neighbours.clear();   // the neighbours go with him; nothing is left on screen
   stage.classList.remove("riding", "gliding");
   setTimeout(refreshCTM, 60);
   setTimeout(refreshCTM, 700);
@@ -525,6 +527,7 @@ const place = {
   road: 0,                                  // frame on the filmstrip
   label: ["la rivière", "the river"],
   doorway: (dir) => ways.out.doorAt(dir),
+  peek: (on) => scene.peek(on),
   // where he ends up standing here, so a walk in or out starts and finishes on him
   standsAt: () => game.pose.mouton ?? spot("mouton"),
   frame,

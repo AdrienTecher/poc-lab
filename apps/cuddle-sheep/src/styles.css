@@ -568,6 +568,18 @@
   /* the layer is pointer-events:none, so a place on the map has to opt in the way
      every other reachable thing in the valley does */
   html[data-carte] .carte__spot{pointer-events:auto}
+  /* next door, seen from here. Not dimmed and not vignetted: Dofus does not, and the
+     letterbox margin already puts it at the edge of vision. It is inert, so nothing in
+     it can be tapped or tabbed — see diorama.js. */
+  .peeking{pointer-events:none}
+  /* ...and nothing INSIDE it either. `html[data-place] .edge{pointer-events:auto}` and
+     its siblings are descendant rules, so they happily re-enable a neighbour's ways
+     out — which then sat on top of his own and stole the tap. At ultrawide the
+     geometry sweep caught it by name: the "le pré" edge covered by something. `inert`
+     already blocks focus and activation; this is the hit-testing half of the same
+     statement, and it has to out-rank every per-piece rule at once. */
+  g[data-layer][inert] *{pointer-events:none !important}
+
   .carte__field{fill:#fff; opacity:0; transition:opacity .25s}
   .carte__spot{cursor:pointer; outline:none}
   .carte__spot:hover .carte__field, .carte__spot:focus-visible .carte__field{opacity:.07}

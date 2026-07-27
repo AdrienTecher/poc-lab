@@ -28,6 +28,8 @@ const shot = (page) => page.evaluate(() => {
 const bands = (page) => page.evaluate(() =>
   new Set([...document.querySelectorAll("#valleyBack > g[data-layer], #valleyFront > g[data-layer]")]
     .map((g) => g.id.replace(/^(back|front)-/, ""))).size);
+// ordinarily le pont plus its two neighbours; the map is the one view that holds all six
+const AT_REST = 3;
 const names = (page) => page.evaluate(() =>
   [...document.querySelectorAll(".carte__name")].map((t) => t.textContent));
 
@@ -59,7 +61,8 @@ export default async ({ newPage, check, APP }) => {
   check("the map is offered from a place", await page.locator("#mapBtn").isVisible());
   const closed = await shot(page);
   check("and the shot starts one place wide", Math.abs(closed.w - 728) < 2, `${closed.w}`);
-  check("with one diorama in the document", (await bands(page)) === 1, String(await bands(page)));
+  check("with him and his two neighbours in the document",
+    (await bands(page)) === AT_REST, String(await bands(page)));
 
   await page.locator("#mapBtn").click();
   await page.waitForTimeout(1500);
@@ -91,8 +94,8 @@ export default async ({ newPage, check, APP }) => {
     await page.evaluate(() => document.documentElement.dataset.mode ?? "none"));
   const backAgain = await narrowAgain(page);
   check("and the shot is one place wide again", Math.abs(backAgain - 728) < 4, `${backAgain}`);
-  check("with the neighbours out of the document again", (await bands(page)) === 1,
-    String(await bands(page)));
+  check("and the far places out of the document again, leaving only the neighbours",
+    (await bands(page)) === AT_REST, String(await bands(page)));
 
   /* ---- and touching a place walks him there ---- */
   await page.keyboard.press("m");

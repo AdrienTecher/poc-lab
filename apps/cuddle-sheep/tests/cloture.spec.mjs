@@ -6,7 +6,7 @@
 // one — so the board is made by unlighting a solved fence, and the spec checks
 // the property rather than trusting the construction.
 import { POSTS, toggle, solved, fewest, remaining, start } from "../src/puzzles/cloture.js";
-import { patch } from "./helpers.mjs";
+import { patch, liveBands, peeking } from "./helpers.mjs";
 
 const NOON = "2026-06-21T12:00:00";
 const SCENE = { x: 160, y: 100, width: 960, height: 480 };
@@ -85,7 +85,7 @@ export default async ({ newPage, check, APP }) => {
   await page.keyboard.press("j");
   await page.waitForTimeout(1500);
   const shut = await page.evaluate(() =>
-    [...document.querySelectorAll(".edge__name")].map((t) => t.textContent));
+    [...document.querySelectorAll("g[data-layer]:not([inert]) .edge__name")].map((t) => t.textContent));
   check("an unwalked bridge does not find the fence", !shut.includes("la clôture"), shut.join("|"));
   await page.close();
 
@@ -103,8 +103,15 @@ export default async ({ newPage, check, APP }) => {
     await page.evaluate(() => document.documentElement.dataset.mode ?? "none"));
   const bands = await page.evaluate(() =>
     [...document.querySelectorAll("#valleyBack > g, #valleyFront > g")].map((g) => g.id).sort().join(","));
-  check("and no other diorama is left in the document", bands === "back-cloture,front-cloture", bands);
-  check("there are seven lanterns", (await page.locator(".lamppost").count()) === POSTS);
+  // Invariant 9 changed shape: a sleeping place still leaves the document, but the
+  // two open NEIGHBOURS stay, inert, so the valley reads as continuous in the
+  // letterbox margins. What must still be gone is anything further than one step.
+  check("its open neighbour is here too, and nothing further",
+    (await liveBands(page)).join(",") === "cloture,pont", (await liveBands(page)).join(","));
+  // la lisière needs le clocher solved and this save has not, so the fence is the end of
+  // the road here and its only neighbour is the bridge
+  check("and it is only being looked at",
+    (await peeking(page)).join(",") === "pont", (await peeking(page)).join(","));
 
   const before = await lit(page);
   check("and the fence starts part-lit", before.some(Boolean) && !before.every(Boolean),
@@ -166,8 +173,8 @@ export default async ({ newPage, check, APP }) => {
   await page.evaluate(() => document.documentElement.style.removeProperty("--m"));
 
   /* ---- leaving is always one border away, even on a solved board ---- */
-  check("the way home is never taken away", (await page.locator('.edge[data-dir="0"]').count()) === 1);
-  await page.locator('.edge[data-dir="0"]').click();
+  check("the way home is never taken away", (await page.locator('g[data-layer]:not([inert]) .edge[data-dir="0"]').count()) === 1);
+  await page.locator('g[data-layer]:not([inert]) .edge[data-dir="0"]').click();
   await page.waitForTimeout(900);
   check("and the fence is left for the meadow",
     (await page.evaluate(() => document.documentElement.dataset.mode)) === undefined);
