@@ -20,7 +20,7 @@ order — and runs the single frame loop.
 | `world/` | what he *is*: the rig, the mood, the fleece, the clover patch, your hands, the progression |
 | `places/` | where he *goes*: one diorama per module, exactly one mounted at a time |
 | `puzzles/` | the rules of a place, as pure functions of where the pieces are |
-| `ui/` | the chrome around the scene: the two clock rings, the hint bubble, the live region |
+| `ui/` | the chrome around the scene: the two clock rings, the hint bubble, the live region — and `copy.js`, every word the game says |
 
 ## The valley
 
@@ -130,6 +130,7 @@ uses. Install it where you run the tests (`pnpm add -Dw playwright`) and set
 | `offline` | nothing loads from another origin, the manifest installs, and a cold reload with the network cut still opens a playable meadow — proven load-bearing by requiring a worker-less context to FAIL |
 | `calm` | with reduced motion asked for, `document.getAnimations()` holds nothing running in any of the seven rooms — and travel still arrives |
 | `firstrun` | no save at all: the one instruction stays up, nothing unearned is visible or tabbable, and the loop closes from cold |
+| `sound` | muted builds no audio context at all; with sound on it is built lazily and once, exactly one node reaches the speakers, and every level is inside the declared mix |
 | `carte` | the map is the WORLD — the real dioramas are what is on screen, showing the state he left them in, and only what he has opened |
 
 Two of these read actual pixels, because some questions can only be settled by

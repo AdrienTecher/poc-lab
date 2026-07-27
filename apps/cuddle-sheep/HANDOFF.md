@@ -1,7 +1,7 @@
 # Nuage — handoff
 
-**Phase 3 closed, Phase 4 three-fifths done, plus a map and a continuous valley.**
-Six places, two animals, an installable offline app, **419/419 green**.
+**Phases 3 and 4 are both closed.** Six places, two animals, a continuous valley,
+a map that is the valley, installable and offline, **429/429 green**.
 `la rivière`, `la grange`, `le pont`, `le clocher`, `la clôture`, `la lisière`.
 This is what a fresh session needs to pick it up.
 
@@ -257,13 +257,32 @@ build is vite and one dev dependency; a wasm runtime measured in tens to hundred
 KB against the current 68KB of JS; and worse debuggability for a comfort toy that
 already holds 60fps on a phone.
 
-### Phase 4 — what is left
-PWA manifest + offline cache, full i18n pass (copy is inline FR-with-EN), audio
-mix, reduced-motion pass, proper first-run.
+### Phase 4 — DONE: the mix, and the copy
+**The mix.** Nine peak gains were scattered through the voices and relative to
+nothing. They are one `LEVEL` table in `engine/audio.js` now, levelled against a 1kHz
+reference — amplitude is not loudness, so a 138Hz sine needs roughly triple what a
+mid-band sawtooth does. Everything routes through a master bus into a limiter, so
+overlapping voices cannot sum past full scale the way they could when each connected
+straight to the destination.
 
-Phase 4 is also where the **hint copy** should be reviewed as a whole: six places
-each set their own bilingual hint on landing, and nobody has read them end to end
-as one voice.
+It was called unassertable because the suite runs muted. That is true of *timbre*
+only: `sound.spec` instruments the browser's Web Audio API — not the app — and checks
+that muted builds no context at all, that sound-on builds it lazily and once, that
+exactly ONE node reaches the speakers, and that every level arriving at a gain node is
+inside the declared mix. Watch out for one thing if you extend it:
+`exponentialRampToValueAtTime` lives on `AudioParam`, which every parameter shares, so
+an untagged patch records pitch sweeps as levels.
+
+**The copy.** Every word the game says is in `ui/copy.js`. Hints are `[fr, en]` pairs
+spread into `setHint`; announcements are French alone, because the live region is what
+a screen reader speaks; anything with a number in it is a function, so the shape of
+the sentence lives with its siblings. Reading the whole script at once immediately
+found three things: every unlock still said *"suis le panneau"* two commits after the
+signpost was replaced by flagstones, `"Retour au pré."` was written out six times, and
+`le clocher` announced itself *"au bout de la vallée"* while standing at road 3 of 5.
+
+Aria-labels are deliberately NOT in there. They belong with the element they name,
+like its class — `copy.js` is what the game *says*, not everything it is called.
 
 ### DONE: the borders are seamless
 The two open neighbours are drawn, inert, in the letterbox margins that were already
