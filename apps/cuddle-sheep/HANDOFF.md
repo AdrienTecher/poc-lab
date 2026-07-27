@@ -1,7 +1,7 @@
 # Nuage — handoff
 
-**Phase 3 is closed, Phase 4 is three-fifths done.** Six places, two animals,
-an installable offline app, **397/397 green**.
+**Phase 3 closed, Phase 4 three-fifths done, plus a map.** Six places, two animals,
+an installable offline app, **416/416 green**.
 `la rivière`, `la grange`, `le pont`, `le clocher`, `la clôture`, `la lisière`.
 This is what a fresh session needs to pick it up.
 
@@ -202,6 +202,48 @@ and the first run is held by a spec. Three notes for whoever touches them:
   * The opening line lives in index.html's markup, NOT in setHint — that is what
     stops it being retracted after 6.5s and leaving a new player with nothing.
 
+## 7. Would WebAssembly help? Measured, not guessed — no.
+
+**As architected it cannot help, and would be slower.** Nuage renders by mutating
+SVG attributes every frame. WebAssembly has no access to the DOM: every write would
+have to cross back into JavaScript, so a wasm renderer would add a boundary to the
+only thing this app does per frame and remove nothing.
+
+**And there is no problem to solve.** Measured on this machine, 180 frames per room:
+
+| where | fps | median frame gap | p95 | SVG nodes |
+|---|---|---|---|---|
+| the meadow | 60 | 16.7ms | 17.2ms | 149 |
+| la rivière | 60 | 16.7ms | 17.1ms | 311 |
+| le pont | 60 | 16.7ms | 17.1ms | 387 |
+| la lisière | 60 | 16.7ms | 17.0ms | 423 |
+| **the map, six places live** | **60** | **16.7ms** | **17.4ms** | **1458** |
+
+The budget at 60fps is 16.67ms and nothing ever exceeds it — not even the map, at
+3.5× the node count of the busiest room. The `getScreenCTM()` forced layout the rig
+depends on costs 0.2ms of that budget. There is no compute bottleneck to move.
+
+**If it became a full game, the port that matters is the RENDERER, not the language.**
+The order of operations would be SVG/DOM → Canvas2D → WebGL, and only *after* that
+does wasm become interesting — and then for simulation rather than drawing. What would
+actually earn it: pathfinding and AI over a large tactical grid, a deterministic
+lockstep simulation compiled once and run identically on client and server,
+procedural generation, physics. None of those exist here. The puzzles are closed-form
+— `la clôture` is a 7×7 solve over GF(2), `la lisière`'s minimum is an arithmetic
+expression — and they run in microseconds.
+
+**The architecture already has the seam, if it is ever wanted.** `puzzles/` is pure:
+no DOM, no imports from `world/` or `places/`, every rule a function of where the
+pieces are. That directory is exactly the natural wasm boundary. If a future place
+needed a solver too heavy for JS, it could be compiled and dropped in behind the same
+function signatures without anything else in the app knowing. That is worth more than
+a port: it means the decision stays cheap.
+
+**What it would cost today:** a Rust or Emscripten toolchain against a repo whose
+build is vite and one dev dependency; a wasm runtime measured in tens to hundreds of
+KB against the current 68KB of JS; and worse debuggability for a comfort toy that
+already holds 60fps on a phone.
+
 ### Phase 4 — what is left
 PWA manifest + offline cache, full i18n pass (copy is inline FR-with-EN), audio
 mix, reduced-motion pass, proper first-run.
@@ -209,6 +251,24 @@ mix, reduced-motion pass, proper first-run.
 Phase 4 is also where the **hint copy** should be reviewed as a whole: six places
 each set their own bilingual hint on landing, and nobody has read them end to end
 as one voice.
+
+### The thing still worth doing: make the borders seamless
+The flagstone thresholds say "a way out is here" but the frame still ends at a hard
+edge, so they read as markers ON a place rather than as part of a continuous valley.
+Dofus solved exactly this in its 16:9 rework by showing a live PREVIEW of the adjacent
+map in the border strip — real scenery, real state, no NPCs.
+
+That is now cheap, because `map.js` already does every hard part: it wakes the
+neighbours, sorts their pieces into the DOM, and puts them on screen in one shared
+shot. A border peek is the same machinery at a much smaller width — wake the two
+neighbours, widen the shot by a sliver rather than six frames, and let the letterbox
+bleed that invariant 9 exists to PREVENT become the thing on purpose, exactly as the
+map does. The threshold stones can then get quieter, or go.
+
+Two cautions. Invariant 9 is suspended in `map.js` and would be suspended here too, so
+it needs restating rather than deleting: bleed is forbidden EXCEPT where a wider shot
+is deliberately showing the neighbours. And the geometry sweep asserts one diorama in
+the document per room, which would have to become "one, or three while peeking".
 
 ### Worth doing next, from what building six places taught
 - **The borders take no room and no longer grow with the roster**, which retires the
